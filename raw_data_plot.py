@@ -10,6 +10,7 @@ from chaco.overlays.api import SimpleInspectorOverlay
 
 from tools import ClickUndoZoomTool, KeyboardPanTool
 from processing import rescale
+from labels import get_value_scale_label
 
 
 class RawDataPlot(HasTraits):
@@ -34,9 +35,11 @@ class RawDataPlot(HasTraits):
         self.plot.index_range.reset()
         self.plot.value_range.reset()
         self.zoom_tool.clear_undo_history()
-        #self.pan_tool.restrict_to_data = True
         self._tools_visible(True)
-        #self.plot.value_scale = scale
+        self._set_scale(scale)
+
+    def _set_scale(self, scale):
+        self.plot.y_axis.title = 'Intensity - %s' % get_value_scale_label(scale)
 
     def _tools_visible(self, visible=True):
         self.plot.legend.visible = visible
@@ -56,7 +59,9 @@ class RawDataPlot(HasTraits):
         self.plot.legend.visible = False
 
         self.plot.x_axis.title = "Angle (2theta)"
-        self.plot.y_axis.title = "Intensity (count)"
+        self.plot.x_axis.title_font = 'modern 14'
+        self.plot.y_axis.title_font = 'modern 14'
+        self._set_scale('linear')
 
         # Add the title at the top
         self.plot.overlays.append(PlotLabel("XYE data",

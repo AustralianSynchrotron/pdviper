@@ -9,6 +9,7 @@ from traits_extensions import HasTraitsGroup
 
 from processing import stack_datasets
 from base_plot import BasePlot
+from labels import get_value_scale_label
 
 
 class MplPlot(BasePlot, HasTraitsGroup):
@@ -99,10 +100,9 @@ class MplPlot(BasePlot, HasTraitsGroup):
         from matplotlib.cm import jet
         self.figure.clear()
         ax = self.figure.add_subplot(111, projection='3d')
-        ax.set_xlabel('2Theta (angle)')
+        ax.set_xlabel('Angle (2Theta)')
         ax.set_ylabel('Dataset')
-        zlabels = { 'log': '\nlog10(N)', 'linear': '', 'sqrt': '\nsqrt(N)' }
-        ax.set_zlabel('Intensity %s' % zlabels[scale])
+        ax.set_zlabel('Intensity - %s' % get_value_scale_label(scale))
         ax.set_yticks(range(1, y_rows + 1), ((y_rows + 1) / 10) * 10)
         ax.view_init(azim=self.azimuth, elev=self.elevation)
         cstride = int((1.0 - self.quality) * y_rows + 1)

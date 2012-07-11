@@ -3,20 +3,16 @@ from numpy import array
 
 from enable.api import Component
 from traits.api import HasTraits, Instance
-
-# Chaco imports
-from chaco.api import Plot, ArrayPlotData, jet, ColorBar, LinearMapper, HPlotContainer
+from chaco.api import Plot, ArrayPlotData, jet, ColorBar, LinearMapper, HPlotContainer, PlotAxis, PlotLabel
 from chaco.tools.api import TraitsTool, PanTool
 from chaco.default_colormaps import fix
 
 from chaco_output import PlotOutput
-from multi_line_plot import create_multi_line_plot
+from multi_line_plot import create_multi_line_plot_renderer
 from tools import ClickUndoZoomTool
-
 from processing import stack_datasets, interpolate_datasets, bin_data, cubic_interpolate
-
 from base_plot import BasePlot
-
+from labels import get_value_scale_label
 
 
 class ChacoPlot(BasePlot, HasTraits):
@@ -49,7 +45,24 @@ class StackedPlot(ChacoPlot):
         y = np.linspace(0, y_limit, num_plots + 1)
 
         z = np.vstack([z, z.shape[1] * [np.nan]])
-        plot = create_multi_line_plot(x[0], y, z, amplitude=2.0)
+        mlp = create_multi_line_plot_renderer(x[0], y, z, amplitude=2.0)
+
+        plot = Plot()
+        plot.add(mlp)
+
+        x_axis = PlotAxis(component=plot,
+                          mapper=mlp.index_mapper,
+                          orientation='bottom',
+                          title='Angle (2theta)',
+                          title_font='modern 14')
+        y_axis_title = 'Normalized intensity - %s' % get_value_scale_label(scale)
+        y_axis = PlotAxis(component=plot,
+                          mapper=mlp.value_mapper,
+                          orientation='left',
+                          title=y_axis_title,
+                          title_font='modern 14')
+        plot.overlays.extend([x_axis, y_axis])
+        plot.tools.append(TraitsTool(plot))
         return plot
 
 
@@ -76,7 +89,9 @@ class Surface2DPlot(ChacoPlot):
                       )
         plot.default_origin = origin
         plot.x_axis.title = "Angle (2theta)"
+        plot.x_axis.title_font = 'modern 14'
         plot.y_axis.title = "Dataset"
+        plot.y_axis.title_font = 'modern 14'
         plot.y_axis.tick_interval = 1.0
         actual_plot = plot.plots["surface2d"][0]
 
@@ -96,13 +111,20 @@ class Surface2DPlot(ChacoPlot):
                         orientation='v',
                         resizable='v',
                         width=30,
-                        padding=20)
+                        padding=40)
         # Add pan and zoom tools to the colorbar
         pan_tool = PanTool(colorbar, constrain_direction="y", constrain=True)
         colorbar.tools.append(pan_tool)
         zoom_overlay = ClickUndoZoomTool(colorbar, axis="index", tool_mode="range",
                                 always_on=True, drag_button="right")
         colorbar.overlays.append(zoom_overlay)
+
+        # Add a label to the top of the color bar
+        colorbar_label = \
+            PlotLabel('Intensity - %s' % get_value_scale_label(scale),
+                      component=colorbar,
+                      font='modern 12')
+        colorbar.overlays.append(colorbar_label)
 
         # Add the plot and colorbar side-by-side
         container = HPlotContainer(use_backbuffer=True)
