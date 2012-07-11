@@ -47,7 +47,7 @@ class StackedPlot(ChacoPlot):
         z = np.vstack([z, z.shape[1] * [np.nan]])
         mlp = create_multi_line_plot_renderer(x[0], y, z, amplitude=2.0)
 
-        plot = Plot()
+        plot = Plot(padding_left=60)
         plot.add(mlp)
 
         x_axis = PlotAxis(component=plot,
@@ -121,7 +121,7 @@ class Surface2DPlot(ChacoPlot):
 
         # Add a label to the top of the color bar
         colorbar_label = \
-            PlotLabel('Intensity - %s' % get_value_scale_label(scale),
+                PlotLabel('Intensity\n{:^9}'.format(get_value_scale_label(scale)),
                       component=colorbar,
                       font='modern 12')
         colorbar.overlays.append(colorbar_label)
