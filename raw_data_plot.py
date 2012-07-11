@@ -35,7 +35,7 @@ class RawDataPlot(HasTraits):
         self.plot.index_range.reset()
         self.plot.value_range.reset()
         self.zoom_tool.clear_undo_history()
-        self.show_legend(False)
+        self.show_legend(True)
         self._set_scale(scale)
 
     def _set_scale(self, scale):
