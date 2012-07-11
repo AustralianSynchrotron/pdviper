@@ -153,7 +153,7 @@ class PlotGenerator(HasTraits):
     copy_button = Button("Copy to clipboard")
     plot_container = Instance(OverlayPlotContainer)
 
-    flip_y_axis = Bool(False)
+    flip_order = Bool(False)
     scale = Enum('linear', 'log', 'sqrt')
 
     mpl_plot = Instance(MplPlot)
@@ -198,7 +198,7 @@ class PlotGenerator(HasTraits):
         view = View(
             VGroup(
                 menu_group,
-                Item('flip_y_axis',
+                Item('flip_order',
                      visible_when="plot_type == '%s'" % PlotGenerator.PLOT_STACKED),
                 UItem('plot_container',
                      editor=ComponentEditor(),
@@ -212,7 +212,7 @@ class PlotGenerator(HasTraits):
         )
         self.edit_traits(view=view)
 
-    def _flip_y_axis_changed(self):
+    def _flip_order_changed(self):
         self._plot_type_changed()
 
     def _scale_changed(self):
@@ -255,7 +255,7 @@ class PlotGenerator(HasTraits):
             self.cached_data[self.plot_type] = x, y, z
 
         x, y, z = self.cached_data[self.plot_type]
-        if self.plot_type == PlotGenerator.PLOT_STACKED and self.flip_y_axis:
+        if self.plot_type == PlotGenerator.PLOT_STACKED and self.flip_order:
             z = z[::-1,:]
         return self.plots[self.plot_type].plot(x, y, z, scale=self.scale)
 
