@@ -41,18 +41,17 @@ class MainApp(HasTraits):
             VGroup(
                 UItem('open_files'),
                 UItem('help_button'),
+                UItem('generate_plot', enabled_when='object._has_data()'),
                 spring,
                 '_',
                 spring,
-                UItem('copy_to_clipboard'),
-                UItem('save_as_image'),
-                UItem('generate_plot'),
+                Label('Scale:', enabled_when='object._has_data()'),
+                UItem('scale', enabled_when='object._has_data()'),
                 spring,
                 '_',
                 spring,
-                Label('Scale:'),
-                UItem('scale'),
-                spring,
+                UItem('copy_to_clipboard', enabled_when='object._has_data()'),
+                UItem('save_as_image', enabled_when='object._has_data()'),
                 show_border=False
             ),
             VGroup(
@@ -64,6 +63,9 @@ class MainApp(HasTraits):
         ),
         resizable=True, title=title, width=size[0], height=size[1]
     )
+
+    def _has_data(self):
+        return len(self.datasets) != 0
 
     def __init__(self, *args, **kws):
         super(MainApp, self).__init__(*args, **kws)
@@ -84,13 +86,16 @@ class MainApp(HasTraits):
             self.file_paths = dlg.paths
 
     def _save_as_image_changed(self):
+        if len(self.datasets) == 0:
+            return
         filename = get_save_as_filename()
         if filename:
             PlotOutput.save_as_image(self.container, filename, change_bounds=False)
             open_file_with_default_handler(filename)
 
     def _copy_to_clipboard_changed(self):
-        PlotOutput.copy_to_clipboard(self.container)
+        if self.datasets:
+            PlotOutput.copy_to_clipboard(self.container)
 
     def _scale_changed(self):
         self._plot_datasets()
@@ -106,8 +111,9 @@ class MainApp(HasTraits):
         self.container.request_redraw()
 
     def _generate_plot_changed(self):
-        generator = PlotGenerator(datasets=self.datasets)
-        generator.show()
+        if self.datasets:
+            generator = PlotGenerator(datasets=self.datasets)
+            generator.show()
 
     def _help_button_changed(self):
         help_box = HelpBox()
