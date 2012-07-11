@@ -4,7 +4,7 @@ import numpy as np
 from enable.api import Component
 from traits.api import HasTraits, Instance
 
-from chaco.api import Plot, ArrayPlotData, add_default_axes, add_default_grids, PlotLabel
+from chaco.api import Plot, ArrayPlotData, PlotLabel
 from chaco.tools.api import TraitsTool, SimpleInspectorTool
 from chaco.overlays.api import SimpleInspectorOverlay
 
@@ -35,14 +35,18 @@ class RawDataPlot(HasTraits):
         self.plot.index_range.reset()
         self.plot.value_range.reset()
         self.zoom_tool.clear_undo_history()
-        self._tools_visible(True)
+        self.show_legend(False)
         self._set_scale(scale)
 
     def _set_scale(self, scale):
         self.plot.y_axis.title = 'Intensity - %s' % get_value_scale_label(scale)
 
-    def _tools_visible(self, visible=True):
+    def show_legend(self, visible=True):
         self.plot.legend.visible = visible
+
+    def show_grids(self, visible=True):
+        self.plot.x_grid.visible = visible
+        self.plot.y_grid.visible = visible
 
     def get_plot(self):
         return self.plot
@@ -77,9 +81,6 @@ class RawDataPlot(HasTraits):
         # Make a white background with grids and axes
         plot.bgcolor = "white"
         plot.pointer = "cross"
-
-        add_default_grids(plot)
-        add_default_axes(plot)
 
         # The PanTool allows panning around the plot
         self.pan_tool = KeyboardPanTool(plot, drag_button="left")

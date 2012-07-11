@@ -2,7 +2,7 @@ from os.path import basename
 
 from enable.api import ComponentEditor
 from traits.api import List, Str, HasTraits, Instance, Button, Enum, Bool
-from traitsui.api import Item, UItem, HGroup, VGroup, View, NullEditor, spring, Label
+from traitsui.api import Item, UItem, HGroup, VGroup, View, NullEditor, spring, Label, CheckListEditor
 from pyface.api import FileDialog, OK
 from chaco.api import OverlayPlotContainer
 
@@ -31,7 +31,7 @@ class MainApp(HasTraits):
     save_as_image = Button("Save as image...")
     generate_plot = Button("Generate plot...")
     help_button = Button("Help...")
-
+    options = List
     scale = Enum('linear', 'log', 'sqrt')
 
     raw_data_plot = Instance(RawDataPlot)
@@ -47,6 +47,7 @@ class MainApp(HasTraits):
                 spring,
                 Label('Scale:', enabled_when='object._has_data()'),
                 UItem('scale', enabled_when='object._has_data()'),
+                UItem('options', editor=CheckListEditor(name='_options'), style='custom', enabled_when='object._has_data()'),
                 spring,
                 '_',
                 spring,
@@ -77,6 +78,10 @@ class MainApp(HasTraits):
             bgcolor="white", use_backbuffer=True)
         self.pan_tool = None
         self.file_paths = [ "0.xye", "1.xye" ]
+        # The list of all options.
+        self._options = [ 'Show legend', 'Show gridlines' ]
+        # The list of currently set options, updated by the UI.
+        self.options = self._options
 
     def _open_files_changed(self):
         wildcard = 'XYE (*.xye)|*.xye|' \
@@ -84,6 +89,16 @@ class MainApp(HasTraits):
         dlg = FileDialog(title='Choose files', action='open files', wildcard=wildcard)
         if dlg.open() == OK:
             self.file_paths = dlg.paths
+
+    def _options_changed(self, opts):
+        # opts just contains the keys that are true.
+        # Create a dict all_options that has True/False for each item.
+        all_options = dict.fromkeys(self._options, False)
+        true_options = dict.fromkeys(opts, True)
+        all_options.update(true_options)
+        self.raw_data_plot.show_legend(all_options['Show legend'])
+        self.raw_data_plot.show_grids(all_options['Show gridlines'])
+        self.container.request_redraw()
 
     def _save_as_image_changed(self):
         if len(self.datasets) == 0:
