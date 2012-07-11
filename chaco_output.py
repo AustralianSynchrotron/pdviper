@@ -12,8 +12,12 @@ class PlotOutput(object):
         else:
             width, height = plot.outer_bounds
 
-        gc = PlotGraphicsContext((width, height), dpi=72)
+        gc = PlotGraphicsContext((width, height), dpi=300)
+        # Backbuffering apparently causes poor quality rendering of underlays
+        backbuffer = plot.use_backbuffer
+        plot.use_backbuffer = False
         gc.render_component(plot)
+        plot.use_backbuffer = backbuffer
 
         try:
             gc.save(filename)
@@ -38,8 +42,11 @@ class PlotOutput(object):
 
         width, height = plot.outer_bounds
 
-        gc = PlotGraphicsContext((width, height), dpi=72)
+        gc = PlotGraphicsContext((width, height), dpi=300)
+        backbuffer = plot.use_backbuffer
+        plot.use_backbuffer = False
         gc.render_component(plot)
+        plot.use_backbuffer = backbuffer
 
         # Create a bitmap the same size as the plot
         # and copy the plot data to it
