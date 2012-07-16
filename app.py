@@ -174,7 +174,7 @@ class PlotGenerator(HasTraits):
         }
         self.plot_container = OverlayPlotContainer(
             bgcolor='white', use_backbuffer=True,
-            padding_left=20, fill_padding=True)
+            padding_left=30, fill_padding=True)
         self.datasets = kws['datasets']
         self.cached_data = {}
         self._plot_type_changed()
@@ -274,7 +274,7 @@ class HelpBox(HasTraits):
 
 
 def get_save_as_filename():
-    wildcard =  'PNG file (*.png)|*.png|\nTIFF file (*.tiff)|*.tiff|'
+    wildcard =  'PNG file (*.png)|*.png|\nTIFF file (*.tiff)|*.tiff|\nSVG file (*.svg)|*.svg|'
     dialog = FileDialog(action='save as', title='Save as', wildcard=wildcard)
     if dialog.open() == OK:
         filename = dialog.path

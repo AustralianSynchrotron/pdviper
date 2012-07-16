@@ -47,7 +47,8 @@ class StackedPlot(ChacoPlot):
         z = np.vstack([z, z.shape[1] * [np.nan]])
         mlp = create_multi_line_plot_renderer(x[0], y, z, amplitude=2.0)
 
-        plot = Plot(padding_left=60)
+        plot = Plot()
+        plot.bgcolor = 'white'
         plot.add(mlp)
 
         x_axis = PlotAxis(component=plot,
@@ -63,7 +64,11 @@ class StackedPlot(ChacoPlot):
                           title_font='modern 14')
         plot.overlays.extend([x_axis, y_axis])
         plot.tools.append(TraitsTool(plot))
-        return plot
+        container = HPlotContainer(padding_left=30,
+                                   fill_padding=True,
+                                   use_backbuffer=True)
+        container.add(plot)
+        return container
 
 
 class Surface2DPlot(ChacoPlot):

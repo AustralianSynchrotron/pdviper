@@ -1,6 +1,14 @@
 from pyface.api import error
-from chaco.api import PlotGraphicsContext
+from chaco.api import PlotGraphicsContext, PlotGraphicsContextMixin
 
+from output.svg import GraphicsContext as SVGGraphicsContext
+from output.ps import PSGC
+
+class SVGPlotGraphicsContext(PlotGraphicsContextMixin, SVGGraphicsContext):
+    pass
+
+class PSPlotGraphicsContext(PlotGraphicsContextMixin, PSGC):
+    pass
 
 class PlotOutput(object):
     @staticmethod
@@ -12,7 +20,12 @@ class PlotOutput(object):
         else:
             width, height = plot.outer_bounds
 
-        gc = PlotGraphicsContext((width, height), dpi=300)
+        if filename.endswith('.svg'):
+            gc = SVGPlotGraphicsContext((width, height), dpi=72)
+        elif filename.endswith('.eps') or filename.endswith('.ps'):
+            gc = PSPlotGraphicsContext((width, height), dpi=72)
+        else:
+            gc = PlotGraphicsContext((width, height), dpi=300)
         # Backbuffering apparently causes poor quality rendering of underlays
         backbuffer = plot.use_backbuffer
         plot.use_backbuffer = False
@@ -42,7 +55,7 @@ class PlotOutput(object):
 
         width, height = plot.outer_bounds
 
-        gc = PlotGraphicsContext((width, height), dpi=300)
+        gc = PlotGraphicsContext((width, height), dpi=72)
         backbuffer = plot.use_backbuffer
         plot.use_backbuffer = False
         gc.render_component(plot)
