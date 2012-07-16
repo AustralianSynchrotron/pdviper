@@ -19,7 +19,7 @@
 # Major library imports
 import os
 import sys
-import cStringIO
+from cStringIO import StringIO
 from numpy import arange, ravel
 
 # Local, relative Kiva imports
@@ -28,6 +28,7 @@ from kiva import basecore2d
 from kiva import constants
 from kiva.constants import FILL, STROKE, FILL_STROKE, EOF_FILL, EOF_FILL_STROKE
 from kiva.constants import *
+from kiva import agg
 
 # This backend does not have compiled paths, yet.
 CompiledPath = None
@@ -58,7 +59,7 @@ except ImportError:
     log = FakeLogger()
 
 def _strpoints(points):
-    c = cStringIO.StringIO()
+    c = StringIO()
     for x,y in points:
         c.write('%3.2f,%3.2f ' % (x,y))
     return c.getvalue()
@@ -123,7 +124,7 @@ class PSGC(basecore2d.GraphicsContextBase):
         super(PSGC, self).__init__(size, *args, **kwargs)
         self.size = size
         self._height = size[1]
-        self.contents = cStringIO.StringIO()
+        self.contents = StringIO()
         self._clipmap = {}
         self.clip_id = None
         self.contents.write('%.3f %.3f scale\n' % (1.0, -1.0))
@@ -198,7 +199,51 @@ class PSGC(basecore2d.GraphicsContextBase):
         """
         from PIL import Image as PilImage
 
-        # Not implemented yet
+        if type(img) == type(array([])):
+            # Numeric array
+            converted_img = agg.GraphicsContextArray(img, pix_format='rgba32')
+            format = 'RGBA'
+        elif isinstance(img, agg.GraphicsContextArray):
+            if img.format().startswith('RGBA'):
+                format = 'RGBA'
+            elif img.format().startswith('RGB'):
+                format = 'RGB'
+            else:
+                converted_img = img.convert_pixel_format('rgba32', inplace=0)
+                format = 'RGBA'
+            # Should probably take this into account
+            # interp = img.get_image_interpolation()
+        else:
+            warnings.warn("Cannot render image of type %r into SVG context."
+                          % type(img))
+            return
+
+        # converted_img now holds an Agg graphics context with the image
+        pil_img = PilImage.fromstring(format,
+                                      (converted_img.width(),
+                                       converted_img.height()),
+                                      converted_img.bmp_array.tostring())
+        if rect == None:
+            rect = (0, 0, img.width(), img.height())
+
+        # PIL PS output doesn't support alpha.
+        if format != 'RGB':
+            pil_img = pil_img.convert('RGB')
+
+        left, top, width, height = rect
+        if width != img.width() or height != img.height():
+            # This is not strictly required.
+            pil_img = pil_img.resize((int(width), int(height)), PilImage.NEAREST)
+
+        self.contents.write('gsave\n')
+        self.contents.write('initmatrix\n')
+        m = self.get_ctm()
+        self.contents.write('[%.3f %.3f %.3f %.3f %.3f %.3f] concat\n' % \
+                            affine.affine_params(m))
+        self.contents.write('%.3f %.3f translate\n' % (left, top))
+        # Rely on PIL's EpsImagePlugin to do the hard work here.
+        pil_img.save(self.contents, 'eps', eps=0)
+        self.contents.write('grestore\n')
 
     def device_transform_device_ctm(self,func,args):
         if func == LOAD_CTM:

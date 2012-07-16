@@ -274,7 +274,7 @@ class HelpBox(HasTraits):
 
 
 def get_save_as_filename():
-    wildcard =  'PNG file (*.png)|*.png|\nTIFF file (*.tiff)|*.tiff|\nSVG file (*.svg)|*.svg|'
+    wildcard =  'PNG file (.png)|*.png|TIFF file (.tiff)|*.tiff|EPS file (.eps)|*.eps|SVG file (.svg)|*.svg|'
     dialog = FileDialog(action='save as', title='Save as', wildcard=wildcard)
     if dialog.open() == OK:
         filename = dialog.path
