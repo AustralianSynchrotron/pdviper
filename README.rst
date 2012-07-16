@@ -29,7 +29,9 @@ Sculpd relies on the (free) `Enthought Python Distribution`_ for easy one-click 
 .. _`Enthought Python Distribution`: http://www.enthought.com/products/epd_free.php
 
 Run
--------
+---
 To run sculpd, just call python on app.py from the cloned project directory: ::
+
     $ ipython app.py
+
 
