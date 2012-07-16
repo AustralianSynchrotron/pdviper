@@ -33,7 +33,7 @@ class MplPlot(BasePlot, HasTraitsGroup):
         super(MplPlot, self).__init__(*args, **kws)
         import matplotlib.pyplot as plt
         self.figure = plt.figure()
-        self.figure.subplots_adjust(bottom=0, left=0, top=1, right=1)
+        self.figure.subplots_adjust(bottom=0.05, left=0, top=1, right=0.95)
         self.ax = None
         # This must be a weak reference, otherwise the entire app will
         # hang on exit.
@@ -99,6 +99,7 @@ class MplPlot(BasePlot, HasTraitsGroup):
         from mpl_toolkits.mplot3d import Axes3D
         from matplotlib.cm import jet
         self.figure.clear()
+        self.figure.set_facecolor('white')
         ax = self.figure.add_subplot(111, projection='3d')
         ax.set_xlabel('Angle (2Theta)')
         ax.set_ylabel('Dataset')
