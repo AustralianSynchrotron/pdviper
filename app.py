@@ -78,7 +78,7 @@ class MainApp(HasTraits):
             bgcolor="white", use_backbuffer=True)
         self.pan_tool = None
         # The list of all options.
-        self._options = [ 'Show legend', 'Show gridlines' ]
+        self._options = [ 'Show legend', 'Show gridlines', 'Show crosslines' ]
         # The list of currently set options, updated by the UI.
         self.options = self._options
         self.file_paths = [ "0.xye", "1.xye" ]
@@ -98,6 +98,7 @@ class MainApp(HasTraits):
         all_options.update(true_options)
         self.raw_data_plot.show_legend(all_options['Show legend'])
         self.raw_data_plot.show_grids(all_options['Show gridlines'])
+        self.raw_data_plot.show_crosslines(all_options['Show crosslines'])
         self.container.request_redraw()
 
     def _save_as_image_changed(self):
