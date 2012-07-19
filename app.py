@@ -77,11 +77,11 @@ class MainApp(HasTraits):
             padding_left=50, fill_padding=True,
             bgcolor="white", use_backbuffer=True)
         self.pan_tool = None
-        self.file_paths = [ "0.xye", "1.xye" ]
         # The list of all options.
         self._options = [ 'Show legend', 'Show gridlines' ]
         # The list of currently set options, updated by the UI.
         self.options = self._options
+        self.file_paths = [ "0.xye", "1.xye" ]
 
     def _open_files_changed(self):
         wildcard = 'XYE (*.xye)|*.xye|' \
@@ -123,6 +123,7 @@ class MainApp(HasTraits):
 
     def _plot_datasets(self):
         self.raw_data_plot.plot_datasets(self.datasets, scale=self.scale)
+        self._options_changed(self.options)
         self.container.request_redraw()
 
     def _generate_plot_changed(self):
