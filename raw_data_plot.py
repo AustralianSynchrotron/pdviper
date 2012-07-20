@@ -92,7 +92,8 @@ class RawDataPlot(HasTraits):
                         x_min_zoom_factor=-inf, y_min_zoom_factor=-inf,
                         tool_mode="box", always_on=True,
                         drag_button="right", #axis="index",
-                        pointer="cross")
+                        pointer="cross",
+                        zoom_to_mouse=True)
         plot.overlays.append(self.zoom_tool)
 
         tool = SimpleInspectorTool(plot)

@@ -7,15 +7,11 @@ from parab import load_params
 class XYEDataset(object):
     @staticmethod
     def _load_xye_data(filename):
-        f = open(filename)
-        data = genfromtxt(f, delimiter=' ')
-        f.close()
-        return data
+        return genfromtxt(filename, delimiter=' ')
 
     @staticmethod
     def from_file(filename, positions=2):
         data = XYEDataset._load_xye_data(filename)
-
         metadata = XYEDataset.load_metadata(filename)
         return XYEDataset(data, name=basename(filename), source=filename,
                           metadata=metadata)

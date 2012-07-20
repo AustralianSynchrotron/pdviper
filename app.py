@@ -40,12 +40,13 @@ class MainApp(HasTraits):
         HGroup(
             VGroup(
                 UItem('open_files'),
-                UItem('help_button'),
                 UItem('generate_plot', enabled_when='object._has_data()'),
+                UItem('help_button'),
                 spring,
                 '_',
                 spring,
-                Label('Scale:', enabled_when='object._has_data()'),
+                #~ Label('Scale:', enabled_when='object._has_data()'),
+                Label('Scale:'),
                 UItem('scale', enabled_when='object._has_data()'),
                 UItem('options', editor=CheckListEditor(name='_options'), style='custom', enabled_when='object._has_data()'),
                 spring,
