@@ -1,5 +1,0 @@
-Left drag = Pan the plot
-Right drag = Zoom a selection of the plot
-Right click = Undo zoom
-Esc = Reset zoom/pan
-Mousewheel = Zoom in/out

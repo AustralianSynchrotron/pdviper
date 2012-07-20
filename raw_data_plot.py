@@ -8,7 +8,7 @@ from chaco.api import Plot, ArrayPlotData, PlotLabel
 from chaco.tools.api import TraitsTool, SimpleInspectorTool
 from chaco.overlays.api import SimpleInspectorOverlay
 
-from tools import ClickUndoZoomTool, KeyboardPanTool
+from tools import ClickUndoZoomTool, KeyboardPanTool, PointerControlTool, LineInspectorTool
 from processing import rescale
 from labels import get_value_scale_label
 
@@ -48,6 +48,14 @@ class RawDataPlot(HasTraits):
         self.plot.x_grid.visible = visible
         self.plot.y_grid.visible = visible
 
+    def show_crosslines(self, visible=True):
+        for crossline in self.crosslines:
+            crossline.visible = visible
+        if visible:
+            self.pointer_tool.inner_pointer = 'blank'
+        else:
+            self.pointer_tool.inner_pointer = 'cross'
+
     def get_plot(self):
         return self.plot
 
@@ -80,7 +88,8 @@ class RawDataPlot(HasTraits):
         """Sets up the background, and several tools on a plot"""
         # Make a white background with grids and axes
         plot.bgcolor = "white"
-        plot.pointer = "cross"
+        #self.pointer = 'cross'
+        #plot.pointer = self.pointer
 
         # The PanTool allows panning around the plot
         self.pan_tool = KeyboardPanTool(plot, drag_button="left")
@@ -96,6 +105,22 @@ class RawDataPlot(HasTraits):
                         zoom_to_mouse=True)
         plot.overlays.append(self.zoom_tool)
 
+        x_crossline = LineInspectorTool(component=plot,
+                                    axis='index_x',
+                                    inspect_mode="indexed",
+                                    #write_metadata=True,
+                                    is_listener=False,
+                                    color="grey")
+        y_crossline = LineInspectorTool(component=plot,
+                                    axis='index_y',
+                                    inspect_mode="indexed",
+                                    #write_metadata=True,
+                                    color="grey",
+                                    is_listener=False)
+        plot.overlays.append(x_crossline)
+        plot.overlays.append(y_crossline)
+        self.crosslines = (x_crossline, y_crossline)
+
         tool = SimpleInspectorTool(plot)
         plot.tools.append(tool)
         overlay = SimpleInspectorOverlay(component=plot, inspector=tool, align="lr")
@@ -104,4 +129,8 @@ class RawDataPlot(HasTraits):
         overlay.field_formatters = [[formatter]]
         overlay.alternate_position = (-25, -25)
         plot.overlays.append(overlay)
+
+        self.pointer_tool = PointerControlTool(component=plot, pointer='arrow')
+        plot.tools.append(self.pointer_tool)
+
 

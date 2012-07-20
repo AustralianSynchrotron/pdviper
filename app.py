@@ -78,11 +78,11 @@ class MainApp(HasTraits):
             padding_left=50, fill_padding=True,
             bgcolor="white", use_backbuffer=True)
         self.pan_tool = None
-        self.file_paths = [ "0.xye", "1.xye" ]
         # The list of all options.
-        self._options = [ 'Show legend', 'Show gridlines' ]
+        self._options = [ 'Show legend', 'Show gridlines', 'Show crosslines' ]
         # The list of currently set options, updated by the UI.
         self.options = self._options
+        self.file_paths = [ "0.xye", "1.xye" ]
 
     def _open_files_changed(self):
         wildcard = 'XYE (*.xye)|*.xye|' \
@@ -99,6 +99,7 @@ class MainApp(HasTraits):
         all_options.update(true_options)
         self.raw_data_plot.show_legend(all_options['Show legend'])
         self.raw_data_plot.show_grids(all_options['Show gridlines'])
+        self.raw_data_plot.show_crosslines(all_options['Show crosslines'])
         self.container.request_redraw()
 
     def _save_as_image_changed(self):
@@ -124,6 +125,7 @@ class MainApp(HasTraits):
 
     def _plot_datasets(self):
         self.raw_data_plot.plot_datasets(self.datasets, scale=self.scale)
+        self._options_changed(self.options)
         self.container.request_redraw()
 
     def _generate_plot_changed(self):
@@ -271,7 +273,14 @@ class HelpBox(HasTraits):
 
     def __init__(self, *args, **kws):
         super(HelpBox, self).__init__(*args, **kws)
-        self.help_text = open('help_text.txt').read()
+        self.help_text = \
+"""
+Left drag = Pan the plot
+Right drag = Zoom a selection of the plot
+Right click = Undo zoom
+Esc = Reset zoom/pan
+Mousewheel = Zoom in/out
+"""
 
 
 def get_save_as_filename():
@@ -293,8 +302,10 @@ def open_file_with_default_handler(filename):
 
 
 
-demo = MainApp()
+def main():
+    demo = MainApp()
+    demo.configure_traits()
 
 if __name__ == "__main__":
-    demo.configure_traits()
+    main()
 
