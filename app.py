@@ -272,7 +272,14 @@ class HelpBox(HasTraits):
 
     def __init__(self, *args, **kws):
         super(HelpBox, self).__init__(*args, **kws)
-        self.help_text = open('help_text.txt').read()
+        self.help_text = \
+"""
+Left drag = Pan the plot
+Right drag = Zoom a selection of the plot
+Right click = Undo zoom
+Esc = Reset zoom/pan
+Mousewheel = Zoom in/out
+"""
 
 
 def get_save_as_filename():
