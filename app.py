@@ -294,8 +294,10 @@ def open_file_with_default_handler(filename):
 
 
 
-demo = MainApp()
+def main():
+    demo = MainApp()
+    demo.configure_traits()
 
 if __name__ == "__main__":
-    demo.configure_traits()
+    main()
 
