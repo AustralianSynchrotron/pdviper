@@ -1,5 +1,5 @@
 from os.path import basename
-from numpy import genfromtxt
+from numpy import loadtxt
 
 from parab import load_params
 
@@ -7,7 +7,7 @@ from parab import load_params
 class XYEDataset(object):
     @staticmethod
     def _load_xye_data(filename):
-        return genfromtxt(filename, delimiter=' ')
+        return loadtxt(filename)
 
     @staticmethod
     def from_file(filename, positions=2):
