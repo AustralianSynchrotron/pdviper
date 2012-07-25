@@ -157,6 +157,7 @@ class PlotGenerator(HasTraits):
     PLOT_2D = "2D surface"
 
     plot_type = Enum(PLOT_STACKED, PLOT_2D, PLOT_3D)
+    reset_button = Button("Reset view")
     save_button = Button("Save plot...")
     copy_button = Button("Copy to clipboard")
     plot_container = Instance(OverlayPlotContainer)
@@ -197,6 +198,7 @@ class PlotGenerator(HasTraits):
                     UItem('plot_type', style='custom'),#, padding=5),
                     spring,
                     UItem('scale'),
+                    UItem('reset_button'),
                     spring,
                     UItem('save_button'),
                     UItem('copy_button'),
@@ -225,6 +227,9 @@ class PlotGenerator(HasTraits):
 
     def _scale_changed(self):
         self._plot_type_changed(replot=True)
+
+    def _reset_button_changed(self):
+        self.plots[self.plot_type].reset_view()
 
     def _update_status(self, status, delay=0):
         def _update():

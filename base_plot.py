@@ -8,3 +8,6 @@ class BasePlot(object):
         self.component = self._plot(*data, **kwargs)
         return self.component
 
+    def reset_view(self):
+        self._reset_view()
+

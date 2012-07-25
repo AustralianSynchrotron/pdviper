@@ -70,6 +70,9 @@ class StackedPlot(ChacoPlot):
         container.add(plot)
         return container
 
+    def _reset_view(self):
+        pass
+
 
 class Surface2DPlot(ChacoPlot):
     def _prepare_data(self, datasets):
@@ -101,12 +104,12 @@ class Surface2DPlot(ChacoPlot):
         plot.y_axis.tick_interval = 1.0
         actual_plot = plot.plots["surface2d"][0]
 
-        zoom = ClickUndoZoomTool(plot,
+        self.plot_zoom_tool = ClickUndoZoomTool(plot,
                         x_min_zoom_factor=-np.inf, y_min_zoom_factor=-np.inf,
                         tool_mode="box", always_on=True,
                         drag_button="right",
                         pointer="cross")
-        plot.overlays.append(zoom)
+        plot.overlays.append(self.plot_zoom_tool)
         plot.tools.append(TraitsTool(plot))
 
         # Add a color bar
@@ -131,10 +134,11 @@ class Surface2DPlot(ChacoPlot):
         colorbar.overlays.append(self.colorbar_zoom_tool)
 
         # Add a label to the top of the color bar
-        colorbar_label = \
-                PlotLabel('Intensity\n{:^9}'.format(get_value_scale_label(scale)),
-                      component=colorbar,
-                      font='modern 12')
+        colorbar_label = PlotLabel(
+            'Intensity\n{:^9}'.format(get_value_scale_label(scale)),
+            component=colorbar,
+            font='modern 12'
+        )
         colorbar.overlays.append(colorbar_label)
 
         # Add the plot and colorbar side-by-side
@@ -142,4 +146,8 @@ class Surface2DPlot(ChacoPlot):
         container.add(plot)
         container.add(colorbar)
         return container
+
+    def _reset_view(self):
+        self.plot_zoom_tool.revert_history_all()
+        self.colorbar_zoom_tool.revert_history_all()
 
