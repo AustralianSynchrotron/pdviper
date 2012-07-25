@@ -4,12 +4,12 @@ from numpy import array
 from enable.api import Component
 from traits.api import HasTraits, Instance
 from chaco.api import Plot, ArrayPlotData, jet, ColorBar, LinearMapper, HPlotContainer, PlotAxis, PlotLabel
-from chaco.tools.api import TraitsTool, PanTool
+from chaco.tools.api import TraitsTool
 from chaco.default_colormaps import fix
 
 from chaco_output import PlotOutput
 from multi_line_plot import create_multi_line_plot_renderer
-from tools import ClickUndoZoomTool
+from tools import ClickUndoZoomTool, PanToolWithHistory
 from processing import stack_datasets, interpolate_datasets, bin_data, cubic_interpolate
 from base_plot import BasePlot
 from labels import get_value_scale_label
@@ -119,11 +119,16 @@ class Surface2DPlot(ChacoPlot):
                         width=30,
                         padding=40)
         # Add pan and zoom tools to the colorbar
-        pan_tool = PanTool(colorbar, constrain_direction="y", constrain=True)
+        self.colorbar_zoom_tool = ClickUndoZoomTool(colorbar,
+                                                    axis="index",
+                                                    tool_mode="range",
+                                                    always_on=True,
+                                                    drag_button="right")
+        pan_tool = PanToolWithHistory(colorbar,
+                                      history_tool=self.colorbar_zoom_tool,
+                                      constrain_direction="y", constrain=True)
         colorbar.tools.append(pan_tool)
-        zoom_overlay = ClickUndoZoomTool(colorbar, axis="index", tool_mode="range",
-                                always_on=True, drag_button="right")
-        colorbar.overlays.append(zoom_overlay)
+        colorbar.overlays.append(self.colorbar_zoom_tool)
 
         # Add a label to the top of the color bar
         colorbar_label = \
