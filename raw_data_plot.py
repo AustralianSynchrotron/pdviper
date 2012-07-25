@@ -85,10 +85,6 @@ class RawDataPlot(HasTraits):
         #self.pointer = 'cross'
         #plot.pointer = self.pointer
 
-        # The PanTool allows panning around the plot
-        self.pan_tool = KeyboardPanTool(plot, drag_button="left")
-        plot.tools.append(self.pan_tool)
-
         # The ZoomTool tool is stateful and allows drawing a zoom
         # box to select a zoom region.
         self.zoom_tool = ClickUndoZoomTool(plot,
@@ -97,6 +93,11 @@ class RawDataPlot(HasTraits):
                         drag_button="right", #axis="index",
                         pointer="cross",
                         zoom_to_mouse=True)
+
+        # The PanTool allows panning around the plot
+        self.pan_tool = KeyboardPanTool(plot, drag_button="left", history_tool=self.zoom_tool)
+
+        plot.tools.append(self.pan_tool)
         plot.overlays.append(self.zoom_tool)
 
         x_crossline = LineInspectorTool(component=plot,

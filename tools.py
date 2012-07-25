@@ -3,16 +3,22 @@ from numpy import array
 from enable.api import KeySpec, BaseTool
 from traits.api import Instance
 from chaco.tools.api import PanTool, ZoomTool, LineInspector
+from chaco.tools.tool_states import PanState
 from chaco.api import AbstractOverlay
 
 
 class KeyboardPanTool(PanTool):
+    """Allow panning with the keyboard arrow keys"""
+
     left_key = Instance(KeySpec, args=("Left",))
     right_key = Instance(KeySpec, args=("Right",))
     up_key = Instance(KeySpec, args=("Up",))
     down_key = Instance(KeySpec, args=("Down",))
 
     def __init__(self, *args, **kwargs):
+        self.history_tool = kwargs.get('history_tool', None)
+        if 'history_tool' in kwargs:
+            del kwargs['history_tool']
         super(KeyboardPanTool, self).__init__(*args, **kwargs)
 
     def normal_key_pressed(self, event):
@@ -33,8 +39,24 @@ class KeyboardPanTool(PanTool):
             self.panning_mouse_move(event)
             self._end_pan(event)
 
+    def _start_pan(self, event):
+        super(KeyboardPanTool, self)._start_pan(event)
+        if self.history_tool is not None:
+            # Save the current data range center so this movement can be
+            # undone later.
+            self._prev_state = self.history_tool.data_range_center()
+
+    def _end_pan(self, event):
+        super(KeyboardPanTool, self)._end_pan(event)
+        if self.history_tool is not None:
+            next = self.history_tool.data_range_center()
+            prev = self._prev_state
+            self.history_tool.append_state(PanState(prev, next))
+
 
 class PointerControlTool(BaseTool):
+    """Allow the pointer inside the bounds of a plot to be different to the
+       pointer outside the bounds."""
     def __init__(self, inner_pointer='arrow', *args, **kwargs):
         super(PointerControlTool, self).__init__(*args, **kwargs)
         # self.pointer defined in BaseTool
@@ -92,6 +114,18 @@ class ClickUndoZoomTool(ZoomTool):
     def clear_undo_history(self):
         self._history_index = 0
         self._history = self._history[:1]
+
+    def _get_mapper_center(self, mapper):
+        bounds = mapper.range.low, mapper.range.high
+        return bounds[0] + (bounds[1] - bounds[0])/2.
+
+    def data_range_center(self):
+        x_center = self._get_mapper_center(self._get_x_mapper())
+        y_center = self._get_mapper_center(self._get_y_mapper())
+        return x_center, y_center
+
+    def append_state(self, state):
+        self._append_state(state, set_index=True)
 
 
 # Even thought it is an overlay, LineInspector doesn't seem to inherit
