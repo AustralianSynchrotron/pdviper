@@ -1,9 +1,9 @@
 from numpy import array
 
 from traits.api import Instance, Range, Bool
-from traitsui.api import Item, UItem, VGroup, CustomEditor, DefaultOverride
+from traitsui.api import Item, UItem, VGroup, DefaultOverride
 
-from mpl_figure_editor import matplotlib_figure_editor
+from mpl_figure_editor import MPLFigureEditor
 from matplotlib.figure import Figure
 from traits_extensions import HasTraitsGroup
 
@@ -25,8 +25,7 @@ class MplPlot(BasePlot, HasTraitsGroup):
         Item('elevation',
              editor=DefaultOverride(mode='slider', auto_set=False, enter_set=True)),
         Item('quality'),
-        UItem('figure',
-             editor=CustomEditor(matplotlib_figure_editor)),
+        UItem('figure', editor=MPLFigureEditor()),
     )
 
     def __init__(self, callback_obj=None, *args, **kws):
