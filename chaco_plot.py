@@ -54,7 +54,7 @@ class StackedPlot(ChacoPlot):
         x_axis = PlotAxis(component=plot,
                           mapper=mlp.index_mapper,
                           orientation='bottom',
-                          title='Angle (2theta)',
+                          title=u'Angle (2\u0398)',
                           title_font='modern 14')
         y_axis_title = 'Normalized intensity - %s' % get_value_scale_label(scale)
         y_axis = PlotAxis(component=plot,
@@ -93,7 +93,8 @@ class Surface2DPlot(ChacoPlot):
                       origin=origin,
                       )
         plot.default_origin = origin
-        plot.x_axis.title = "Angle (2theta)"
+        plot.x_axis.title = u'Angle (2\u0398)'
+
         plot.x_axis.title_font = 'modern 14'
         plot.y_axis.title = "Dataset"
         plot.y_axis.title_font = 'modern 14'

@@ -70,7 +70,7 @@ class RawDataPlot(HasTraits):
         self.plot.legend.plots = self.plots
         self.plot.legend.visible = False
 
-        self.plot.x_axis.title = "Angle (2theta)"
+        self.plot.x_axis.title = u'Angle (2\u0398)'
         self.plot.x_axis.title_font = 'modern 14'
         self.plot.y_axis.title_font = 'modern 14'
         self._set_scale('linear')

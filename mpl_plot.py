@@ -101,7 +101,7 @@ class MplPlot(BasePlot, HasTraitsGroup):
         self.figure.clear()
         self.figure.set_facecolor('white')
         ax = self.figure.add_subplot(111, projection='3d')
-        ax.set_xlabel('Angle (2Theta)')
+        ax.set_xlabel('Angle (2$\Theta$)')
         ax.set_ylabel('Dataset')
         ax.set_zlabel('Intensity - %s' % get_value_scale_label(scale))
         ax.set_yticks(range(1, y_rows + 1), ((y_rows + 1) / 10) * 10)
