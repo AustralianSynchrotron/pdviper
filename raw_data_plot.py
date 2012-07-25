@@ -4,7 +4,7 @@ import numpy as np
 from enable.api import Component
 from traits.api import HasTraits, Instance
 
-from chaco.api import Plot, ArrayPlotData, PlotLabel
+from chaco.api import Plot, ArrayPlotData
 from chaco.tools.api import TraitsTool, SimpleInspectorTool
 from chaco.overlays.api import SimpleInspectorOverlay
 
@@ -32,11 +32,14 @@ class RawDataPlot(HasTraits):
             plot = self.plot.plot((name + '_x', name + '_y'),
                                   name=name, type='line', color='auto')
             self.plots[name] = plot
+        self.reset_view()
+        self.show_legend(True)
+        self._set_scale(scale)
+
+    def reset_view(self):
         self.plot.index_range.reset()
         self.plot.value_range.reset()
         self.zoom_tool.clear_undo_history()
-        self.show_legend(True)
-        self._set_scale(scale)
 
     def _set_scale(self, scale):
         self.plot.y_axis.title = 'Intensity - %s' % get_value_scale_label(scale)

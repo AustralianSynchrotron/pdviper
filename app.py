@@ -31,6 +31,7 @@ class MainApp(HasTraits):
     save_as_image = Button("Save as image...")
     generate_plot = Button("Generate plot...")
     help_button = Button("Help...")
+    reset_button = Button("Reset view")
     options = List
     scale = Enum('linear', 'log', 'sqrt')
 
@@ -49,6 +50,7 @@ class MainApp(HasTraits):
                 Label('Scale:'),
                 UItem('scale', enabled_when='object._has_data()'),
                 UItem('options', editor=CheckListEditor(name='_options'), style='custom', enabled_when='object._has_data()'),
+                UItem('reset_button', enabled_when='object._has_data()'),
                 spring,
                 '_',
                 spring,
@@ -136,6 +138,9 @@ class MainApp(HasTraits):
     def _help_button_changed(self):
         help_box = HelpBox()
         help_box.edit_traits()
+
+    def _reset_button_changed(self):
+        self.raw_data_plot.reset_view()
 
     def _add_xye_dataset(self, file_path):
         try:
