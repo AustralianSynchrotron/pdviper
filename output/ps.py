@@ -127,7 +127,6 @@ class PSGC(basecore2d.GraphicsContextBase):
         self.contents = StringIO()
         self._clipmap = {}
         self.clip_id = None
-        self.contents.write('%.3f %.3f scale\n' % (1.0, -1.0))
 
     def width(self):
         return self.size[0]

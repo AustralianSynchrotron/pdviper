@@ -75,12 +75,6 @@ class RawDataPlot(HasTraits):
         self.plot.y_axis.title_font = 'modern 14'
         self._set_scale('linear')
 
-        # Add the title at the top
-        self.plot.overlays.append(PlotLabel("XYE data",
-                                       component=self.plot,
-                                       font="swiss 16",
-                                       overlay_position="top"))
-
         # Add the traits inspector tool to the container
         self.plot.tools.append(TraitsTool(self.plot))
 
