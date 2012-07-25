@@ -25,7 +25,8 @@ class PanToolWithHistory(PanTool):
         if self.history_tool is not None:
             next = self.history_tool.data_range_center()
             prev = self._prev_state
-            self.history_tool.append_state(PanState(prev, next))
+            if next != prev:
+                self.history_tool.append_state(PanState(prev, next))
 
 
 class KeyboardPanTool(PanToolWithHistory):
