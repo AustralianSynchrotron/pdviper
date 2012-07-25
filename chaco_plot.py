@@ -13,6 +13,7 @@ from tools import ClickUndoZoomTool, PanToolWithHistory
 from processing import stack_datasets, interpolate_datasets, bin_data, cubic_interpolate
 from base_plot import BasePlot
 from labels import get_value_scale_label
+import settings
 
 
 class ChacoPlot(BasePlot, HasTraits):
@@ -107,7 +108,7 @@ class Surface2DPlot(ChacoPlot):
         self.plot_zoom_tool = ClickUndoZoomTool(plot,
                         x_min_zoom_factor=-np.inf, y_min_zoom_factor=-np.inf,
                         tool_mode="box", always_on=True,
-                        drag_button="right",
+                        drag_button=settings.zoom_button,
                         pointer="cross")
         plot.overlays.append(self.plot_zoom_tool)
         plot.tools.append(TraitsTool(plot))
@@ -126,10 +127,11 @@ class Surface2DPlot(ChacoPlot):
                                                     axis="index",
                                                     tool_mode="range",
                                                     always_on=True,
-                                                    drag_button="right")
+                                                    drag_button=settings.zoom_button)
         pan_tool = PanToolWithHistory(colorbar,
                                       history_tool=self.colorbar_zoom_tool,
-                                      constrain_direction="y", constrain=True)
+                                      constrain_direction="y", constrain=True,
+                                      drag_button=settings.pan_button)
         colorbar.tools.append(pan_tool)
         colorbar.overlays.append(self.colorbar_zoom_tool)
 

@@ -11,6 +11,7 @@ from chaco.overlays.api import SimpleInspectorOverlay
 from tools import ClickUndoZoomTool, KeyboardPanTool, PointerControlTool, LineInspectorTool
 from processing import rescale
 from labels import get_value_scale_label
+import settings
 
 
 class RawDataPlot(HasTraits):
@@ -83,22 +84,20 @@ class RawDataPlot(HasTraits):
 
     def _setup_plot_tools(self, plot):
         """Sets up the background, and several tools on a plot"""
-        # Make a white background with grids and axes
         plot.bgcolor = "white"
-        #self.pointer = 'cross'
-        #plot.pointer = self.pointer
 
         # The ZoomTool tool is stateful and allows drawing a zoom
         # box to select a zoom region.
         self.zoom_tool = ClickUndoZoomTool(plot,
                         x_min_zoom_factor=-inf, y_min_zoom_factor=-inf,
                         tool_mode="box", always_on=True,
-                        drag_button="right", #axis="index",
+                        drag_button=settings.zoom_button,
                         pointer="cross",
                         zoom_to_mouse=True)
 
         # The PanTool allows panning around the plot
-        self.pan_tool = KeyboardPanTool(plot, drag_button="left", history_tool=self.zoom_tool)
+        self.pan_tool = KeyboardPanTool(plot, drag_button=settings.pan_button,
+                                        history_tool=self.zoom_tool)
 
         plot.tools.append(self.pan_tool)
         plot.overlays.append(self.zoom_tool)
@@ -106,13 +105,11 @@ class RawDataPlot(HasTraits):
         x_crossline = LineInspectorTool(component=plot,
                                     axis='index_x',
                                     inspect_mode="indexed",
-                                    #write_metadata=True,
                                     is_listener=False,
                                     color="grey")
         y_crossline = LineInspectorTool(component=plot,
                                     axis='index_y',
                                     inspect_mode="indexed",
-                                    #write_metadata=True,
                                     color="grey",
                                     is_listener=False)
         plot.overlays.append(x_crossline)
