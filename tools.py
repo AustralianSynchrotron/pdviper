@@ -6,20 +6,35 @@ from chaco.tools.api import PanTool, ZoomTool, LineInspector
 from chaco.tools.tool_states import PanState
 from chaco.api import AbstractOverlay
 
+class PanToolWithHistory(PanTool):
+    def __init__(self, *args, **kwargs):
+        self.history_tool = kwargs.get('history_tool', None)
+        if 'history_tool' in kwargs:
+            del kwargs['history_tool']
+        super(PanToolWithHistory, self).__init__(*args, **kwargs)
 
-class KeyboardPanTool(PanTool):
+    def _start_pan(self, event):
+        super(PanToolWithHistory, self)._start_pan(event)
+        if self.history_tool is not None:
+            # Save the current data range center so this movement can be
+            # undone later.
+            self._prev_state = self.history_tool.data_range_center()
+
+    def _end_pan(self, event):
+        super(PanToolWithHistory, self)._end_pan(event)
+        if self.history_tool is not None:
+            next = self.history_tool.data_range_center()
+            prev = self._prev_state
+            self.history_tool.append_state(PanState(prev, next))
+
+
+class KeyboardPanTool(PanToolWithHistory):
     """Allow panning with the keyboard arrow keys"""
 
     left_key = Instance(KeySpec, args=("Left",))
     right_key = Instance(KeySpec, args=("Right",))
     up_key = Instance(KeySpec, args=("Up",))
     down_key = Instance(KeySpec, args=("Down",))
-
-    def __init__(self, *args, **kwargs):
-        self.history_tool = kwargs.get('history_tool', None)
-        if 'history_tool' in kwargs:
-            del kwargs['history_tool']
-        super(KeyboardPanTool, self).__init__(*args, **kwargs)
 
     def normal_key_pressed(self, event):
         x, y = (0, 0)
@@ -38,20 +53,6 @@ class KeyboardPanTool(PanTool):
             (event.x, event.y) = (self._original_xy[0] + x, self._original_xy[1] + y)
             self.panning_mouse_move(event)
             self._end_pan(event)
-
-    def _start_pan(self, event):
-        super(KeyboardPanTool, self)._start_pan(event)
-        if self.history_tool is not None:
-            # Save the current data range center so this movement can be
-            # undone later.
-            self._prev_state = self.history_tool.data_range_center()
-
-    def _end_pan(self, event):
-        super(KeyboardPanTool, self)._end_pan(event)
-        if self.history_tool is not None:
-            next = self.history_tool.data_range_center()
-            prev = self._prev_state
-            self.history_tool.append_state(PanState(prev, next))
 
 
 class PointerControlTool(BaseTool):
@@ -85,9 +86,7 @@ class ClickUndoZoomTool(ZoomTool):
         start = array(self._screen_start)
         end = array(self._screen_end)
         if sum(abs(end - start)) < self.minimum_screen_delta:
-            if self._history_index > 0:
-                self._history_index -= 1
-                self._prev_state_pressed()
+            self.revert_history()
 
     def selecting_left_up(self, event):
         """ Handles the left mouse button being released when the tool is in
@@ -114,6 +113,15 @@ class ClickUndoZoomTool(ZoomTool):
     def clear_undo_history(self):
         self._history_index = 0
         self._history = self._history[:1]
+
+    def revert_history(self):
+        if self._history_index > 0:
+            self._history_index -= 1
+            self._prev_state_pressed()
+
+    def revert_history_all(self):
+        self._history_index = 0
+        self._reset_state_pressed()
 
     def _get_mapper_center(self, mapper):
         bounds = mapper.range.low, mapper.range.high
