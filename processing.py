@@ -122,7 +122,7 @@ def interpolate_datasets(datasets, points):
     x_index = np.linspace(x_min, x_max, points)
     y_data = None
     for x_row, y_row in zip(x, y):
-        tck = interpolate.splrep(x_row, y_row, s=0, k=3)
+        tck = interpolate.splrep(x_row, y_row, s=0, k=1)
         y_new = interpolate.splev(x_index, tck, der=0)
         if y_data is None:
             y_data = array([y_new])
@@ -313,3 +313,4 @@ def fit_peaks_2theta(dataset, low_index=None, high_index=None, plot=False):
         plt.show()
 
     return ps
+

@@ -2,13 +2,12 @@ import numpy as np
 from numpy import array
 
 from enable.api import Component
-from traits.api import HasTraits, Instance
-from chaco.api import Plot, ArrayPlotData, jet, ColorBar, LinearMapper, HPlotContainer, PlotAxis, PlotLabel
+from traits.api import HasTraits, Instance, Range
+from chaco.api import Plot, ArrayPlotData, jet, ColorBar, LinearMapper, HPlotContainer, PlotAxis, PlotLabel, create_line_plot, OverlayPlotContainer, LinePlot
 from chaco.tools.api import TraitsTool
 from chaco.default_colormaps import fix
 
 from chaco_output import PlotOutput
-from multi_line_plot import create_multi_line_plot_renderer
 from tools import ClickUndoZoomTool, PanToolWithHistory
 from processing import stack_datasets, interpolate_datasets, bin_data, cubic_interpolate
 from base_plot import BasePlot
@@ -30,49 +29,72 @@ class ChacoPlot(BasePlot, HasTraits):
 
 
 class StackedPlot(ChacoPlot):
+    offset = Range(0.0, 2.0, 1.0)
+
     def _prepare_data(self, datasets):
+        interpolate = True
         stack = stack_datasets(datasets)
-        (x, z) = interpolate_datasets(stack, points=4800)
-        x = array([x] * len(datasets))
+        if interpolate:
+            (x, z) = interpolate_datasets(stack, points=4800)
+            x = array([x] * len(datasets))
+        else:
+            x, z = map(np.transpose, np.transpose(stack))
         y = array([ [i] * z.shape[1] for i in range(1, len(datasets) + 1) ])
         return x, y, z
 
     def _plot(self, x, y, z, scale):
-        num_plots = z.shape[0]
-        # The multi-line plot code seems to omit 1 dataset from the y range,
-        # so add a dummy dataset full of NaNs to make sure all datasets are
-        # visible.
-        y_limit = np.sum(np.nanmax(z, axis=1))
-        y = np.linspace(0, y_limit, num_plots + 1)
+        self.container = OverlayPlotContainer(bgcolor='white',
+                                         use_backbuffer=True,
+                                         border_visible=True,
+                                         padding=50,
+                                         padding_left=70,
+                                         fill_padding=True
+                                             )
+        self.value_mapper = None
+        self.index_mapper = None
+        use_downsampling = False
 
-        z = np.vstack([z, z.shape[1] * [np.nan]])
-        mlp = create_multi_line_plot_renderer(x[0], y, z, amplitude=2.0)
+        offset = (z.max(axis=1) - z.min(axis=1)).min() * self.offset
+        for i, (x_row, z_row) in enumerate(zip(x, z)):
+            plot = create_line_plot((x_row, z_row + i * offset), color='black')
+            plot.bgcolor = 'white'
+            plot.use_downsampling = use_downsampling
 
-        plot = Plot()
-        plot.bgcolor = 'white'
-        plot.add(mlp)
+            if self.value_mapper is None:
+                self.index_mapper = plot.index_mapper
+                self.value_mapper = plot.value_mapper
+            else:
+                plot.value_mapper = self.value_mapper
+                self.value_mapper.range.add(plot.value)
+                plot.index_mapper = self.index_mapper
+                self.index_mapper.range.add(plot.index)
+            self.container.add(plot)
 
-        x_axis = PlotAxis(component=plot,
-                          mapper=mlp.index_mapper,
+        x_axis = PlotAxis(component=self.container,
+                          mapper=self.index_mapper,
                           orientation='bottom',
                           title=u'Angle (2\u0398)',
                           title_font='modern 14')
         y_axis_title = 'Normalized intensity - %s' % get_value_scale_label(scale)
-        y_axis = PlotAxis(component=plot,
-                          mapper=mlp.value_mapper,
+        y_axis = PlotAxis(component=self.container,
+                          mapper=self.value_mapper,
                           orientation='left',
                           title=y_axis_title,
                           title_font='modern 14')
-        plot.overlays.extend([x_axis, y_axis])
-        plot.tools.append(TraitsTool(plot))
-        container = HPlotContainer(padding_left=30,
-                                   fill_padding=True,
-                                   use_backbuffer=True)
-        container.add(plot)
+        self.container.overlays.extend([x_axis, y_axis])
+
+        self.zoom_tool = ClickUndoZoomTool(component=plot, always_on=True)
+        plot.overlays.append(self.zoom_tool)
+
+        self.container.tools.append(
+            TraitsTool(self.container, classes=[LinePlot,PlotAxis]))
+
+        container = HPlotContainer(use_backbuffer=True)
+        container.add(self.container)
         return container
 
     def _reset_view(self):
-        pass
+        self.zoom_tool.revert_history_all()
 
 
 class Surface2DPlot(ChacoPlot):
