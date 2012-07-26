@@ -47,6 +47,10 @@ class MplPlot(BasePlot, HasTraitsGroup):
         import matplotlib.pyplot as plt
         plt.close()
 
+    def __del__(self):
+        import matplotlib.pyplot as plt
+        plt.close()
+
     def _azimuth_changed(self):
         self._perspective_changed()
 
@@ -120,7 +124,8 @@ class MplPlot(BasePlot, HasTraitsGroup):
     def save_as(self, filename):
         self.figure.canvas.print_figure(filename)
 
-    def __del__(self):
-        import matplotlib.pyplot as plt
-        plt.close()
+    def _reset_view(self):
+        self.azimuth = -89
+        self.elevation = 14
+        #self.quality = 0.1
 
