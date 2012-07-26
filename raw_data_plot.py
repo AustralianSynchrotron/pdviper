@@ -4,7 +4,7 @@ import numpy as np
 from enable.api import Component
 from traits.api import HasTraits, Instance
 
-from chaco.api import Plot, ArrayPlotData
+from chaco.api import Plot, ArrayPlotData, Legend
 from chaco.tools.api import TraitsTool, SimpleInspectorTool
 from chaco.overlays.api import SimpleInspectorOverlay
 
@@ -71,8 +71,12 @@ class RawDataPlot(HasTraits):
 
         self._setup_plot_tools(self.plot)
 
-        self.plot.legend.plots = self.plots
-        self.plot.legend.visible = False
+        # Recreate the legend so it sits on top of the other tools.
+        self.plot.legend = Legend(component=self.plot,
+                                  padding=10,
+                                  error_icon='blank',
+                                  visible=False,
+                                  plots=self.plots)
 
         self.plot.x_axis.title = u'Angle (2\u0398)'
         self.plot.x_axis.title_font = 'modern 14'
