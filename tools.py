@@ -6,7 +6,6 @@ from chaco.tools.api import PanTool, ZoomTool, LineInspector
 from chaco.tools.tool_states import PanState
 from chaco.api import AbstractOverlay
 
-
 class PanToolWithHistory(PanTool):
     def __init__(self, *args, **kwargs):
         self.history_tool = kwargs.get('history_tool', None)

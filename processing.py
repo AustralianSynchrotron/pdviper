@@ -181,6 +181,14 @@ def normalise_datasets(datasets):
         dataset.data[:,1] *= max_count / dataset.metadata[key]
 
 
+def get_reference_dataset_name(datasets):
+    """
+    Returns the name of the reference dataset used as a key in the datasets dictionary,
+    i.e. the one with the lowest filename according to Python's sort rules.
+    """
+    return sorted(datasets.keys())[0]
+
+
 def fit_peak_2theta(data_x, data_y, plot=False):
     """
     Returns the 2theta value of the 1st moment/mean of a peak lying in the provided
@@ -236,6 +244,13 @@ def fit_peak_2theta(data_x, data_y, plot=False):
 
     return p[1]
 
+
+#def remove_background(dataset, window=None)
+#    """
+#    Returns a dataset with the background removed.
+#    If 
+#    """
+#    return dataset
 
 def fit_peaks_2theta(dataset, low_index=None, high_index=None, plot=False):
     """

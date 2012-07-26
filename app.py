@@ -5,6 +5,7 @@ from traits.api import List, Str, HasTraits, Instance, Button, Enum, Bool
 from traitsui.api import Item, UItem, HGroup, VGroup, View, NullEditor, spring, Label, CheckListEditor
 from pyface.api import FileDialog, OK
 from chaco.api import OverlayPlotContainer
+from chaco.tools.api import RangeSelection, RangeSelectionOverlay
 
 from xye import XYEDataset
 from chaco_output import PlotOutput
@@ -13,6 +14,8 @@ from processing import rescale
 from mpl_plot import MplPlot
 from chaco_plot import StackedPlot, Surface2DPlot
 from fixes import fix_background_color
+
+import processing
 
 # Linux/Ubuntu themes cause the background of windows to be ugly and dark
 # grey. This fixes that.
@@ -30,6 +33,10 @@ class MainApp(HasTraits):
     copy_to_clipboard = Button("Copy to clipboard")
     save_as_image = Button("Save as image...")
     generate_plot = Button("Generate plot...")
+
+    bt_select_peak = Button("Select peak")
+    bt_auto_align_series = Button("Auto align series")
+
     help_button = Button("Help...")
     reset_button = Button("Reset view")
     options = List
@@ -51,6 +58,12 @@ class MainApp(HasTraits):
                 UItem('scale', enabled_when='object._has_data()'),
                 UItem('options', editor=CheckListEditor(name='_options'), style='custom', enabled_when='object._has_data()'),
                 UItem('reset_button', enabled_when='object._has_data()'),
+                spring,
+                '_',
+                spring,
+                Label('Align series:'),
+                UItem('bt_select_peak', enabled_when='object._has_data()'),
+                UItem('bt_auto_align_series', enabled_when='object._has_data()'),
                 spring,
                 '_',
                 spring,
@@ -103,6 +116,27 @@ class MainApp(HasTraits):
         self.raw_data_plot.show_grids(all_options['Show gridlines'])
         self.raw_data_plot.show_crosslines(all_options['Show crosslines'])
         self.container.request_redraw()
+
+    def _bt_select_peak_changed(self):
+        '''
+        The explanation of hooking up a RangeSelection overlay is here:
+        https://mail.enthought.com/pipermail/chaco-users/2009-July/001290.html
+        However, I don't know what the renderer is. Line 32 of raw_data_plot is:
+        self.plots[name] = self.plot.plot()
+        implying the renderer is accessed as
+        self.raw_data_plot_instance.plots[name][0]
+        '''
+        # enable selection tool
+        reference_filename = processing.get_reference_dataset_name(self.datasets)
+        print type(self.raw_data_plot.plots[reference_filename][0])
+#        1/0
+        self.raw_data_plot.plots[reference_filename][0].active_tool = RangeSelection(component=self.raw_data_plot.plots[reference_filename][0])
+        self.raw_data_plot.plots[reference_filename][0].overlays.append(RangeSelectionOverlay(component=self.raw_data_plot.plots[reference_filename][0]))
+        print 'Select peak'
+
+    def _bt_auto_align_series_changed(self):
+        # attempt auto alignment
+        print 'Auto align series'
 
     def _save_as_image_changed(self):
         if len(self.datasets) == 0:

@@ -5,7 +5,7 @@ from enable.api import Component
 from traits.api import HasTraits, Instance
 
 from chaco.api import Plot, ArrayPlotData, Legend
-from chaco.tools.api import TraitsTool, SimpleInspectorTool
+from chaco.tools.api import TraitsTool, SimpleInspectorTool, RangeSelection, RangeSelectionOverlay
 from chaco.overlays.api import SimpleInspectorOverlay
 
 from tools import ClickUndoZoomTool, KeyboardPanTool, PointerControlTool, LineInspectorTool
@@ -119,6 +119,10 @@ class RawDataPlot(HasTraits):
         plot.overlays.append(x_crossline)
         plot.overlays.append(y_crossline)
         self.crosslines = (x_crossline, y_crossline)
+
+        # The RangeSelectionTool tool is stateful and allows selection of a candidate
+        # range for dataseries alignment.
+#        plot.overlays.append(RangeSelectionOverlay(component=plot))
 
         tool = SimpleInspectorTool(plot)
         plot.tools.append(tool)
