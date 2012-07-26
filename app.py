@@ -1,8 +1,8 @@
 from os.path import basename
 
 from enable.api import ComponentEditor
-from traits.api import List, Str, HasTraits, Instance, Button, Enum, Bool
-from traitsui.api import Item, UItem, HGroup, VGroup, View, NullEditor, spring, Label, CheckListEditor
+from traits.api import List, Str, HasTraits, Instance, Button, Enum, Bool, Event
+from traitsui.api import Item, UItem, HGroup, VGroup, View, NullEditor, spring, Label, CheckListEditor, ButtonEditor
 from pyface.api import FileDialog, OK
 from chaco.api import OverlayPlotContainer
 from chaco.tools.api import RangeSelection, RangeSelectionOverlay
@@ -34,7 +34,13 @@ class MainApp(HasTraits):
     save_as_image = Button("Save as image...")
     generate_plot = Button("Generate plot...")
 
-    bt_select_peak = Button("Select peak")
+    # To update the button label based on a state machine state, do this:
+    # http://osdir.com/ml/python.enthought.devel/2006-10/msg00144.html
+    bt_select_peak_event_controller = Event
+    bt_select_peak_label = Str("Select peak")
+    bt_select_peak = UItem('bt_select_peak_event_controller',
+                          editor = ButtonEditor(label_value='bt_select_peak_label'),
+                          enabled_when='object._has_data()')
     bt_auto_align_series = Button("Auto align series")
 
     help_button = Button("Help...")
@@ -62,7 +68,7 @@ class MainApp(HasTraits):
                 '_',
                 spring,
                 Label('Align series:'),
-                UItem('bt_select_peak', enabled_when='object._has_data()'),
+                bt_select_peak,
                 UItem('bt_auto_align_series', enabled_when='object._has_data()'),
                 spring,
                 '_',
@@ -117,7 +123,7 @@ class MainApp(HasTraits):
         self.raw_data_plot.show_crosslines(all_options['Show crosslines'])
         self.container.request_redraw()
 
-    def _bt_select_peak_changed(self):
+    def _bt_select_peak_event_controller_fired(self):
         '''
         The explanation of hooking up a RangeSelection overlay is here:
         https://mail.enthought.com/pipermail/chaco-users/2009-July/001290.html
@@ -126,13 +132,22 @@ class MainApp(HasTraits):
         implying the renderer is accessed as
         self.raw_data_plot_instance.plots[name][0]
         '''
-        # enable selection tool
-        reference_filename = processing.get_reference_dataset_name(self.datasets)
-        print type(self.raw_data_plot.plots[reference_filename][0])
-#        1/0
-        self.raw_data_plot.plots[reference_filename][0].active_tool = RangeSelection(component=self.raw_data_plot.plots[reference_filename][0])
-        self.raw_data_plot.plots[reference_filename][0].overlays.append(RangeSelectionOverlay(component=self.raw_data_plot.plots[reference_filename][0]))
-        print 'Select peak'
+        plot = self.raw_data_plot
+        # Use the button label to determine the button state
+        if self.bt_select_peak_label == 'Select peak':
+            plot.add_range_selection_tool()
+            # disable zoom tool and change selection cursor to a vertical line
+            plot.zoom_tool.drag_button = None
+            plot.crosslines[1].visible = False
+            self.bt_select_peak_label = 'Align series'
+        elif self.bt_select_peak_label == 'Align series':
+            # reenable zoom tool and change selection cursor back to crossed lines
+            plot.remove_range_selection_tool()
+            plot.zoom_tool.drag_button = 'left'
+            plot.crosslines[1].visible = True
+            self.bt_select_peak_label = 'Select peak'
+
+            print plot.get_range_selection_tool_limits()
 
     def _bt_auto_align_series_changed(self):
         # attempt auto alignment
