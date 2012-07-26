@@ -66,7 +66,7 @@ class RawDataPlot(HasTraits):
     def _setup_plot(self):
         self.plot_data = ArrayPlotData()
         self.plot = Plot(self.plot_data,
-            padding_left=50, fill_padding=True,
+            padding_left=70, fill_padding=True,
             bgcolor="white", use_backbuffer=True)
 
         self._setup_plot_tools(self.plot)

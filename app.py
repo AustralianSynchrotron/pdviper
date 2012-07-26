@@ -77,7 +77,7 @@ class MainApp(HasTraits):
         self.raw_data_plot = RawDataPlot(self.datasets)
         self.plot = self.raw_data_plot.get_plot()
         self.container = OverlayPlotContainer(self.plot,
-            padding_left=50, fill_padding=True,
+            padding_left=20, fill_padding=True,
             bgcolor="white", use_backbuffer=True)
         self.pan_tool = None
         # The list of all options.
