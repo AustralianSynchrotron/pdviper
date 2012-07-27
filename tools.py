@@ -6,6 +6,7 @@ from chaco.tools.api import PanTool, ZoomTool, LineInspector
 from chaco.tools.tool_states import PanState
 from chaco.api import AbstractOverlay
 
+
 class PanToolWithHistory(PanTool):
     def __init__(self, *args, **kwargs):
         self.history_tool = kwargs.get('history_tool', None)
@@ -13,9 +14,10 @@ class PanToolWithHistory(PanTool):
             del kwargs['history_tool']
         super(PanToolWithHistory, self).__init__(*args, **kwargs)
 
-    def _start_pan(self, event):
-        super(PanToolWithHistory, self)._start_pan(event)
+    def _start_pan(self, event, capture_mouse=False):
+        super(PanToolWithHistory, self)._start_pan(event, capture_mouse=False)
         if self.history_tool is not None:
+            self._start_pan_xy = self._original_xy
             # Save the current data range center so this movement can be
             # undone later.
             self._prev_state = self.history_tool.data_range_center()
@@ -23,10 +25,16 @@ class PanToolWithHistory(PanTool):
     def _end_pan(self, event):
         super(PanToolWithHistory, self)._end_pan(event)
         if self.history_tool is not None:
-            next = self.history_tool.data_range_center()
-            prev = self._prev_state
-            if next != prev:
-                self.history_tool.append_state(PanState(prev, next))
+            # Only append to the undo history if we have moved a significant
+            # amount. This avoids conflicts with the single-click undo
+            # function.
+            new_xy = array((event.x, event.y))
+            old_xy = array(self._start_pan_xy)
+            if any(abs(new_xy - old_xy) > 10):
+                next = self.history_tool.data_range_center()
+                prev = self._prev_state
+                if next != prev:
+                    self.history_tool.append_state(PanState(prev, next))
 
 
 class KeyboardPanTool(PanToolWithHistory):
@@ -82,34 +90,54 @@ class PointerControlTool(BaseTool):
 
 
 class ClickUndoZoomTool(ZoomTool):
-    def _pop_state_on_single_click(self, event):
-        self._screen_end = (event.x, event.y)
-        start = array(self._screen_start)
-        end = array(self._screen_end)
-        if sum(abs(end - start)) < self.minimum_screen_delta:
-            self.revert_history()
+    def __init__(self, component=None, undo_button='right', *args, **kwargs):
+        super(ClickUndoZoomTool, self).__init__(component, *args, **kwargs)
+        self.undo_button = undo_button
+        self._reverting = False
+        self.minimum_undo_delta = 3
+
+    def normal_left_down(self, event):
+        """ Handles the left mouse button being pressed while the tool is
+        in the 'normal' state.
+
+        If the tool is enabled or always on, it starts selecting.
+        """
+        if self.undo_button == 'left':
+            self._undo_screen_start = (event.x, event.y)
+        super(ClickUndoZoomTool, self).normal_left_down(event)
+
+    def normal_right_down(self, event):
+        """ Handles the right mouse button being pressed while the tool is
+        in the 'normal' state.
+
+        If the tool is enabled or always on, it starts selecting.
+        """
+        if self.undo_button == 'right':
+            self._undo_screen_start = (event.x, event.y)
+        super(ClickUndoZoomTool, self).normal_right_down(event)
+
+    def normal_left_up(self, event):
+        if self.undo_button == 'left':
+            if self._mouse_didnt_move(event):
+                self.revert_history()
+
+    def normal_right_up(self, event):
+        if self.undo_button == 'right':
+            if self._mouse_didnt_move(event):
+                self.revert_history()
 
     def selecting_left_up(self, event):
-        """ Handles the left mouse button being released when the tool is in
-        the 'selecting' state.
-
-        Finishes selecting and does the zoom.
-        """
-        if self.drag_button == "left":
-            self._pop_state_on_single_click(event)
-            self._end_select(event)
-        return
+        self.normal_left_up(event)
+        super(ClickUndoZoomTool, self).selecting_left_up(event)
 
     def selecting_right_up(self, event):
-        """ Handles the right mouse button being released when the tool is in
-        the 'selecting' state.
+        self.normal_right_up(event)
+        super(ClickUndoZoomTool, self).selecting_right_up(event)
 
-        Finishes selecting and does the zoom.
-        """
-        if self.drag_button == "right":
-            self._pop_state_on_single_click(event)
-            self._end_select(event)
-        return
+    def _mouse_didnt_move(self, event):
+        start = array(self._undo_screen_start)
+        end = array((event.x, event.y))
+        return all(abs(end - start) == 0)
 
     def clear_undo_history(self):
         self._history_index = 0

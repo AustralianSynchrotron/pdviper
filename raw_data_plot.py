@@ -96,7 +96,7 @@ class RawDataPlot(HasTraits):
                         x_min_zoom_factor=-inf, y_min_zoom_factor=-inf,
                         tool_mode="box", always_on=True,
                         drag_button=settings.zoom_button,
-                        pointer="cross",
+                        undo_button=settings.undo_button,
                         zoom_to_mouse=True)
 
         # The PanTool allows panning around the plot

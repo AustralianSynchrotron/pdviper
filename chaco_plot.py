@@ -83,7 +83,11 @@ class StackedPlot(ChacoPlot):
                           title_font='modern 14')
         self.container.overlays.extend([x_axis, y_axis])
 
-        self.zoom_tool = ClickUndoZoomTool(component=plot, always_on=True)
+        self.zoom_tool = ClickUndoZoomTool(
+            plot, tool_mode="box", always_on=True, pointer="cross",
+            drag_button=settings.zoom_button,
+            undo_button=settings.undo_button,
+        )
         plot.overlays.append(self.zoom_tool)
 
         self.container.tools.append(
@@ -127,11 +131,12 @@ class Surface2DPlot(ChacoPlot):
         plot.y_axis.tick_interval = 1.0
         actual_plot = plot.plots["surface2d"][0]
 
-        self.plot_zoom_tool = ClickUndoZoomTool(plot,
-                        x_min_zoom_factor=-np.inf, y_min_zoom_factor=-np.inf,
-                        tool_mode="box", always_on=True,
-                        drag_button=settings.zoom_button,
-                        pointer="cross")
+        self.plot_zoom_tool = ClickUndoZoomTool(
+            plot, tool_mode="box", always_on=True, pointer="cross",
+            drag_button=settings.zoom_button,
+            undo_button=settings.undo_button,
+            x_min_zoom_factor=-np.inf, y_min_zoom_factor=-np.inf,
+        )
         plot.overlays.append(self.plot_zoom_tool)
         plot.tools.append(TraitsTool(plot))
 
@@ -149,7 +154,8 @@ class Surface2DPlot(ChacoPlot):
                                                     axis="index",
                                                     tool_mode="range",
                                                     always_on=True,
-                                                    drag_button=settings.zoom_button)
+                                                    drag_button=settings.zoom_button,
+                                                    undo_button=settings.undo_button)
         pan_tool = PanToolWithHistory(colorbar,
                                       history_tool=self.colorbar_zoom_tool,
                                       constrain_direction="y", constrain=True,
