@@ -192,8 +192,8 @@ def get_reference_dataset_name(datasets):
 def get_peak_offsets_for_all_dataseries(range_low, range_high, datasets):
     """
     Perform peak detection for every dataset within the defined range.
-    Appends the fit result to the XYEDataset item metadata. The fit result can be a float
-    or None in the case of a series that could not be fitted.
+    If successful, the fit result is appended to the XYEDataset item metadata.
+    The fit result can be a float or None in the case of a series that could not be fitted.
     """
     for dataset in datasets.values():
         x_range = (dataset.x() >= range_low) & (dataset.x() <= range_high)
@@ -208,9 +208,8 @@ def get_peak_offsets_for_all_dataseries(range_low, range_high, datasets):
         data_x, data_y = dataset.data[x_range].T
         data_y_baseline_removed = data_y - y_baseline[x_range]
         fit_centre, fit_successful = fit_peak_2theta(data_x, data_y_baseline_removed, plot=True)
-        if not fit_successful:
-            fit_centre = None
-        dataset.add_param('peak_fit', fit_centre)
+        if fit_successful:
+            dataset.add_param('peak_fit', fit_centre)
 
 
 def fit_peak_2theta(data_x, data_y, plot=False):
