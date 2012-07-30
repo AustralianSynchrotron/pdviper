@@ -39,3 +39,5 @@ class XYEDataset(object):
     def x(self):
         return self.data[:, 0]
 
+    def add_param(self, name, value):
+        self.metadata[name] = value

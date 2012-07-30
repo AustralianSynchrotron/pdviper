@@ -147,7 +147,11 @@ class MainApp(HasTraits):
             plot.crosslines[1].visible = True
             self.bt_select_peak_label = 'Select peak'
 
-            print plot.get_range_selection_tool_limits()
+            range_low, range_high = plot.get_range_selection_tool_limits()
+            processing.get_peak_offsets_for_all_dataseries(range_low, range_high, self.datasets)
+
+#            if fit_successful:
+#                print fit_centre
 
     def _bt_auto_align_series_changed(self):
         # attempt auto alignment
