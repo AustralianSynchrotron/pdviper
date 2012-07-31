@@ -1,7 +1,7 @@
 from os.path import basename
 
 from enable.api import ComponentEditor
-from traits.api import List, Str, HasTraits, Instance, Button, Enum, Bool, Event
+from traits.api import List, Str, Float, HasTraits, Instance, Button, Enum, Bool, Event
 from traitsui.api import Item, UItem, HGroup, VGroup, View, NullEditor, spring, Label, CheckListEditor, ButtonEditor
 from pyface.api import FileDialog, OK
 from chaco.api import OverlayPlotContainer
@@ -42,11 +42,16 @@ class MainApp(HasTraits):
                           editor = ButtonEditor(label_value='bt_select_peak_label'),
                           enabled_when='object._has_data()')
     bt_auto_align_series = Button("Auto align series")
+    
+    correction = Float(0.0)
 
     help_button = Button("Help...")
     reset_button = Button("Reset view")
     options = List
     scale = Enum('linear', 'log', 'sqrt')
+    merge_method = Enum('merge', 'splice', 'none')
+    merge_regrid = Bool
+    normalise = Bool
 
     raw_data_plot = Instance(RawDataPlot)
 
@@ -70,6 +75,19 @@ class MainApp(HasTraits):
                 Label('Align series:'),
                 bt_select_peak,
                 UItem('bt_auto_align_series', enabled_when='object._has_data()'),
+                Label('Correction:'),
+                UItem('correction', enabled_when='object._has_data()'),
+                spring,
+                '_',
+                spring,
+                Label('Merge method:'),
+                UItem('merge_method', enabled_when='object._has_data()'),
+                HGroup(
+                    VGroup(
+                        Item('merge_regrid', label='Grid', enabled_when='object._has_data()'),
+                        Item('normalise', label='Normalise', enabled_when='object._has_data()'),
+                    ),
+                ),
                 spring,
                 '_',
                 spring,
