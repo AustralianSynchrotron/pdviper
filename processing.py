@@ -207,18 +207,18 @@ def get_peak_offsets_for_all_dataseries(range_low, range_high, datasets):
         # get just the data in the range defined by the range_low, range_high parameters
         data_x, data_y = dataset.data[x_range].T
         data_y_baseline_removed = data_y - y_baseline[x_range]
-        fit_centre, fit_successful = fit_peak_2theta(data_x, data_y_baseline_removed, plot=True)
+        fit_centre, fit_parameters, fit_successful = fit_peak_2theta(data_x, data_y_baseline_removed, plot=True)
         if fit_successful:
             dataset.add_param('peak_fit', fit_centre)
 
 
 def fit_peak_2theta(data_x, data_y, plot=False):
     """
-    Returns a tuple containing two items.
-    The second item is the success result from the fitting algorithm (0/1)
-    If the fit is successful the first item is the 2theta value of the 1st
-    moment/mean of a peak lying in the provided data according to a maximum likelihood fit
-    of a linear combination of a Gaussian+Lorentzian.
+    Fits a linear combination of a Gaussian+Lorentzian to the specified data.
+    Returns a tuple containing three items.
+    The third item is the success result (1=success,0=failure) from the fitting algorithm
+    If the fit is successful the first item is the 2theta value of the higher of the
+    Gaussian or Lorentzian peak.
     Assumes any background has been removed prior to calling and the data is assumed to
     contain just a single peak to be fitted. <data_x> is a 1D array containing the 2theta
     values <data_y> is a 1D array containing the intensity values
@@ -227,26 +227,80 @@ def fit_peak_2theta(data_x, data_y, plot=False):
     scipy.signal.find_peaks_cwt which should do a much better job than the approach
     taken here according to http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2631518/.
     """
-    # smooth the ys (Intensities) a bit by using ndimage grey_opening then subtract off the background
-    foreground_ys = sn.grey_opening(data_y, size=(2,), mode='nearest')
+#    # smooth the ys (Intensities) a bit by using ndimage grey_opening then subtract off the background
+#    foreground_ys = sn.grey_opening(data_y, size=(2,), mode='nearest')
+    foreground_ys = data_y
     # get the centre and width based on the extrema of the data_x series as a starting
     # point for a Gaussian+Lorentzian fit
     x_peak_candidate_centre = (data_x[0] + data_x[-1])/2.0
     x_peak_candidate_width = (data_x[-1] - data_x[0])/2.0
     peak_height = data_y.max() - data_y.min()
 
-    # Gaussian + Lorentzian function - both centred around p[1]
+    # Gaussian + Lorentzian function
     # p[0] and p[3] are the amplitudes of the respective components
+    # p[1] and p[5] are the centres of the respective functions
     # p[2] and p[4] are the fit parameters of the respective functions
     fit_function = lambda p, x: p[0]*exp(-((x-p[1])/p[2])**2/2.0) + \
-                                p[3]*(p[4]**2/((x-p[1])**2 + p[4]**2))
+                                p[3]*(p[4]**2/((x-p[5])**2 + p[4]**2))
     fit_function_error = lambda p, x, y: (fit_function(p,x) - y)    # 1d Gaussian + Lorentzian fit
 
     p0 = np.r_[peak_height/2.0,
                x_peak_candidate_centre,
                x_peak_candidate_width,
                peak_height/2.0,
-               x_peak_candidate_width]
+               x_peak_candidate_width,
+               x_peak_candidate_centre]
+    p, success = so.leastsq(fit_function_error, p0[:], args=(data_x, foreground_ys))
+    '''
+    bounds = [(0.0, peak_height),
+              (data_x[0], data_x[-1]),
+              (0.0, data_x[-1] - data_x[0]),
+              (0.0, peak_height),
+              (0.0, data_x[-1] - data_x[0]),
+              (data_x[0], data_x[-1])]
+    p, nfeval, rc = so.fmin_tnc(fit_function_error, p0, fprime=None, args=(data_x, foreground_ys),
+                                approx_grad=True, bounds=bounds, epsilon=(data_x[-1]-data_x[0])/100.0,
+                                disp=0)
+    print so.tnc.RCSTRINGS[nfeval]
+    success = (nfeval==so.tnc.FCONVERGED)
+    '''
+    if plot and success:
+        plt.plot(data_x, foreground_ys)
+        x_samples = np.linspace(data_x[0], data_x[-1], 1000)
+        plt.plot(x_samples, fit_function(p, x_samples))
+        plt.show()
+
+    return p[1] if p[0] > p[3] else p[5], p, success
+
+
+def fit_modeled_peak_to_data(data_x, data_y, p0, plot=False):
+    """
+    Fits a linear combination of a Gaussian+Lorentzian to the specified data allowing only
+    the x-location to change.
+    p0 is the 6-element parameter list:
+    # p0[0] and p0[3] are the amplitudes of the respective components
+    # p0[1] and p0[5] are the centres of the respective functions
+    # p0[2] and p0[4] are the fit parameters of the respective functions
+    Returns a tuple containing two items.
+    The second item is the success result (1=success,0=failure) from the fitting algorithm
+    If the fit is successful the first item is the 2theta value of the higher of the
+    Gaussian or Lorentzian peak.
+    Assumes any background has been removed prior to calling and the data is assumed to
+    contain just a single peak to be fitted. <data_x> is a 1D array containing the 2theta
+    values <data_y> is a 1D array containing the intensity values
+    """
+#    # smooth the ys (Intensities) a bit by using ndimage grey_opening then subtract off the background
+#    foreground_ys = sn.grey_opening(data_y, size=(2,), mode='nearest')
+    foreground_ys = data_y
+
+    # Gaussian + Lorentzian function
+    # p[0] and p[3] are the amplitudes of the respective components
+    # p[1] and p[5] are the centres of the respective functions
+    # p[2] and p[4] are the fit parameters of the respective functions
+    fit_function = lambda x_offset, x: p0[0]*exp(-((x-p0[1]-x_offset[0])/p0[2])**2/2.0) + \
+                                p0[3]*(p0[4]**2/((x-p0[5]-x_offset[0])**2 + p0[4]**2))
+    fit_function_error = lambda p, x, y: (fit_function(p,x) - y)    # 1d Gaussian + Lorentzian fit
+
     p, success = so.leastsq(fit_function_error, p0[:], args=(data_x, foreground_ys))
 
     if plot and success:
@@ -255,7 +309,7 @@ def fit_peak_2theta(data_x, data_y, plot=False):
         plt.plot(x_samples, fit_function(p, x_samples))
         plt.show()
 
-    return p[1], success
+    return p[1]-p if p[0] > p[3] else p[5]-p, success
 
 
 #def remove_background(dataset, window=None)

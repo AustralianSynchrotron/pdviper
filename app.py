@@ -49,9 +49,9 @@ class MainApp(HasTraits):
     reset_button = Button("Reset view")
     options = List
     scale = Enum('linear', 'log', 'sqrt')
-    merge_method = Enum('merge', 'splice', 'none')
-    merge_regrid = Bool
-    normalise = Bool
+    merge_method = Enum('none', 'merge', 'splice')('splice')
+    merge_regrid = Bool(False)
+    normalise = Bool(True)
 
     raw_data_plot = Instance(RawDataPlot)
 
