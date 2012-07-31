@@ -5,7 +5,7 @@ from enable.api import Component
 from traits.api import HasTraits, Instance
 
 from chaco.api import Plot, ArrayPlotData, Legend
-from chaco.tools.api import TraitsTool, SimpleInspectorTool
+from chaco.tools.api import TraitsTool, SimpleInspectorTool, RangeSelection, RangeSelectionOverlay
 from chaco.overlays.api import SimpleInspectorOverlay
 
 from tools import ClickUndoZoomTool, KeyboardPanTool, PointerControlTool, LineInspectorTool
@@ -33,6 +33,12 @@ class RawDataPlot(HasTraits):
             plot = self.plot.plot((name + '_x', name + '_y'),
                                   name=name, type='line', color='auto')
             self.plots[name] = plot
+
+        if len(datasets) > 0:
+            self.plot0renderer = plot[0]
+            self.range_selection_tool = RangeSelection(self.plot0renderer, left_button_selects=True)
+            self.range_selection_overlay = RangeSelectionOverlay(component=self.plot0renderer)
+
         self.reset_view()
         self.show_legend(True)
         self._set_scale(scale)
@@ -62,6 +68,17 @@ class RawDataPlot(HasTraits):
 
     def get_plot(self):
         return self.plot
+
+    def add_range_selection_tool(self):
+        self.plot0renderer.tools.append(self.range_selection_tool)
+        self.plot0renderer.overlays.append(self.range_selection_overlay)
+
+    def remove_range_selection_tool(self):
+        self.plot0renderer.tools.remove(self.range_selection_tool)
+        self.plot0renderer.overlays.remove(self.range_selection_overlay)
+
+    def get_range_selection_tool_limits(self):
+        return self.range_selection_tool._get_selection()
 
     def _setup_plot(self):
         self.plot_data = ArrayPlotData()
@@ -119,6 +136,10 @@ class RawDataPlot(HasTraits):
         plot.overlays.append(x_crossline)
         plot.overlays.append(y_crossline)
         self.crosslines = (x_crossline, y_crossline)
+
+        # The RangeSelectionTool tool is stateful and allows selection of a candidate
+        # range for dataseries alignment.
+#        plot.overlays.append(RangeSelectionOverlay(component=plot))
 
         tool = SimpleInspectorTool(plot)
         plot.tools.append(tool)

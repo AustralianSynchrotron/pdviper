@@ -1,10 +1,11 @@
 from os.path import basename
 
 from enable.api import ComponentEditor
-from traits.api import List, Str, HasTraits, Instance, Button, Enum, Bool
-from traitsui.api import Item, UItem, HGroup, VGroup, View, NullEditor, spring, Label, CheckListEditor
+from traits.api import List, Str, Float, HasTraits, Instance, Button, Enum, Bool, Event
+from traitsui.api import Item, UItem, HGroup, VGroup, View, NullEditor, spring, Label, CheckListEditor, ButtonEditor
 from pyface.api import FileDialog, OK
 from chaco.api import OverlayPlotContainer
+from chaco.tools.api import RangeSelection, RangeSelectionOverlay
 
 from xye import XYEDataset
 from chaco_output import PlotOutput
@@ -13,6 +14,8 @@ from processing import rescale
 from mpl_plot import MplPlot
 from chaco_plot import StackedPlot, Surface2DPlot
 from fixes import fix_background_color
+
+import processing
 
 # Linux/Ubuntu themes cause the background of windows to be ugly and dark
 # grey. This fixes that.
@@ -30,10 +33,25 @@ class MainApp(HasTraits):
     copy_to_clipboard = Button("Copy to clipboard")
     save_as_image = Button("Save as image...")
     generate_plot = Button("Generate plot...")
+
+    # To update the button label based on a state machine state, do this:
+    # http://osdir.com/ml/python.enthought.devel/2006-10/msg00144.html
+    bt_select_peak_event_controller = Event
+    bt_select_peak_label = Str("Select peak")
+    bt_select_peak = UItem('bt_select_peak_event_controller',
+                          editor = ButtonEditor(label_value='bt_select_peak_label'),
+                          enabled_when='object._has_data()')
+    bt_auto_align_series = Button("Auto align series")
+    
+    correction = Float(0.0)
+
     help_button = Button("Help...")
     reset_button = Button("Reset view")
     options = List
     scale = Enum('linear', 'log', 'sqrt')
+    merge_method = Enum('none', 'merge', 'splice')('splice')
+    merge_regrid = Bool(False)
+    normalise = Bool(True)
 
     raw_data_plot = Instance(RawDataPlot)
 
@@ -51,6 +69,25 @@ class MainApp(HasTraits):
                 UItem('scale', enabled_when='object._has_data()'),
                 UItem('options', editor=CheckListEditor(name='_options'), style='custom', enabled_when='object._has_data()'),
                 UItem('reset_button', enabled_when='object._has_data()'),
+                spring,
+                '_',
+                spring,
+                Label('Align series:'),
+                bt_select_peak,
+                UItem('bt_auto_align_series', enabled_when='object._has_data()'),
+                Label('Correction:'),
+                UItem('correction', enabled_when='object._has_data()'),
+                spring,
+                '_',
+                spring,
+                Label('Merge method:'),
+                UItem('merge_method', enabled_when='object._has_data()'),
+                HGroup(
+                    VGroup(
+                        Item('merge_regrid', label='Grid', enabled_when='object._has_data()'),
+                        Item('normalise', label='Normalise', enabled_when='object._has_data()'),
+                    ),
+                ),
                 spring,
                 '_',
                 spring,
@@ -103,6 +140,40 @@ class MainApp(HasTraits):
         self.raw_data_plot.show_grids(all_options['Show gridlines'])
         self.raw_data_plot.show_crosslines(all_options['Show crosslines'])
         self.container.request_redraw()
+
+    def _bt_select_peak_event_controller_fired(self):
+        '''
+        The explanation of hooking up a RangeSelection overlay is here:
+        https://mail.enthought.com/pipermail/chaco-users/2009-July/001290.html
+        However, I don't know what the renderer is. Line 32 of raw_data_plot is:
+        self.plots[name] = self.plot.plot()
+        implying the renderer is accessed as
+        self.raw_data_plot_instance.plots[name][0]
+        '''
+        plot = self.raw_data_plot
+        # Use the button label to determine the button state
+        if self.bt_select_peak_label == 'Select peak':
+            plot.add_range_selection_tool()
+            # disable zoom tool and change selection cursor to a vertical line
+            plot.zoom_tool.drag_button = None
+            plot.crosslines[1].visible = False
+            self.bt_select_peak_label = 'Align series'
+        elif self.bt_select_peak_label == 'Align series':
+            # reenable zoom tool and change selection cursor back to crossed lines
+            plot.remove_range_selection_tool()
+            plot.zoom_tool.drag_button = 'left'
+            plot.crosslines[1].visible = True
+            self.bt_select_peak_label = 'Select peak'
+
+            range_low, range_high = plot.get_range_selection_tool_limits()
+            processing.get_peak_offsets_for_all_dataseries(range_low, range_high, self.datasets)
+
+#            if fit_successful:
+#                print fit_centre
+
+    def _bt_auto_align_series_changed(self):
+        # attempt auto alignment
+        print 'Auto align series'
 
     def _save_as_image_changed(self):
         if len(self.datasets) == 0:

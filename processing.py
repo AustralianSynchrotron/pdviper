@@ -181,66 +181,152 @@ def normalise_datasets(datasets):
         dataset.data[:,1] *= max_count / dataset.metadata[key]
 
 
+def get_reference_dataset_name(datasets):
+    """
+    Returns the name of the reference dataset used as a key in the datasets dictionary,
+    i.e. the one with the lowest filename according to Python's sort rules.
+    """
+    return sorted(datasets.keys())[0]
+
+
+def get_peak_offsets_for_all_dataseries(range_low, range_high, datasets):
+    """
+    Perform peak detection for every dataset within the defined range.
+    If successful, the fit result is appended to the XYEDataset item metadata.
+    The fit result can be a float or None in the case of a series that could not be fitted.
+    """
+    for dataset in datasets.values():
+        x_range = (dataset.x() >= range_low) & (dataset.x() <= range_high)
+        # Get the baseline by using a median filter 3x as long as the selection
+        filter_length = 3*int(len(dataset.x())*(range_high-range_low)/(dataset.x()[-1]-dataset.x()[0]))
+        # restrict filter length to a sane value
+        if filter_length > 10000:               filter_length = 10000
+        if filter_length < 20:                  filter_length = 20
+        if filter_length > len(dataset.x())/2:  filter_length = len(dataset.x())/2
+        y_baseline = sn.filters.median_filter(dataset.y(), size=filter_length, mode='nearest')
+        # get just the data in the range defined by the range_low, range_high parameters
+        data_x, data_y = dataset.data[x_range].T
+        data_y_baseline_removed = data_y - y_baseline[x_range]
+        fit_centre, fit_parameters, fit_successful = fit_peak_2theta(data_x, data_y_baseline_removed, plot=True)
+        if fit_successful:
+            dataset.add_param('peak_fit', fit_centre)
+
+
 def fit_peak_2theta(data_x, data_y, plot=False):
     """
-    Returns the 2theta value of the 1st moment/mean of a peak lying in the provided
-    data according to a maximum likelihood fit of a linear combination of a
-    Gaussian+Lorentzian. Assumes any background has been removed prior to calling and
-    the data is assumed to contain just a single peak to be fitted.
-    <data_x> is a 1D array containing the 2theta values
-    <data_y> is a 1D array containing the intensity values
-
-    If fitting is successful, the  central x value of the peak is returned.
-    If unsuccessful, a FitFailed exception is raised.
+    Fits a linear combination of a Gaussian+Lorentzian to the specified data.
+    Returns a tuple containing three items.
+    The third item is the success result (1=success,0=failure) from the fitting algorithm
+    If the fit is successful the first item is the 2theta value of the higher of the
+    Gaussian or Lorentzian peak.
+    Assumes any background has been removed prior to calling and the data is assumed to
+    contain just a single peak to be fitted. <data_x> is a 1D array containing the 2theta
+    values <data_y> is a 1D array containing the intensity values
 
     Note, scipy v0.11 has a wavelet-based peak finding function
     scipy.signal.find_peaks_cwt which should do a much better job than the approach
     taken here according to http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2631518/.
     """
-    # smooth the ys (Intensities) a bit by using ndimage grey_opening then subtract off the background
-    foreground_ys = sn.grey_opening(data_y, size=(2,), mode='nearest')
-    # choose a threshold of 1/10 of the height of the biggest sample in the filtered and backgrounded data
-    y_threshold = foreground_ys.max()/10.0
-    # Get the range exceeding the threshold and use the centre and width as a starting point for
-    # a Gaussian+Lorentzian fit
-    zero_crossing_indices = np.where(np.diff(np.sign(data_y > y_threshold)))[0] # indices of threshold crossings
-    assert zero_crossing_indices.size == 2             # verify we have only two zero crossings
-    peak_nearby_index = zero_crossing_indices.mean().round().astype(int) # rough index of the peak centre
-    # peaks lie in the middle of the zero crossing pairs - get these positions
-    x_peak_candidate_centre = data_x[zero_crossing_indices].mean()
-    x_peak_candidate_width = np.diff(data_x[zero_crossing_indices]) / 2.0
+#    # smooth the ys (Intensities) a bit by using ndimage grey_opening then subtract off the background
+#    foreground_ys = sn.grey_opening(data_y, size=(2,), mode='nearest')
+    foreground_ys = data_y
+    # get the centre and width based on the extrema of the data_x series as a starting
+    # point for a Gaussian+Lorentzian fit
+    x_peak_candidate_centre = (data_x[0] + data_x[-1])/2.0
+    x_peak_candidate_width = (data_x[-1] - data_x[0])/2.0
+    peak_height = data_y.max() - data_y.min()
 
-    # Gaussian + Lorentzian function - both centred around p[1]
+    # Gaussian + Lorentzian function
     # p[0] and p[3] are the amplitudes of the respective components
+    # p[1] and p[5] are the centres of the respective functions
     # p[2] and p[4] are the fit parameters of the respective functions
     fit_function = lambda p, x: p[0]*exp(-((x-p[1])/p[2])**2/2.0) + \
-                                p[3]*(p[4]**2/((x-p[1])**2 + p[4]**2))
+                                p[3]*(p[4]**2/((x-p[5])**2 + p[4]**2))
     fit_function_error = lambda p, x, y: (fit_function(p,x) - y)    # 1d Gaussian + Lorentzian fit
 
-    p0 = np.r_[data_y[peak_nearby_index]/2.0,
+    p0 = np.r_[peak_height/2.0,
                x_peak_candidate_centre,
                x_peak_candidate_width,
-               data_y[peak_nearby_index]/2.0,
-               x_peak_candidate_width]
-    p, success = so.leastsq(fit_function_error, p0[:],
-                 args=(data_x, foreground_ys))
-
-    if not success:
-        raise FitFailed
-
-    if plot:
+               peak_height/2.0,
+               x_peak_candidate_width,
+               x_peak_candidate_centre]
+    p, success = so.leastsq(fit_function_error, p0[:], args=(data_x, foreground_ys))
+    '''
+    bounds = [(0.0, peak_height),
+              (data_x[0], data_x[-1]),
+              (0.0, data_x[-1] - data_x[0]),
+              (0.0, peak_height),
+              (0.0, data_x[-1] - data_x[0]),
+              (data_x[0], data_x[-1])]
+    p, nfeval, rc = so.fmin_tnc(fit_function_error, p0, fprime=None, args=(data_x, foreground_ys),
+                                approx_grad=True, bounds=bounds, epsilon=(data_x[-1]-data_x[0])/100.0,
+                                disp=0)
+    print so.tnc.RCSTRINGS[nfeval]
+    success = (nfeval==so.tnc.FCONVERGED)
+    '''
+    if plot and success:
         plt.plot(data_x, foreground_ys)
         x_samples = np.linspace(data_x[0], data_x[-1], 1000)
         plt.plot(x_samples, fit_function(p, x_samples))
         plt.show()
 
-    return p[1]
+    return p[1] if p[0] > p[3] else p[5], p, success
 
+
+def fit_modeled_peak_to_data(data_x, data_y, p0, plot=False):
+    """
+    Fits a linear combination of a Gaussian+Lorentzian to the specified data allowing only
+    the x-location to change.
+    p0 is the 6-element parameter list:
+    # p0[0] and p0[3] are the amplitudes of the respective components
+    # p0[1] and p0[5] are the centres of the respective functions
+    # p0[2] and p0[4] are the fit parameters of the respective functions
+    Returns a tuple containing two items.
+    The second item is the success result (1=success,0=failure) from the fitting algorithm
+    If the fit is successful the first item is the 2theta value of the higher of the
+    Gaussian or Lorentzian peak.
+    Assumes any background has been removed prior to calling and the data is assumed to
+    contain just a single peak to be fitted. <data_x> is a 1D array containing the 2theta
+    values <data_y> is a 1D array containing the intensity values
+    """
+#    # smooth the ys (Intensities) a bit by using ndimage grey_opening then subtract off the background
+#    foreground_ys = sn.grey_opening(data_y, size=(2,), mode='nearest')
+    foreground_ys = data_y
+
+    # Gaussian + Lorentzian function
+    # p[0] and p[3] are the amplitudes of the respective components
+    # p[1] and p[5] are the centres of the respective functions
+    # p[2] and p[4] are the fit parameters of the respective functions
+    fit_function = lambda x_offset, x: p0[0]*exp(-((x-p0[1]-x_offset[0])/p0[2])**2/2.0) + \
+                                p0[3]*(p0[4]**2/((x-p0[5]-x_offset[0])**2 + p0[4]**2))
+    fit_function_error = lambda p, x, y: (fit_function(p,x) - y)    # 1d Gaussian + Lorentzian fit
+
+    p, success = so.leastsq(fit_function_error, p0[:], args=(data_x, foreground_ys))
+
+    if plot and success:
+        plt.plot(data_x, foreground_ys)
+        x_samples = np.linspace(data_x[0], data_x[-1], 1000)
+        plt.plot(x_samples, fit_function(p, x_samples))
+        plt.show()
+
+    return p[1]-p if p[0] > p[3] else p[5]-p, success
+
+
+#def remove_background(dataset, window=None)
+#    """
+#    Returns a dataset with the background removed.
+#    If 
+#    """
+#    return dataset
 
 def fit_peaks_2theta(dataset, low_index=None, high_index=None, plot=False):
     """
-    Returns the 2theta value of the 1st moment/mean of several peaks according
-    to a maximum likelihood fit of a linear combination of a Gaussian+Lorentzian.
+    Returns a tuple containing two lists.
+    
+    The second list contains the 0/1 fit success flag for the corresponding peak.
+    The first list contains the 2theta values of the 1st moment/mean of all peaks
+    according to a maximum likelihood fit of a linear combination of a Gaussian+Lorentzian
+    or it contains None if the fit was unsuccessful.
     <dataset> is an XYEDataset instance
     <low_index> and <high_index> if provided constrain the search range
     The data is filtered by a windowing filter in order to ignore any rogue samples
@@ -248,7 +334,6 @@ def fit_peaks_2theta(dataset, low_index=None, high_index=None, plot=False):
     A threshold is then applied to locate candidate peaks.
     A fit is attempted on the highest peak.
     If successful, the central x value of each peak is returned.
-    If any peaks are not fitted, a FitFailed exception is raised.
 
     Note, scipy v0.11 has a wavelet-based peak finding function
     scipy.signal.find_peaks_cwt which should do a much better job than the approach
@@ -279,7 +364,7 @@ def fit_peaks_2theta(dataset, low_index=None, high_index=None, plot=False):
     fit_function_error = lambda p, x, y: (fit_function(p,x) - y)    # 1d Gaussian + Lorentzian fit
 
     ps = []
-    at_least_one_successful_fit = False
+    successes = []
     for i in range(x_peak_candidate_centres.size):
         low, high = zero_crossing_indices.reshape(-1, 2)[i]
         # expand the index range to cover the peak and tails
@@ -296,21 +381,18 @@ def fit_peaks_2theta(dataset, low_index=None, high_index=None, plot=False):
         p, success = so.leastsq(fit_function_error, p0[:],
                      args=(data_x[peak_index_range], foreground_ys[peak_index_range]))
         if success:
-            at_least_one_successful_fit = True
             ps.append(p[1])
         else:
             ps.append(None)
+        successes.append(success)
 
-        if plot:
+        if plot and success:
             plt.plot(data_x[peak_index_range], foreground_ys[peak_index_range])
             x_samples = np.linspace(data_x[peak_index_range][0], data_x[peak_index_range][-1], 1000)
             plt.plot(x_samples, fit_function(p, x_samples))
 
-        if not at_least_one_successful_fit:
-            raise FitFailed
-
     if plot:
         plt.show()
 
-    return ps
+    return ps, successes
 
