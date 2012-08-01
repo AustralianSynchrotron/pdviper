@@ -1,18 +1,66 @@
+import os
 from pyface.api import error
 from chaco.api import PlotGraphicsContext, PlotGraphicsContextMixin
+from output.mpl import GraphicsContext as MplGraphicsContext
 
-from output.svg import GraphicsContext as SVGGraphicsContext
-from output.ps import PSGC
 
-class SVGPlotGraphicsContext(PlotGraphicsContextMixin, SVGGraphicsContext):
-    pass
+class MplPlotGraphicsContext(PlotGraphicsContextMixin, MplGraphicsContext):
+    def __init__(self, size, dpi=72, format='svg', renderer=None):
+        PlotGraphicsContextMixin.__init__(self, size, dpi=dpi)
+        MplGraphicsContext.__init__(self, size, dpi=dpi, format=format, renderer=renderer)
 
-class PSPlotGraphicsContext(PlotGraphicsContextMixin, PSGC):
-    pass
+
+class ChacoFigure(object):
+    def __init__(self, plot, width, height, dpi=72):
+        self.plot = plot
+        self.width = width
+        self.height = height
+        class BBox(object):
+            pass
+        self.bbox = BBox()
+        self.bbox.width = width
+        self.bbox.height = height
+        self.bbox.bounds = 0, 0, width, height
+        self.dpi = dpi
+        self.facecolor = (255, 255, 255)
+        self.edgecolor = (255, 255, 255)
+
+    def set_canvas(self, canvas):
+        self.canvas = canvas
+
+    def set_dpi(self, dpi):
+        self.dpi = dpi
+
+    def get_size_inches(self):
+        return self.width / self.dpi, self.height / self.dpi
+
+    def get_facecolor(self):
+        return self.facecolor
+
+    def get_edgecolor(self):
+        return self.edgecolor
+
+    def set_facecolor(self, facecolor):
+        self.facecolor = facecolor
+
+    def set_edgecolor(self, edgecolor):
+        self.edgecolor = edgecolor
+
+    def draw(self, renderer):
+        gc = MplPlotGraphicsContext((self.width, self.height), self.dpi, renderer=renderer)
+        backbuffer = self.plot.use_backbuffer
+        self.plot.use_backbuffer = False
+        gc.render_component(self.plot)
+        self.plot.use_backbuffer = backbuffer
+
 
 class PlotOutput(object):
     @staticmethod
     def save_as_image(plot, filename, width=640, height=480, change_bounds=True):
+        # Backbuffering apparently causes poor quality rendering of underlays
+        backbuffer = plot.use_backbuffer
+        plot.use_backbuffer = False
+
         if change_bounds:
             old_bounds = plot.outer_bounds
             plot.outer_bounds = [width, height]
@@ -20,32 +68,45 @@ class PlotOutput(object):
         else:
             width, height = plot.outer_bounds
 
-        if filename.endswith('.svg'):
-            gc = SVGPlotGraphicsContext((width, height), dpi=72)
-        elif filename.endswith('.eps') or filename.endswith('.ps'):
-            gc = PSPlotGraphicsContext((width, height), dpi=72)
+        ext = os.path.splitext(filename)[1][1:]
+        if ext in ( 'svg', 'eps', 'pdf' ):
+            PlotOutput.save_with_matplotlib(plot, width, height, 300, filename)
         else:
-            gc = PlotGraphicsContext((width, height), dpi=300)
-        # Backbuffering apparently causes poor quality rendering of underlays
-        backbuffer = plot.use_backbuffer
-        plot.use_backbuffer = False
-        gc.render_component(plot)
+            PlotOutput.save_with_kiva(plot, width, height, 300, filename)
+
+        if change_bounds:
+            plot.outer_bounds = old_bounds
+
         plot.use_backbuffer = backbuffer
+        plot.do_layout(force=True)
+
+    @staticmethod
+    def save_with_kiva(plot, width, height, dpi, filename):
+        gc = PlotGraphicsContext((width, height), dpi=dpi)
+        gc.render_component(plot)
+        gc.save(filename)
+
+    @staticmethod
+    def save_with_matplotlib(plot, width, height, dpi, filename):
+        from matplotlib.backend_bases import FigureCanvasBase
+        figure = ChacoFigure(plot, width, height, dpi)
+        canvas = FigureCanvasBase(figure)
+        ext = os.path.splitext(filename)[1][1:]
 
         try:
-            gc.save(filename)
-        except KeyError, e:
+            # Call the relevant print_ method on the canvas.
+            # This invokes the correct backend and prints the "figure".
+            func = getattr(canvas, 'print_' + ext)
+        except AttributeError, e:
             errmsg = ("The filename must have an extension that matches "
                       "a graphics format, such as '.png' or '.tiff'.")
             if str(e.message) != '':
                 errmsg = ("Unknown filename extension: '%s'\n" %
                           str(e.message)) + errmsg
-
             error(None, errmsg, title="Invalid Filename Extension")
-
-        if change_bounds:
-            plot.outer_bounds = old_bounds
-            plot.do_layout(force=True)
+        else:
+            # Call the function
+            func(filename)
 
     @staticmethod
     def copy_to_clipboard(plot):
