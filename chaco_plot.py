@@ -153,7 +153,9 @@ class Surface2DPlot(ChacoPlot):
                         orientation='v',
                         resizable='v',
                         width=30,
-                        padding=40)
+                        padding=40,
+                        padding_right=100,
+                        fill_padding=True)
 
         colorbar._axis.title_font = settings.axis_title_font
         colorbar._axis.tick_label_font = settings.tick_font
@@ -180,7 +182,8 @@ class Surface2DPlot(ChacoPlot):
         colorbar.overlays.append(colorbar_label)
 
         # Add the plot and colorbar side-by-side
-        container = HPlotContainer(use_backbuffer=True)
+        container = HPlotContainer(use_backbuffer=True, padding_top=50,
+                                   fill_padding=True)
         container.add(plot)
         container.add(colorbar)
         return container
