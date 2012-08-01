@@ -167,12 +167,14 @@ class PSGC(basecore2d.GraphicsContextBase):
         self.contents.write('%3.3f %3.3f moveto\n' % (0,0))
         r,g,b,a = self.state.line_color
         self.contents.write('%1.3f %1.3f %1.3f setrgbcolor\n' % (r,g,b) )
+        text = text.encode('ascii', 'replace')
         self.contents.write('(%s) show\n' % text)
         self.contents.write('grestore\n')
         if self.state.clipping_path:
             self.contents.write('cliprestore\n')
 
     def get_full_text_extent(self, text):
+        text = text.encode('ascii', 'replace')
         ascent,descent=_fontdata.ascent_descent[self.face_name]
         descent = (-descent) * self.font_size / 1000.0
         ascent = ascent * self.font_size / 1000.0

@@ -186,6 +186,7 @@ class GraphicsContext(basecore2d.GraphicsContextBase):
         self.font_size = font.size
 
     def device_show_text(self, text):
+        text = text.encode('ascii', 'xmlcharrefreplace')
         ttm = self.get_text_matrix()
         ctm = self.get_ctm()  # not device_ctm!!
         m = affine.concat(ctm,ttm)
@@ -199,6 +200,7 @@ class GraphicsContext(basecore2d.GraphicsContextBase):
                        'transform': transform})
 
     def get_full_text_extent(self, text):
+        text = text.encode('ascii', 'replace')
         ascent,descent=_fontdata.ascent_descent[self.face_name]
         descent = (-descent) * self.font_size / 1000.0
         ascent = ascent * self.font_size / 1000.0
