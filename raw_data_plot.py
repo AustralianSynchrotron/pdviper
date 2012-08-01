@@ -95,9 +95,14 @@ class RawDataPlot(HasTraits):
                                   visible=False,
                                   plots=self.plots)
 
-        self.plot.x_axis.title = u'Angle (2\u0398)'
-        self.plot.x_axis.title_font = 'modern 14'
-        self.plot.y_axis.title_font = 'modern 14'
+        self.plot.x_axis.title = ur'Angle (2\u0398)'
+        tick_font = settings.tick_font
+        self.plot.x_axis.title_font = settings.axis_title_font
+        self.plot.y_axis.title_font = settings.axis_title_font
+        self.plot.x_axis.tick_label_font = tick_font
+        self.plot.y_axis.tick_label_font = tick_font
+        #self.plot.x_axis.tick_out = 0
+        #self.plot.y_axis.tick_out = 0
         self._set_scale('linear')
 
         # Add the traits inspector tool to the container
