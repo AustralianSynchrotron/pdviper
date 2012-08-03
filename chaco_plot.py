@@ -74,13 +74,15 @@ class StackedPlot(ChacoPlot):
                           mapper=self.index_mapper,
                           orientation='bottom',
                           title=u'Angle (2\u0398)',
-                          title_font='modern 14')
+                          title_font=settings.axis_title_font,
+                          tick_label_font=settings.tick_font)
         y_axis_title = 'Normalized intensity - %s' % get_value_scale_label(scale)
         y_axis = PlotAxis(component=self.container,
                           mapper=self.value_mapper,
                           orientation='left',
                           title=y_axis_title,
-                          title_font='modern 14')
+                          title_font=settings.axis_title_font,
+                          tick_label_font=settings.tick_font)
         self.container.overlays.extend([x_axis, y_axis])
 
         self.zoom_tool = ClickUndoZoomTool(
@@ -125,9 +127,12 @@ class Surface2DPlot(ChacoPlot):
         plot.default_origin = origin
         plot.x_axis.title = u'Angle (2\u0398)'
 
-        plot.x_axis.title_font = 'modern 14'
+        tick_font = settings.tick_font
+        plot.x_axis.title_font = settings.axis_title_font
+        plot.y_axis.title_font = settings.axis_title_font
+        plot.x_axis.tick_label_font = tick_font
+        plot.y_axis.tick_label_font = tick_font
         plot.y_axis.title = "Dataset"
-        plot.y_axis.title_font = 'modern 14'
         plot.y_axis.tick_interval = 1.0
         actual_plot = plot.plots["surface2d"][0]
 
@@ -148,7 +153,12 @@ class Surface2DPlot(ChacoPlot):
                         orientation='v',
                         resizable='v',
                         width=30,
-                        padding=40)
+                        padding=40,
+                        padding_right=100,
+                        fill_padding=True)
+
+        colorbar._axis.title_font = settings.axis_title_font
+        colorbar._axis.tick_label_font = settings.tick_font
         # Add pan and zoom tools to the colorbar
         self.colorbar_zoom_tool = ClickUndoZoomTool(colorbar,
                                                     axis="index",
@@ -167,12 +177,13 @@ class Surface2DPlot(ChacoPlot):
         colorbar_label = PlotLabel(
             'Intensity\n{:^9}'.format(get_value_scale_label(scale)),
             component=colorbar,
-            font='modern 12'
+            font=settings.axis_title_font,
         )
         colorbar.overlays.append(colorbar_label)
 
         # Add the plot and colorbar side-by-side
-        container = HPlotContainer(use_backbuffer=True)
+        container = HPlotContainer(use_backbuffer=True, padding_top=50,
+                                   fill_padding=True)
         container.add(plot)
         container.add(colorbar)
         return container
