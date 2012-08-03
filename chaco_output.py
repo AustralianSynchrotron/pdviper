@@ -33,7 +33,7 @@ class ChacoFigure(object):
         self.dpi = dpi
 
     def get_size_inches(self):
-        return self.width / self.dpi, self.height / self.dpi
+        return self.width / float(self.dpi), self.height / float(self.dpi)
 
     def get_facecolor(self):
         return self.facecolor
