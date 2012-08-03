@@ -76,7 +76,7 @@ class StackedPlot(ChacoPlot):
                           title=u'Angle (2\u0398)',
                           title_font=settings.axis_title_font,
                           tick_label_font=settings.tick_font)
-        y_axis_title = 'Normalized intensity - %s' % get_value_scale_label(scale)
+        y_axis_title = 'Normalized intensity (%s)' % get_value_scale_label(scale)
         y_axis = PlotAxis(component=self.container,
                           mapper=self.value_mapper,
                           orientation='left',
@@ -175,7 +175,7 @@ class Surface2DPlot(ChacoPlot):
 
         # Add a label to the top of the color bar
         colorbar_label = PlotLabel(
-            'Intensity\n{:^9}'.format(get_value_scale_label(scale)),
+            u'Intensity\n{:^9}'.format('(' + get_value_scale_label(scale) + ')'),
             component=colorbar,
             font=settings.axis_title_font,
         )
