@@ -47,7 +47,7 @@ class StackedPlot(ChacoPlot):
                                          use_backbuffer=True,
                                          border_visible=True,
                                          padding=50,
-                                         padding_left=70,
+                                         padding_left=110,
                                          fill_padding=True
                                              )
         self.value_mapper = None
@@ -114,7 +114,7 @@ class Surface2DPlot(ChacoPlot):
     def _plot(self, x, y, z, scale):
         pd = ArrayPlotData()
         pd.set_data("imagedata", z)
-        plot = Plot(pd)
+        plot = Plot(pd, padding_left=60, fill_padding=True)
         plot.bgcolor = 'white'
         cmap = fix(jet, (0, z.max()))
         origin = 'bottom left' # origin = 'top left' # to flip y-axis
@@ -154,7 +154,7 @@ class Surface2DPlot(ChacoPlot):
                         resizable='v',
                         width=30,
                         padding=40,
-                        padding_right=100,
+                        padding_top=50,
                         fill_padding=True)
 
         colorbar._axis.title_font = settings.axis_title_font
@@ -182,8 +182,7 @@ class Surface2DPlot(ChacoPlot):
         colorbar.overlays.append(colorbar_label)
 
         # Add the plot and colorbar side-by-side
-        container = HPlotContainer(use_backbuffer=True, padding_top=50,
-                                   fill_padding=True)
+        container = HPlotContainer(use_backbuffer=True)
         container.add(plot)
         container.add(colorbar)
         return container
