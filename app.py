@@ -99,7 +99,7 @@ class MainApp(HasTraits):
                 UItem(editor=NullEditor()),
                 show_border=False,
             ),
-            UItem('container', editor=ComponentEditor()),
+            UItem('container', editor=ComponentEditor(bgcolor='white')),
             show_border=False
         ),
         resizable=True, title=title, width=size[0], height=size[1]
@@ -281,7 +281,7 @@ class PlotGenerator(HasTraits):
                 Item('flip_order',
                      visible_when="plot_type == '%s'" % PlotGenerator.PLOT_STACKED),
                 UItem('plot_container',
-                     editor=ComponentEditor(),
+                     editor=ComponentEditor(bgcolor='white'),
                      visible_when="plot_type != '%s'" % PlotGenerator.PLOT_3D
                 ),
                 self.mpl_plot.traits_group('mpl_plot',
