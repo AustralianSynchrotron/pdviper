@@ -180,7 +180,7 @@ class MainApp(HasTraits):
             return
         filename = get_save_as_filename()
         if filename:
-            PlotOutput.save_as_image(self.container, filename, change_bounds=False)
+            PlotOutput.save_as_image(self.container, filename)
             open_file_with_default_handler(filename)
 
     def _copy_to_clipboard_changed(self):
@@ -253,8 +253,7 @@ class PlotGenerator(HasTraits):
             PlotGenerator.PLOT_3D: self.mpl_plot,
         }
         self.plot_container = OverlayPlotContainer(
-            bgcolor='white', use_backbuffer=True,
-            padding_left=30, fill_padding=True)
+            bgcolor='white', use_backbuffer=True)
         self.datasets = kws['datasets']
         self.cached_data = {}
         self._plot_type_changed()
@@ -266,7 +265,7 @@ class PlotGenerator(HasTraits):
 
     def show(self):
         menu_group = HGroup(
-                    UItem('plot_type', style='custom'),#, padding=5),
+                    UItem('plot_type', style='custom'),
                     spring,
                     UItem('scale'),
                     UItem('reset_button'),

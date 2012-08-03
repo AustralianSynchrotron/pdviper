@@ -57,13 +57,32 @@ import matplotlib as mpl
 mpl.rcParams['mathtext.fontset'] = 'stix'
 mpl.rcParams['mathtext.default'] = 'regular'
 
-def escape_unicode_as_mathtext(ch):
-    if ord(ch) > 128:
-        return '$' + ch + '$'
-    return ch
+def is_subscript(code):
+    return code >= 0x2080 and code < 0x2090
+
+def escape_unicode_as_mathtext(string, i):
+    ch = string[i]
+    code = ord(ch)
+    if code > 128:
+        j = i + 1
+        # This is dumb.
+        if is_subscript(code):
+            while is_subscript(ord(string[j])) and j < len(string):
+                j += 1
+            output = u'_{' + u''.join(map(lambda c: str(ord(c) - 0x2080), string[i:j])) + u'}'
+        else:
+            output = ch
+        return u''.join([ u'$', output, u'$' ]), j
+    return ch, i + 1
 
 def unicode_to_mathtext(string):
-    return u''.join(map(escape_unicode_as_mathtext, string))
+    new_string = u''
+    strlen = len(string)
+    i = 0
+    while i < strlen:
+        new, i = escape_unicode_as_mathtext(string, i)
+        new_string += new
+    return new_string
 
 
 class GraphicsContext(basecore2d.GraphicsContextBase):
@@ -98,8 +117,6 @@ class GraphicsContext(basecore2d.GraphicsContextBase):
     def save(self, filename):
         f = open(filename, 'w')
         self._backend.finalize()
-        if self.format == 'pdf':
-            self._pdf_file.close()
         f.write(self.contents.getvalue())
         f.close()
 
@@ -142,10 +159,10 @@ class GraphicsContext(basecore2d.GraphicsContextBase):
                                 self._font_prop, angle, ismath=True)
         gc.restore()
 
-    def get_full_text_extent(self, text):
+    def device_get_full_text_extent(self, text):
         text = unicode_to_mathtext(text)
         width, height, descent = self._backend.get_text_width_height_descent(text, self._font_prop, ismath=True)
-        return width, height, descent, height*1.2 # assume leading of 1.2*height
+        return width, height, descent, 0. #height*1.2 # assume leading of 1.2*height
 
     # actual implementation =)
 

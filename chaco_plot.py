@@ -25,7 +25,7 @@ class ChacoPlot(BasePlot, HasTraits):
         PlotOutput.copy_to_clipboard(self.component)
 
     def save_as(self, filename):
-        PlotOutput.save_as_image(self.component, filename, change_bounds=False)
+        PlotOutput.save_as_image(self.component, filename)
 
 
 class StackedPlot(ChacoPlot):
@@ -47,7 +47,7 @@ class StackedPlot(ChacoPlot):
                                          use_backbuffer=True,
                                          border_visible=True,
                                          padding=50,
-                                         padding_left=70,
+                                         padding_left=110,
                                          fill_padding=True
                                              )
         self.value_mapper = None
@@ -76,7 +76,7 @@ class StackedPlot(ChacoPlot):
                           title=u'Angle (2\u0398)',
                           title_font=settings.axis_title_font,
                           tick_label_font=settings.tick_font)
-        y_axis_title = 'Normalized intensity - %s' % get_value_scale_label(scale)
+        y_axis_title = 'Normalized intensity (%s)' % get_value_scale_label(scale)
         y_axis = PlotAxis(component=self.container,
                           mapper=self.value_mapper,
                           orientation='left',
@@ -114,7 +114,7 @@ class Surface2DPlot(ChacoPlot):
     def _plot(self, x, y, z, scale):
         pd = ArrayPlotData()
         pd.set_data("imagedata", z)
-        plot = Plot(pd)
+        plot = Plot(pd, padding_left=60, fill_padding=True)
         plot.bgcolor = 'white'
         cmap = fix(jet, (0, z.max()))
         origin = 'bottom left' # origin = 'top left' # to flip y-axis
@@ -154,7 +154,7 @@ class Surface2DPlot(ChacoPlot):
                         resizable='v',
                         width=30,
                         padding=40,
-                        padding_right=100,
+                        padding_top=50,
                         fill_padding=True)
 
         colorbar._axis.title_font = settings.axis_title_font
@@ -175,15 +175,14 @@ class Surface2DPlot(ChacoPlot):
 
         # Add a label to the top of the color bar
         colorbar_label = PlotLabel(
-            'Intensity\n{:^9}'.format(get_value_scale_label(scale)),
+            u'Intensity\n{:^9}'.format('(' + get_value_scale_label(scale) + ')'),
             component=colorbar,
             font=settings.axis_title_font,
         )
         colorbar.overlays.append(colorbar_label)
 
         # Add the plot and colorbar side-by-side
-        container = HPlotContainer(use_backbuffer=True, padding_top=50,
-                                   fill_padding=True)
+        container = HPlotContainer(use_backbuffer=True)
         container.add(plot)
         container.add(colorbar)
         return container

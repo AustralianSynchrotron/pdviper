@@ -49,7 +49,7 @@ class RawDataPlot(HasTraits):
         self.zoom_tool.clear_undo_history()
 
     def _set_scale(self, scale):
-        self.plot.y_axis.title = 'Intensity - %s' % get_value_scale_label(scale)
+        self.plot.y_axis.title = 'Intensity (%s)' % get_value_scale_label(scale)
 
     def show_legend(self, visible=True):
         self.plot.legend.visible = visible
@@ -83,8 +83,7 @@ class RawDataPlot(HasTraits):
     def _setup_plot(self):
         self.plot_data = ArrayPlotData()
         self.plot = Plot(self.plot_data,
-            padding_left=110, fill_padding=True,
-            padding_bottom=60,
+            padding_left=120, fill_padding=True,
             bgcolor="white", use_backbuffer=True)
 
         self._setup_plot_tools(self.plot)
