@@ -32,28 +32,46 @@ class MergeTest(unittest.TestCase):
         testpath = r'tests/testdata/'
         prefix = 'BZA-scan_'
 
-#        self.p1_0_params = parab.load_params(testpath + prefix + 'p1_0000.parab')
-#        self.p1_1_params = parab.load_params(testpath + prefix + 'p1_0001.parab')
-#        self.p2_0_params = parab.load_params(testpath + prefix + 'p2_0000.parab')
-#        self.p2_1_params = parab.load_params(testpath + prefix + 'p2_0001.parab')
-
-        self.p1_0_data = xye.XYEDataset.from_file(testpath + prefix + 'p1_0000.xye')
-        self.p1_1_data = xye.XYEDataset.from_file(testpath + prefix + 'p1_0001.xye')
-        self.p2_0_data = xye.XYEDataset.from_file(testpath + prefix + 'p2_0000.xye')
-        self.p2_1_data = xye.XYEDataset.from_file(testpath + prefix + 'p2_0001.xye')
-
     def merge_constructed_data_test(self):
-        x1data = np.hstack((np.arange(4),np.arange(3,6)))
-        x2data = np.hstack((np.arange(3),np.arange(2,6)))+0.5
-        data1 = xye.XYEDataset(data=np.vstack((x1data,x1data)).T)
-        data2 = xye.XYEDataset(data=np.vstack((x2data,x2data)).T)
+        x1data = np.r_[0:4, 3:6]
+        x2data = np.r_[0:3, 2:6] + 0.5
+        data1 = np.vstack((x1data,x1data)).T
+        data2 = np.vstack((x2data,x2data)).T
         merged = processing.combine_by_merge(data1, data2)
         self.assertTrue(merged.shape==(12,2))
 
-#    def merge_test(self):
-#        print processing.combine_by_merge(self.p1_0_data, self.p2_0_data)
-#        print processing.combine_by_merge(self.p1_1_data, self.p2_1_data)
-#        self.assertTrue(False)
+    def splice_constructed_data_test(self):
+        x1data = np.r_[0:2, 4:6, 7:9]
+        x2data = np.arange(6) + 0.5
+        data1 = np.vstack((x1data,x1data)).T
+        data2 = np.vstack((x2data,x2data)).T
+        merged = processing.combine_by_splice(data1, data2, gap_threshold=1.5)
+        self.assertTrue(np.allclose(merged[:,0],
+                             np.r_[0., 1., 1.5, 2.5, 3.5, 4., 5., 5.5, 7., 8.]))
+
+    def clean_gaps_test(self):
+        data = np.arange(13)
+        data = np.delete(data, [3,9])
+        data = np.vstack((data,data)).T
+        data = processing.clean_gaps(data, gap_threshold=1.5, shave_number=2)
+        self.assertTrue(np.alltrue(data[:,0]==np.r_[0,6,12]))
+
+    def regrid_data_test(self):
+        # test that regridding preserves the y-data if resampled at the x-data points
+        data = np.random.seed(42)
+        POINTS = 50000
+        data = np.c_[np.arange(POINTS), np.random.rand(POINTS)]
+        newdata = processing.regrid_data(data, interval=1.0)
+        self.assertTrue(np.allclose(data, newdata))
+
+    def regrid_data_test2(self):
+        # test that regridding preserves the y-data if resampled near the x-data points
+        data = np.random.seed(42)
+        POINTS = 50000
+        data = np.c_[np.arange(POINTS), np.random.rand(POINTS)]
+        newdata = processing.regrid_data(data, start=0.000001, end=data[:,0][-1]+.000001, interval=1.0)
+        self.assertTrue(np.allclose(data, newdata, atol=1e-4))
+
 
 if __name__ == '__main__':
     nose.main()

@@ -55,13 +55,6 @@ The data is output as an .xye file along with a .parab file.
 A GUI checkbox option enables the .parab file contents to be prepended to the .xye file.
 """
 
-import exceptions
-
-class FitFailed(exceptions.Exception):
-    def __str__(self):
-        print "","Peak fit failed"
-
-
 def cubic_interpolate(x, y, z, x_size, y_size):
     """
     This 2D interpolation routine is used by the 2D surface plot to generate values between actual plot series data values.
@@ -141,29 +134,33 @@ def rescale(data, method='log'):
     return new_data
 
 
-def fill_gaps(dataset, method='merge'):
-    filename = dataset.source
-    if '_p1_' not in filename:
-        return dataset.data
-    p2_filename = filename.replace('_p1_', '_p2_')
-    try:
-        disabled
-        p2 = XYEDataset.from_file(p2_filename)
-        key = 'Integrated Ion Chamber Count(counts)'
-        p2_count = p2.metadata[key]
-        p1_count = dataset.metadata[key]
-        p2.data[:,1] *= p1_count / p2_count
-        dataset.data = combine_by_merge(dataset, p2)
-    except:
-        pass
-    return dataset.data
+def clean_gaps(data, gap_threshold=0.1, shave_number=5):
+    """
+    data is an Nx2 array of xy data.
+    Gaps in the detector array lead to gaps in the data and corruption of the sample
+    values adjacent to the gaps. Therefore this routine is called prior to merging the
+    data for the two detector positions to remove 5 (currently) samples from each side of
+    the identified gaps.
+    """
+    # Gaps are 0.5 deg each whereas data points are typically spaced by about 0.00375 deg
+    gap_indices = np.where(np.diff(data[:,0]) > gap_threshold)[0]
+    # Now gap_indices contains indices of samples on the LHS of the gap
+    # Expand indices into ranges +/- shave_number
+    deletion_indices = gap_indices[np.newaxis].T + np.arange(1-shave_number, 1+shave_number)
+    return np.delete(data, deletion_indices, axis=0)
 
 
 def combine_by_merge(d1, d2):
-    combined = np.vstack([d1.data, d2.data])
+    """
+    d1 and d2 are Nx2 arrays of xy data.
+    Merge the datasets by combining all data points in x-sorted order.
+    Assumes that the 'gaps' in d1 have been cleaned by a call to clean_gaps().
+    If any points have exactly duplicated x values the d2 point is not merged.
+    """
+    combined = np.vstack([d1, d2])
     indices = combined[:,0].argsort()
     new_data = combined[indices]
-    x, y = np.transpose(new_data)
+    x = new_data[:,0]
     # Remove duplicate x values that interfere with interpolation
     x_diff = np.diff(x)
     # Don't forget the first element, which doesn't have a diff result yet
@@ -171,6 +168,63 @@ def combine_by_merge(d1, d2):
     # Only take the unique values from the array
     x_uniq = x_diff > 0
     return new_data[x_uniq]
+
+
+def combine_by_splice(d1, d2, gap_threshold=0.1):
+    """
+    d1 and d2 are Nx2 arrays of xy data.
+    Replace the 'gaps' in d1 by valid data in the corresponding parts of d2.
+    Assumes that the 'gaps' in d1 have been cleaned by a call to clean_gaps().
+    """
+    # Identify the gaps in d1
+    gap_indices = np.where(np.diff(d1[:,0]) > gap_threshold)[0]
+    # get the x or 2theta value ranges for the samples at the edges of the gaps in d1
+    x_edges = np.vstack((d1[:,0][gap_indices], d1[:,0][gap_indices + 1])).T
+    # for each identified gap in d1, insert that segment from d2
+    d1 = d1[:]
+    for lower, upper in x_edges:
+        new_segment = d2[(d2[:,0] > lower) & (d2[:,0] < upper)]
+        d1 = combine_by_merge(d1, new_segment)
+    return d1
+
+
+def regrid_data(data, start=None, end=None, interval=0.00375):
+    """
+    data is an Nx2 array of xy data.
+    Returns an Nx2 array of the data resampled at x values starting at start and
+    spaced by interval.
+    If start==None the start x value is the first x value in the input data.
+    If end==None the end x value is the last value less than or equal to the last
+    x value in the input data.
+    """
+    data = np.cast[np.double](data)
+    '''
+    # Looking at the behaviour of the existing IDL code which uses the spline() fitting function with
+    # sigma=15 and speaking to Qinfen, linear interpolation will probably work just as well and is extremely fast.
+    # If linear interpolation is no good, the two best options appear to be InterpolatedUnivariateSpline and pchip.
+    # pchip works beautifully but unfortunately is slow as it has to compute a Hermite polynomial between each data point.
+    # Unfortunately it is probably too slow for processing large numbers of datasets.
+    # The KroghInterpolator and BarycentricInterpolator don't work properly on my test data - it is big and ill-conditioned.
+    # The LSQUnivariateSpline is not useful for close fitting of large data.
+    # interpolator = interpolate.InterpolatedUnivariateSpline(data[:,0], data[:,1], k=5)
+    interpolator = interpolate.pchip(data[:,0], data[:,1])
+    # interpolator = interpolate.interp1d(data[:,0], data[:,1], kind='quadratic')                 # worse than linear InterpolatedUnivariateSpline
+    # interpolator = interpolate.interp1d(data[:,0], data[:,1], kind='cubic')                     # OK, as expected, but not as close at the 
+    # interpolator = interpolate.interp1d(data[:,0], data[:,1], kind='nearest')                   # probably unacceptable?
+    if start==None:
+        start = data[0,0]
+    if end==None:
+        end = data[-1,0]
+    xs = np.arange(start, end, interval)
+    return np.vstack((xs, interpolator(xs))).T
+    '''
+    # linear interpolation
+    if start==None:
+        start = data[0,0]
+    if end==None:
+        end = data[-1,0]
+    xs = np.arange(start, end+interval/100.0, interval)
+    return np.vstack((xs, np.interp(xs, data[:,0], data[:,1]))).T
 
 
 def normalise_datasets(datasets):
