@@ -180,7 +180,7 @@ class MainApp(HasTraits):
             return
         filename = get_save_as_filename()
         if filename:
-            PlotOutput.save_as_image(self.container, filename, change_bounds=False)
+            PlotOutput.save_as_image(self.container, filename)
             open_file_with_default_handler(filename)
 
     def _copy_to_clipboard_changed(self):

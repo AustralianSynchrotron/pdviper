@@ -25,7 +25,7 @@ class ChacoPlot(BasePlot, HasTraits):
         PlotOutput.copy_to_clipboard(self.component)
 
     def save_as(self, filename):
-        PlotOutput.save_as_image(self.component, filename, change_bounds=False)
+        PlotOutput.save_as_image(self.component, filename)
 
 
 class StackedPlot(ChacoPlot):

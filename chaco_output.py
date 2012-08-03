@@ -1,11 +1,12 @@
 import os
 from pyface.api import error
-from chaco.api import PlotGraphicsContext, PlotGraphicsContextMixin
+
+from output.plot_graphics_context import PlotGraphicsContext, PlotGraphicsContextMixin
 from output.mpl import GraphicsContext as MplGraphicsContext
 
 
 class MplPlotGraphicsContext(PlotGraphicsContextMixin, MplGraphicsContext):
-    def __init__(self, size, dpi=72, format='svg', renderer=None):
+    def __init__(self, size, dpi, format='svg', renderer=None):
         PlotGraphicsContextMixin.__init__(self, size, dpi=dpi)
         MplGraphicsContext.__init__(self, size, dpi=dpi, format=format, renderer=renderer)
 
@@ -48,15 +49,12 @@ class ChacoFigure(object):
 
     def draw(self, renderer):
         gc = MplPlotGraphicsContext((self.width, self.height), self.dpi, renderer=renderer)
-        backbuffer = self.plot.use_backbuffer
-        self.plot.use_backbuffer = False
         gc.render_component(self.plot)
-        self.plot.use_backbuffer = backbuffer
 
 
 class PlotOutput(object):
     @staticmethod
-    def save_as_image(plot, filename, width=640, height=480, change_bounds=True):
+    def save_as_image(plot, filename, width=960, height=720, dpi=300, change_bounds=True):
         # Backbuffering apparently causes poor quality rendering of underlays
         backbuffer = plot.use_backbuffer
         plot.use_backbuffer = False
@@ -68,17 +66,22 @@ class PlotOutput(object):
         else:
             width, height = plot.outer_bounds
 
+        plot.invalidate_draw()
+        plot.request_redraw()
+
         ext = os.path.splitext(filename)[1][1:]
         if ext in ( 'svg', 'eps', 'pdf' ):
-            PlotOutput.save_with_matplotlib(plot, width, height, 300, filename)
+            PlotOutput.save_with_matplotlib(plot, width, height, dpi, filename)
         else:
-            PlotOutput.save_with_kiva(plot, width, height, 300, filename)
+            PlotOutput.save_with_kiva(plot, width, height, dpi, filename)
 
         if change_bounds:
             plot.outer_bounds = old_bounds
 
         plot.use_backbuffer = backbuffer
         plot.do_layout(force=True)
+        plot.invalidate_draw()
+        plot.request_redraw()
 
     @staticmethod
     def save_with_kiva(plot, width, height, dpi, filename):
