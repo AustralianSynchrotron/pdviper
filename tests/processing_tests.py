@@ -15,22 +15,15 @@ class PeakDetectionTest(unittest.TestCase):
         # these magic indices are found by examining the si640c_low_temp_cal_p1_scan0.000000_adv0_0000.xye dataset
         data_x = self.data.x()[1686:1735]
         data_y = self.data.y()[1686:1735]
-        peak_offset = processing.fit_peak_2theta(data_x, data_y, plot=False)
+        peak_offset, _ = processing.fit_peak_2theta(data_x, data_y, plot=False)
         LOW_2TH = 24.8278
         HIGH_2TH = 24.8280
         self.assertTrue(LOW_2TH < peak_offset < HIGH_2TH)
 
-    def find_peaks_test(self):
-        peak_offsets = processing.fit_peaks_2theta(self.data, plot=False)
-        LOW_2TH = 24.8278
-        HIGH_2TH = 24.8280
-        self.assertTrue(LOW_2TH < peak_offsets[0] < HIGH_2TH)
-
 
 class MergeTest(unittest.TestCase):
     def setUp(self):
-        testpath = r'tests/testdata/'
-        prefix = 'BZA-scan_'
+        pass
 
     def merge_constructed_data_test(self):
         x1data = np.r_[0:4, 3:6]
@@ -58,7 +51,7 @@ class MergeTest(unittest.TestCase):
 
     def regrid_data_test(self):
         # test that regridding preserves the y-data if resampled at the x-data points
-        data = np.random.seed(42)
+        np.random.seed(42)
         POINTS = 50000
         data = np.c_[np.arange(POINTS), np.random.rand(POINTS)]
         newdata = processing.regrid_data(data, interval=1.0)
@@ -66,7 +59,7 @@ class MergeTest(unittest.TestCase):
 
     def regrid_data_test2(self):
         # test that regridding preserves the y-data if resampled near the x-data points
-        data = np.random.seed(42)
+        np.random.seed(42)
         POINTS = 50000
         data = np.c_[np.arange(POINTS), np.random.rand(POINTS)]
         newdata = processing.regrid_data(data, start=0.000001, end=data[:,0][-1]+.000001, interval=1.0)
