@@ -1,3 +1,5 @@
+import os
+import re
 from os.path import basename
 
 from enable.api import ComponentEditor
@@ -5,7 +7,6 @@ from traits.api import List, Str, Float, HasTraits, Instance, Button, Enum, Bool
 from traitsui.api import Item, UItem, HGroup, VGroup, View, NullEditor, spring, Label, CheckListEditor, ButtonEditor
 from pyface.api import FileDialog, OK
 from chaco.api import OverlayPlotContainer
-from chaco.tools.api import RangeSelection, RangeSelectionOverlay
 
 from xye import XYEDataset
 from chaco_output import PlotOutput
@@ -109,8 +110,16 @@ class MainApp(HasTraits):
         return len(self.datasets) != 0
 
     def __init__(self, *args, **kws):
+        """
+        <datasets> is a dictionary whose entries are XYEDataset objects with keys equal to
+        the filename of the dataset, e.g. {'BZA-scan_p2_0027.xye', <XYEDataset>}
+        <dataset_pairs> is a set containing the keys of (odd,even) pairs of datasets to
+        process, e.g. set([('BZA-scan_p1_0025.xye', 'BZA-scan_p2_0025.xye'),
+                           ('BZA-scan_p1_0026.xye', 'BZA-scan_p2_0026.xye')])
+        """
         super(MainApp, self).__init__(*args, **kws)
         self.datasets = {}
+        self.dataset_pairs = set()
         self.raw_data_plot = RawDataPlot(self.datasets)
         self.plot = self.raw_data_plot.get_plot()
         self.container = OverlayPlotContainer(self.plot,
@@ -121,7 +130,8 @@ class MainApp(HasTraits):
         self._options = [ 'Show legend', 'Show gridlines', 'Show crosslines' ]
         # The list of currently set options, updated by the UI.
         self.options = self._options
-        self.file_paths = [ "0.xye", "1.xye" ]
+#        self.file_paths = [ "0.xye", "1.xye" ]
+        self.file_paths = []
 
     def _open_files_changed(self):
         wildcard = 'XYE (*.xye)|*.xye|' \
@@ -143,12 +153,8 @@ class MainApp(HasTraits):
 
     def _bt_select_peak_event_controller_fired(self):
         '''
-        The explanation of hooking up a RangeSelection overlay is here:
-        https://mail.enthought.com/pipermail/chaco-users/2009-July/001290.html
-        However, I don't know what the renderer is. Line 32 of raw_data_plot is:
-        self.plots[name] = self.plot.plot()
-        implying the renderer is accessed as
-        self.raw_data_plot_instance.plots[name][0]
+        Button click event handler for peak alignment. Controls enabling and disabling the
+        range selection tool and cycling the button label that indicates the bottun mode. 
         '''
         plot = self.raw_data_plot
         # Use the button label to determine the button state
@@ -166,10 +172,11 @@ class MainApp(HasTraits):
             self.bt_select_peak_label = 'Select peak'
 
             range_low, range_high = plot.get_range_selection_tool_limits()
-            processing.get_peak_offsets_for_all_dataseries(range_low, range_high, self.datasets)
 
-#            if fit_successful:
-#                print fit_centre
+            # fit the peak in all loaded dataseries
+            for datapairs in self.dataset_pairs:
+                processing.fit_peaks_for_a_dataset_pair(range_low, range_high, self.datasets, datapairs)
+
 
     def _bt_auto_align_series_changed(self):
         # attempt auto alignment
@@ -190,10 +197,63 @@ class MainApp(HasTraits):
     def _scale_changed(self):
         self._plot_datasets()
 
-    def _file_paths_changed(self):
+    def _get_file_path_parts(self, filename):
+        """
+        A helper function that parses a filename and returns the filename split into
+        useful parts as follows:
+        Example filenames:
+            path/si640c_low_temp_cal_p1_scan0.000000_adv0_0000.xye
+            path/BZA-scan_p2_0026.xye
+        The filename path/foo_p1_bar_0123.xye returns the tuple
+        ('path', 'foo_p1_bar_0123.xye', ['', 'foo', '1', '_bar', '0123', 'xye', ''])
+        The filename path/foo_p1_0123.xye returns the tuple
+        ('path', 'foo_p1_0123.xye',
+            ['', 'foo', '1', '', '0123', 'xye', ''])
+        """
+        current_directory, filename = os.path.split(filename)
+        # root, ext = os.path.splitext(filename)
+        parts = re.split(r'(.+)_p(\d+)(.*)_(\d+)\.(.+)', filename)
+        return current_directory, filename, parts
+
+    def _add_dataset_pair(self, filename):
+        """
+        Adds two datasets (one referred to by filename and its partnered position) to the
+        self.datasets dictionary and the dataset_pairs set.
+        """
+        current_directory, filebase, parts = self._get_file_path_parts(filename)
+        position_index = int(parts[2])      # e.g. equals 1 when the filename contains _p1_
+        # get the index of the associated position, e.g. 2=>1, 1=>2, 5=>6, 6=>5 etc.
+        other_position_index = ((position_index-1)^1)+1
+        # base filename for the associated position.
+        other_filebase = u'{}_p{}{}_{}.{}'.format(parts[1], str(other_position_index),
+                                                  parts[3], parts[4], parts[5])
+        other_filename = os.path.join(current_directory, other_filebase)
+        # OK, we've got the names and paths, now add the actual data and references.
+        self._add_xye_dataset(filename)
+        if other_filename not in self.file_paths:
+            self._add_xye_dataset(other_filename)
+            # We also need to append the new path to the file_paths List trait which is
+            # already populated by the files selected using the file selection dialog
+            self.file_paths.append(other_filename)
+        if (position_index&1) == 0:
+            self.dataset_pairs.add((other_filebase, filebase))
+        else:
+            self.dataset_pairs.add((filebase, other_filebase))
+
+    def _file_paths_changed(self, new):
+        """
+        When the file dialog box is closed with a selection of filenames,
+        Generate a list of all the filenames and pair them off with the associated* positions,
+        Generate a sorted list of all the pairs,
+        Add all the associated datasets to the datasets structure.
+        * - Positions are always paired e.g. 1 and 2, or 3 and 4, so a selection with
+        either 1 or 2 should generate the pair 1 and 2.
+        """
         self.datasets = {}
-        for filename in self.file_paths:
-            self._add_xye_dataset(filename)
+        self.dataset_pairs = set()
+        # self.file_paths is modified by _add_dataset_pair() so iterate over a copy of it.
+        for filename in self.file_paths[:]:
+            self._add_dataset_pair(filename)
         self._plot_datasets()
 
     def _plot_datasets(self):
