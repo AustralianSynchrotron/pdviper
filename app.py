@@ -4,7 +4,7 @@ from os.path import basename
 
 from enable.api import ComponentEditor
 from traits.api import List, Str, Float, HasTraits, Instance, Button, Enum, Bool, Event
-from traitsui.api import Item, UItem, HGroup, VGroup, View, NullEditor, spring, Label, CheckListEditor, ButtonEditor
+from traitsui.api import Item, UItem, HGroup, VGroup, View, spring, Label, CheckListEditor, ButtonEditor, Tabbed
 from pyface.api import FileDialog, OK
 from chaco.api import OverlayPlotContainer
 
@@ -56,6 +56,47 @@ class MainApp(HasTraits):
 
     raw_data_plot = Instance(RawDataPlot)
 
+    view_group = VGroup(
+        Label('Scale:'),
+        UItem('scale', enabled_when='object._has_data()'),
+        UItem('options', editor=CheckListEditor(name='_options'), style='custom', enabled_when='object._has_data()'),
+        UItem('reset_button', enabled_when='object._has_data()'),
+        spring,
+        '_',
+        spring,
+        UItem('copy_to_clipboard', enabled_when='object._has_data()'),
+        UItem('save_as_image', enabled_when='object._has_data()'),
+        label='View',
+        springy=False,
+    )
+
+    process_group = VGroup(
+        Label('Align series:'),
+        bt_select_peak,
+        UItem('bt_auto_align_series', enabled_when='object._has_data()'),
+        spring,
+        '_',
+        spring,
+        Label('Correction:'),
+        UItem('correction', enabled_when='object._has_data()'),
+        spring,
+        '_',
+        spring,
+        Label('Merge method:'),
+        UItem('merge_method', enabled_when='object._has_data()'),
+        HGroup(
+            VGroup(
+                Item('merge_regrid', label='Grid', enabled_when='object._has_data()'),
+                Item('normalise', label='Normalise', enabled_when='object._has_data()'),
+                show_left=True,
+                springy=False,
+            ),
+            springy=False,
+        ),
+        label='Process',
+        springy=False,
+    )
+
     traits_view = View(
         HGroup(
             VGroup(
@@ -63,45 +104,16 @@ class MainApp(HasTraits):
                 UItem('generate_plot', enabled_when='object._has_data()'),
                 UItem('help_button'),
                 spring,
-                '_',
                 spring,
-                #~ Label('Scale:', enabled_when='object._has_data()'),
-                Label('Scale:'),
-                UItem('scale', enabled_when='object._has_data()'),
-                UItem('options', editor=CheckListEditor(name='_options'), style='custom', enabled_when='object._has_data()'),
-                UItem('reset_button', enabled_when='object._has_data()'),
-                spring,
-                '_',
-                spring,
-                Label('Align series:'),
-                bt_select_peak,
-                UItem('bt_auto_align_series', enabled_when='object._has_data()'),
-                Label('Correction:'),
-                UItem('correction', enabled_when='object._has_data()'),
-                spring,
-                '_',
-                spring,
-                Label('Merge method:'),
-                UItem('merge_method', enabled_when='object._has_data()'),
-                HGroup(
-                    VGroup(
-                        Item('merge_regrid', label='Grid', enabled_when='object._has_data()'),
-                        Item('normalise', label='Normalise', enabled_when='object._has_data()'),
-                    ),
+                Tabbed(
+                    view_group,
+                    process_group,
+                    springy=False,
                 ),
-                spring,
-                '_',
-                spring,
-                UItem('copy_to_clipboard', enabled_when='object._has_data()'),
-                UItem('save_as_image', enabled_when='object._has_data()'),
-                show_border=False
-            ),
-            VGroup(
-                UItem(editor=NullEditor()),
                 show_border=False,
             ),
             UItem('container', editor=ComponentEditor(bgcolor='white')),
-            show_border=False
+            show_border=False,
         ),
         resizable=True, title=title, width=size[0], height=size[1]
     )
