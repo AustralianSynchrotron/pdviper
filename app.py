@@ -15,7 +15,7 @@ from processing import rescale
 from mpl_plot import MplPlot
 from chaco_plot import StackedPlot, Surface2DPlot
 from fixes import fix_background_color
-from data_viewer import DatasetEditor, DatasetUI
+from dataset_editor import DatasetEditor, DatasetUI
 
 import processing
 
