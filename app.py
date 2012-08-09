@@ -4,7 +4,7 @@ from os.path import basename
 
 from enable.api import ComponentEditor
 from traits.api import List, Str, Float, HasTraits, Instance, Button, Enum, Bool, Event
-from traitsui.api import Item, UItem, HGroup, VGroup, View, NullEditor, spring, Label, CheckListEditor, ButtonEditor
+from traitsui.api import Item, UItem, HGroup, VGroup, View, spring, Label, CheckListEditor, ButtonEditor, Tabbed
 from pyface.api import FileDialog, OK
 from chaco.api import OverlayPlotContainer
 
@@ -15,6 +15,7 @@ from processing import rescale
 from mpl_plot import MplPlot
 from chaco_plot import StackedPlot, Surface2DPlot
 from fixes import fix_background_color
+from data_viewer import DatasetEditor, DatasetUI
 
 import processing
 
@@ -26,11 +27,18 @@ size = (1200, 700)
 title = "Sculpd"
 
 
+def create_datasetui(dataset):
+    ui = DatasetUI(name=dataset.name, dataset=dataset, color=None)
+    dataset.metadata['ui'] = ui
+    return ui
+
+
 class MainApp(HasTraits):
     container = Instance(OverlayPlotContainer)
 
     file_paths = List(Str)
     open_files = Button("Open files...")
+    edit_datasets = Button("Edit datasets...")
     copy_to_clipboard = Button("Copy to clipboard")
     save_as_image = Button("Save as image...")
     generate_plot = Button("Generate plot...")
@@ -56,52 +64,65 @@ class MainApp(HasTraits):
 
     raw_data_plot = Instance(RawDataPlot)
 
+    view_group = VGroup(
+        Label('Scale:'),
+        UItem('scale', enabled_when='object._has_data()'),
+        UItem('options', editor=CheckListEditor(name='_options'), style='custom', enabled_when='object._has_data()'),
+        UItem('reset_button', enabled_when='object._has_data()'),
+        spring,
+        '_',
+        spring,
+        UItem('copy_to_clipboard', enabled_when='object._has_data()'),
+        UItem('save_as_image', enabled_when='object._has_data()'),
+        label='View',
+        springy=False,
+    )
+
+    process_group = VGroup(
+        Label('Align series:'),
+        bt_select_peak,
+        UItem('bt_auto_align_series', enabled_when='object._has_data()'),
+        spring,
+        '_',
+        spring,
+        Label('Correction:'),
+        UItem('correction', enabled_when='object._has_data()'),
+        spring,
+        '_',
+        spring,
+        Label('Merge method:'),
+        UItem('merge_method', enabled_when='object._has_data()'),
+        HGroup(
+            VGroup(
+                Item('merge_regrid', label='Grid', enabled_when='object._has_data()'),
+                Item('normalise', label='Normalise', enabled_when='object._has_data()'),
+                show_left=True,
+                springy=False,
+            ),
+            springy=False,
+        ),
+        label='Process',
+        springy=False,
+    )
+
     traits_view = View(
         HGroup(
             VGroup(
                 UItem('open_files'),
+                UItem('edit_datasets'),
                 UItem('generate_plot', enabled_when='object._has_data()'),
                 UItem('help_button'),
                 spring,
-                '_',
                 spring,
-                #~ Label('Scale:', enabled_when='object._has_data()'),
-                Label('Scale:'),
-                UItem('scale', enabled_when='object._has_data()'),
-                UItem('options', editor=CheckListEditor(name='_options'), style='custom', enabled_when='object._has_data()'),
-                UItem('reset_button', enabled_when='object._has_data()'),
-                spring,
-                '_',
-                spring,
-                Label('Align series:'),
-                bt_select_peak,
-                UItem('bt_auto_align_series', enabled_when='object._has_data()'),
-                Label('Correction:'),
-                UItem('correction', enabled_when='object._has_data()'),
-                spring,
-                '_',
-                spring,
-                Label('Merge method:'),
-                UItem('merge_method', enabled_when='object._has_data()'),
-                HGroup(
-                    VGroup(
-                        Item('merge_regrid', label='Grid', enabled_when='object._has_data()'),
-                        Item('normalise', label='Normalise', enabled_when='object._has_data()'),
-                    ),
+                Tabbed(
+                    view_group,
+                    process_group,
+                    springy=False,
                 ),
-                spring,
-                '_',
-                spring,
-                UItem('copy_to_clipboard', enabled_when='object._has_data()'),
-                UItem('save_as_image', enabled_when='object._has_data()'),
-                show_border=False
-            ),
-            VGroup(
-                UItem(editor=NullEditor()),
                 show_border=False,
             ),
             UItem('container', editor=ComponentEditor(bgcolor='white')),
-            show_border=False
+            show_border=False,
         ),
         resizable=True, title=title, width=size[0], height=size[1]
     )
@@ -120,6 +141,7 @@ class MainApp(HasTraits):
         super(MainApp, self).__init__(*args, **kws)
         self.datasets = {}
         self.dataset_pairs = set()
+        self.uidatasets = []
         self.raw_data_plot = RawDataPlot(self.datasets)
         self.plot = self.raw_data_plot.get_plot()
         self.container = OverlayPlotContainer(self.plot,
@@ -251,15 +273,22 @@ class MainApp(HasTraits):
         """
         self.datasets = {}
         self.dataset_pairs = set()
+        self.uidatasets = []
         # self.file_paths is modified by _add_dataset_pair() so iterate over a copy of it.
         for filename in self.file_paths[:]:
             self._add_dataset_pair(filename)
         self._plot_datasets()
+        self.uidatasets.sort(key=lambda d: d.name)
 
     def _plot_datasets(self):
         self.raw_data_plot.plot_datasets(self.datasets, scale=self.scale)
         self._options_changed(self.options)
         self.container.request_redraw()
+
+    def _edit_datasets_changed(self):
+        editor = DatasetEditor(datasets=self.uidatasets)
+        editor.edit_traits()
+        self._plot_datasets()
 
     def _generate_plot_changed(self):
         if self.datasets:
@@ -280,6 +309,7 @@ class MainApp(HasTraits):
             return
         filename = basename(file_path)
         self.datasets[filename] = dataset
+        self.uidatasets.append(create_datasetui(dataset))
 
 
 class PlotGenerator(HasTraits):
