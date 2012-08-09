@@ -12,6 +12,11 @@ from chaco.api import OverlayPlotContainer
 class OutputTest(unittest.TestCase):
     def setUp(self):
         self.data = xye.XYEDataset.from_file(r'tests/testdata/si640c_low_temp_cal_p1_scan0.000000_adv0_0000.xye')
+        class UI(object):
+            color = None
+            name = ''
+            active = True
+        self.data.metadata['ui'] = UI()
         self.datasets = { self.data.name: self.data }
         self.plot = RawDataPlot(self.datasets)
         self.plot.plot_datasets(self.datasets, scale='log')
