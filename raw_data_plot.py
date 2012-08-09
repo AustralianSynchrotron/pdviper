@@ -26,12 +26,20 @@ class RawDataPlot(HasTraits):
             self.plot.delplot(*self.plots.keys())
             self.plots = {}
         for name, dataset in datasets.iteritems():
+            ui = dataset.metadata['ui']
+            if not ui.active:
+                continue
             data = dataset.data
             x, y = np.transpose(data[:, [0,1]])
             self.plot_data.set_data(name + '_x', x)
             self.plot_data.set_data(name + '_y', rescale(y, method=scale))
+            color = ui.color
+            if color is None:
+                color = 'auto'
             plot = self.plot.plot((name + '_x', name + '_y'),
-                                  name=name, type='line', color='auto')
+                                  name=name, type='line', color=color)
+            if color == 'auto':
+                ui.color = tuple((np.array(plot[0].color_) * 255).astype('uint8').tolist())
             self.plots[name] = plot
 
         if len(datasets) > 0:

@@ -15,6 +15,7 @@ from processing import rescale
 from mpl_plot import MplPlot
 from chaco_plot import StackedPlot, Surface2DPlot
 from fixes import fix_background_color
+from data_viewer import DatasetEditor, DatasetUI
 
 import processing
 
@@ -26,11 +27,18 @@ size = (1200, 700)
 title = "Sculpd"
 
 
+def create_datasetui(dataset):
+    ui = DatasetUI(name=dataset.name, dataset=dataset, color=None)
+    dataset.metadata['ui'] = ui
+    return ui
+
+
 class MainApp(HasTraits):
     container = Instance(OverlayPlotContainer)
 
     file_paths = List(Str)
     open_files = Button("Open files...")
+    edit_datasets = Button("Edit datasets...")
     copy_to_clipboard = Button("Copy to clipboard")
     save_as_image = Button("Save as image...")
     generate_plot = Button("Generate plot...")
@@ -101,6 +109,7 @@ class MainApp(HasTraits):
         HGroup(
             VGroup(
                 UItem('open_files'),
+                UItem('edit_datasets'),
                 UItem('generate_plot', enabled_when='object._has_data()'),
                 UItem('help_button'),
                 spring,
@@ -132,6 +141,7 @@ class MainApp(HasTraits):
         super(MainApp, self).__init__(*args, **kws)
         self.datasets = {}
         self.dataset_pairs = set()
+        self.uidatasets = []
         self.raw_data_plot = RawDataPlot(self.datasets)
         self.plot = self.raw_data_plot.get_plot()
         self.container = OverlayPlotContainer(self.plot,
@@ -263,15 +273,22 @@ class MainApp(HasTraits):
         """
         self.datasets = {}
         self.dataset_pairs = set()
+        self.uidatasets = []
         # self.file_paths is modified by _add_dataset_pair() so iterate over a copy of it.
         for filename in self.file_paths[:]:
             self._add_dataset_pair(filename)
         self._plot_datasets()
+        self.uidatasets.sort(key=lambda d: d.name)
 
     def _plot_datasets(self):
         self.raw_data_plot.plot_datasets(self.datasets, scale=self.scale)
         self._options_changed(self.options)
         self.container.request_redraw()
+
+    def _edit_datasets_changed(self):
+        editor = DatasetEditor(datasets=self.uidatasets)
+        editor.edit_traits()
+        self._plot_datasets()
 
     def _generate_plot_changed(self):
         if self.datasets:
@@ -292,6 +309,7 @@ class MainApp(HasTraits):
             return
         filename = basename(file_path)
         self.datasets[filename] = dataset
+        self.uidatasets.append(create_datasetui(dataset))
 
 
 class PlotGenerator(HasTraits):
