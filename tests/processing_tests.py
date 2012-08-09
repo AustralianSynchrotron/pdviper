@@ -13,8 +13,8 @@ class PeakDetectionTest(unittest.TestCase):
 
     def find_peak_test(self):
         # these magic indices are found by examining the si640c_low_temp_cal_p1_scan0.000000_adv0_0000.xye dataset
-        data_x = self.data.x()[1686:1735]
-        data_y = self.data.y()[1686:1735]
+        data_x = self.data.x[1686:1735]
+        data_y = self.data.y[1686:1735]
         peak_offset, _ = processing.fit_peak_2theta(data_x, data_y, plot=False)
         LOW_2TH = 24.8278
         HIGH_2TH = 24.8280
@@ -42,12 +42,20 @@ class MergeTest(unittest.TestCase):
         self.assertTrue(np.allclose(merged[:,0],
                              np.r_[0., 1., 1.5, 2.5, 3.5, 4., 5., 5.5, 7., 8.]))
 
+#    def clean_gaps_test(self):
+#        data = np.arange(13)
+#        data = np.delete(data, [3,9])
+#        data = np.vstack((data,data)).T
+#        data = processing.clean_gaps(data, gap_threshold=1.5, shave_number=2)
+#        self.assertTrue(np.alltrue(data[:,0]==np.r_[0,6,12]))
+
     def clean_gaps_test(self):
         data = np.arange(13)
         data = np.delete(data, [3,9])
         data = np.vstack((data,data)).T
-        data = processing.clean_gaps(data, gap_threshold=1.5, shave_number=2)
-        self.assertTrue(np.alltrue(data[:,0]==np.r_[0,6,12]))
+        dataset = xye.XYEDataset(data)
+        dataset = processing.clean_gaps(dataset, gap_threshold=1.5, shave_number=2)
+        self.assertTrue(np.alltrue(dataset.x==np.r_[0,6,12]))
 
     def regrid_data_test(self):
         # test that regridding preserves the y-data if resampled at the x-data points

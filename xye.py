@@ -1,5 +1,6 @@
 from os.path import basename
 from numpy import loadtxt
+import numpy as np
 
 from parab import load_params
 
@@ -29,15 +30,22 @@ class XYEDataset(object):
     def __init__(self, data, name='', source='', metadata={}):
         self.name = name
         self.metadata = metadata
-        self.data = data[:, [0, 1]] #, dtype=[('x', 'f4'), ('y', 'f4')])
-        #self.x, self.y = transpose(data[:, [0, 1]])
+#        self.data = np.core.records.fromarrays(data[:, [0, 1]].T.astype(np.float64), 
+#                                               names='x, y',
+#                                               formats = 'f8, f8')
+        self.x = data[:,0]
+        self._y = data[:,1]
         self.source = source
 
+    @property
     def y(self):
-        return self.data[:, 1]
+        # if the normalise checkbox is checked, normalise y when accessed here.
 
-    def x(self):
-        return self.data[:, 0]
+#        return self.data['y']
+        return self._y
+    @y.setter
+    def y(self, value):
+        self._y = value
 
     def add_param(self, name, value):
         self.metadata[name] = value

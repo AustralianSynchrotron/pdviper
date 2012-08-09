@@ -85,9 +85,10 @@ def bin_data(data, num_bins):
 
 def stack_datasets(datasets):
     #normalise_datasets(datasets)
-    shapes = [ len(dataset.data) for name, dataset in datasets.iteritems() ]
+    shapes = [ dataset.x.size for name, dataset in datasets.iteritems() ]
     min_x_len = np.min(shapes)
-    data = [ dataset.data[:min_x_len] for name, dataset in datasets.iteritems() ]
+#    data = [ dataset.data[:min_x_len] for name, dataset in datasets.iteritems() ]
+    data = [ np.vstack((dataset.x[:min_x_len], dataset.y[:min_x_len])).T for name, dataset in datasets.iteritems() ]
     stack = np.vstack([data])
     return stack
 
@@ -133,20 +134,25 @@ def rescale(data, method='log'):
     return new_data
 
 
-def clean_gaps(data, gap_threshold=0.1, shave_number=5):
+def clean_gaps(dataset, gap_threshold=0.1, shave_number=5):
     """
-    data is an Nx2 array of xy data.
+    data is a reference to an XYEDataset
     Gaps in the detector array lead to gaps in the data and corruption of the sample
     values adjacent to the gaps. Therefore this routine is called prior to merging the
     data for the two detector positions to remove 5 (currently) samples from each side of
     the identified gaps.
+    returns a new XYEDataset with the samples removed
     """
+    from copy import deepcopy
+    new_dataset = deepcopy(dataset)
     # Gaps are 0.5 deg each whereas data points are typically spaced by about 0.00375 deg
-    gap_indices = np.where(np.diff(data[:,0]) > gap_threshold)[0]
+    gap_indices = np.where(np.diff(new_dataset.x) > gap_threshold)[0]
     # Now gap_indices contains indices of samples on the LHS of the gap
     # Expand indices into ranges +/- shave_number
     deletion_indices = gap_indices[np.newaxis].T + np.arange(1-shave_number, 1+shave_number)
-    return np.delete(data, deletion_indices, axis=0)
+    new_dataset.x = np.delete(new_dataset.x, deletion_indices)
+    new_dataset.y = np.delete(new_dataset.y, deletion_indices)
+    return new_dataset
 
 
 def combine_by_merge(d1, d2):
@@ -167,6 +173,26 @@ def combine_by_merge(d1, d2):
     # Only take the unique values from the array
     x_uniq = x_diff > 0
     return new_data[x_uniq]
+
+
+#def combine_by_merge(d1, d2):
+#    """
+#    d1 and d2 are XYEDatasets.
+#    Merge the datasets by combining all data points in x-sorted order.
+#    Assumes that the 'gaps' in d1 have been cleaned by a call to clean_gaps().
+#    If any points have exactly duplicated x values the d2 point is not merged.
+#    """
+#    from xye import XYEDataset
+#    combined = np.vstack([np.vstack((d1.x, d1.y)).T, d2])
+#    indices = combined.x.argsort()
+#    new_data = XYEDataset(combined[indices])
+#    # Remove duplicate x values that interfere with interpolation
+#    x_diff = np.diff(new_data.x)
+#    # Don't forget the first element, which doesn't have a diff result yet
+#    x_diff = np.r_[1, x_diff]
+#    # Only take the unique values from the array
+#    x_uniq = x_diff > 0
+#    return new_data[x_uniq]
 
 
 def combine_by_splice(d1, d2, gap_threshold=0.1):
@@ -231,7 +257,7 @@ def normalise_datasets(datasets):
     counts = array([ dataset.metadata[key] for dataset in datasets.values() ])
     max_count = counts.max()
     for dataset in datasets.values():
-        dataset.data[:,1] *= max_count / dataset.metadata[key]
+        dataset.y *= max_count / dataset.metadata[key]
 
 
 def get_reference_dataset_name(datasets):
@@ -249,16 +275,16 @@ def get_peak_offsets_for_all_dataseries(range_low, range_high, datasets):
     The fit result can be a float or None in the case of a series that could not be fitted.
     """
     for dataset in datasets.values():
-        x_range = (dataset.x() >= range_low) & (dataset.x() <= range_high)
+        x_range = (dataset.x >= range_low) & (dataset.x <= range_high)
         # Get the baseline by using a median filter 3x as long as the selection
-        filter_length = 3*int(len(dataset.x())*(range_high-range_low)/(dataset.x()[-1]-dataset.x()[0]))
+        filter_length = 3*int(len(dataset.x)*(range_high-range_low)/(dataset.x[-1]-dataset.x[0]))
         # restrict filter length to a sane value
         if filter_length > 10000:               filter_length = 10000
         if filter_length < 20:                  filter_length = 20
-        if filter_length > len(dataset.x())/2:  filter_length = len(dataset.x())/2
-        y_baseline = sn.filters.median_filter(dataset.y(), size=filter_length, mode='nearest')
+        if filter_length > len(dataset.x)/2:  filter_length = len(dataset.x)/2
+        y_baseline = sn.filters.median_filter(dataset.y, size=filter_length, mode='nearest')
         # get just the data in the range defined by the range_low, range_high parameters
-        data_x, data_y = dataset.data[x_range].T
+        data_x, data_y = dataset.x[x_range], dataset.y[x_range]
         data_y_baseline_removed = data_y - y_baseline[x_range]
         fit_centre, _ = fit_peak_2theta(data_x, data_y_baseline_removed, plot=True)
         dataset.add_param('peak_fit', fit_centre)
@@ -278,20 +304,20 @@ def fit_peaks_for_a_dataset_pair(range_low, range_high, datasets, dataset_pair):
     """
     dataset1_key, dataset2_key = dataset_pair
     dataset = datasets[dataset1_key]
-    x_range = (dataset.x() >= range_low) & (dataset.x() <= range_high)
-    data_x, data_y = dataset.data[x_range].T
+    x_range = (dataset.x >= range_low) & (dataset.x <= range_high)
+    data_x, data_y = dataset.x[x_range], dataset.y[x_range]
 
     # I want to be able to turn on median filtering easily so leave this code here for now.
     # Fit the first position dataset.
     enable_filter = False
     if enable_filter:
         # Get the baseline by using a median filter 3x as long as the selection
-        filter_length = 3*int(len(dataset.x())*(range_high-range_low)/(dataset.x()[-1]-dataset.x()[0]))
+        filter_length = 3*int(len(dataset.x)*(range_high-range_low)/(dataset.x[-1]-dataset.x[0]))
         # restrict filter length to a sane value
         if filter_length > 10000:               filter_length = 10000
         if filter_length < 20:                  filter_length = 20
-        if filter_length > len(dataset.x())/2:  filter_length = len(dataset.x())/2
-        y_baseline = sn.filters.median_filter(dataset.y(), size=filter_length, mode='nearest')
+        if filter_length > len(dataset.x)/2:  filter_length = len(dataset.x)/2
+        y_baseline = sn.filters.median_filter(dataset.y, size=filter_length, mode='nearest')
         # get just the data in the range defined by the range_low, range_high parameters
         data_y_baseline_removed = data_y - y_baseline[x_range]
         fit_centre, fit_parameters = fit_peak_2theta(data_x, data_y_baseline_removed, plot=True)
@@ -301,8 +327,8 @@ def fit_peaks_for_a_dataset_pair(range_low, range_high, datasets, dataset_pair):
     # If the fit was successful, fit the second dataset.
     # First dataset was fit successfully, fit the other dataset with the peak fitting result.
     dataset2 = datasets[dataset2_key]
-    x_range = (dataset2.x() >= range_low) & (dataset2.x() <= range_high)
-    data_x, data_y = dataset2.data[x_range].T
+    x_range = (dataset2.x >= range_low) & (dataset2.x <= range_high)
+    data_x, data_y = dataset2.x[x_range], dataset2.y[x_range]
     fit2_centre, fit2_successful = fit_modeled_peak_to_data(data_x, data_y, fit_parameters, plot=True)
     # Store the fit results if both data series were successfully fitted.
     if fit2_successful:
@@ -439,8 +465,8 @@ def fit_peaks_2theta(dataset, low_index=None, high_index=None, plot=False):
     scipy.signal.find_peaks_cwt which should do a much better job than the approach
     taken here according to http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2631518/.
     """
-    data_x = dataset.x()
-    data_y = dataset.y()
+    data_x = dataset.x
+    data_y = dataset.y
     # Get the baseline by using a median filter about 3x as long as the widest anticipated peak width
     y_baseline = sn.filters.median_filter(data_y, size=(500,), mode='nearest')
     # smooth the ys (Intensities) a bit by using ndimage grey_opening then subtract off the background
