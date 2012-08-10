@@ -10,18 +10,17 @@ from chaco.api import OverlayPlotContainer
 from xye import XYEDataset
 from chaco_output import PlotOutput
 from raw_data_plot import RawDataPlot
-from processing import rescale
-from mpl_plot import MplPlot
-from chaco_plot import StackedPlot, Surface2DPlot
 from fixes import fix_background_color
 from dataset_editor import DatasetEditor, DatasetUI
 from copy import deepcopy
-
+from ui_helpers import get_save_as_filename, open_file_with_default_handler, get_file_list_from_dialog
 import processing
+from plot_generator import PlotGenerator
 
 # Linux/Ubuntu themes cause the background of windows to be ugly and dark
 # grey. This fixes that.
 fix_background_color()
+
 
 size = (1200, 700)
 title = "Sculpd"
@@ -161,11 +160,9 @@ class MainApp(HasTraits):
         self.file_paths = []
 
     def _open_files_changed(self):
-        wildcard = 'XYE (*.xye)|*.xye|' \
-                   'All files (*.*)|*.*'
-        dlg = FileDialog(title='Choose files', action='open files', wildcard=wildcard)
-        if dlg.open() == OK:
-            self.file_paths = dlg.paths
+        file_list = get_file_list_from_dialog()
+        if file_list:
+            self.file_paths = file_list
 
     def _options_changed(self, opts):
         # opts just contains the keys that are true.
@@ -393,127 +390,6 @@ class MainApp(HasTraits):
         create_datasetui(dataset)
 
 
-class PlotGenerator(HasTraits):
-    PLOT_STACKED = "Stacked"
-    PLOT_3D = "3D surface (slow)"
-    PLOT_2D = "2D surface"
-
-    plot_type = Enum(PLOT_STACKED, PLOT_2D, PLOT_3D)
-    reset_button = Button("Reset view")
-    save_button = Button("Save plot...")
-    copy_button = Button("Copy to clipboard")
-    plot_container = Instance(OverlayPlotContainer)
-
-    flip_order = Bool(False)
-    scale = Enum('linear', 'log', 'sqrt')
-
-    mpl_plot = Instance(MplPlot)
-
-    status = Str
-
-    def _on_redraw(self, drawing):
-        self.status = 'Rendering plot...' if drawing else 'Done'
-
-    def __init__(self, *args, **kws):
-        super(PlotGenerator, self).__init__(*args, **kws)
-        self.plot = None
-        self.mpl_plot = MplPlot(callback_obj=self)
-        self.plots = {
-            PlotGenerator.PLOT_STACKED: StackedPlot(),
-            PlotGenerator.PLOT_2D: Surface2DPlot(),
-            PlotGenerator.PLOT_3D: self.mpl_plot,
-        }
-        self.plot_container = OverlayPlotContainer(
-            bgcolor='white', use_backbuffer=True)
-        self.datasets = kws['datasets']
-        self.cached_data = {}
-        self._plot_type_changed()
-
-    def __del__(self):
-        self.mpl_plot.close()
-        del self.plots
-        del self.mpl_plot
-
-    def show(self):
-        menu_group = HGroup(
-                    UItem('plot_type', style='custom'),
-                    spring,
-                    UItem('scale'),
-                    UItem('reset_button'),
-                    spring,
-                    UItem('save_button'),
-                    UItem('copy_button'),
-                    spring,
-                )
-
-        view = View(
-            VGroup(
-                menu_group,
-                Item('flip_order',
-                     visible_when="plot_type == '%s'" % PlotGenerator.PLOT_STACKED),
-                UItem('plot_container',
-                     editor=ComponentEditor(bgcolor='white'),
-                     visible_when="plot_type != '%s'" % PlotGenerator.PLOT_3D
-                ),
-                self.mpl_plot.traits_group('mpl_plot',
-                    visible_when="plot_type == '%s'" % PlotGenerator.PLOT_3D),
-            ),
-            title='Plot generator', resizable=True, width=900, height=600,
-            statusbar='status',
-        )
-        self.edit_traits(view=view)
-
-    def _flip_order_changed(self):
-        self._plot_type_changed()
-
-    def _scale_changed(self):
-        self._plot_type_changed(replot=True)
-
-    def _reset_button_changed(self):
-        self.plots[self.plot_type].reset_view()
-
-    def _update_status(self, status, delay=0):
-        def _update():
-            self.status = status
-        import wx
-        if delay == 0:
-            _update()
-        else:
-            wx.CallLater(delay, _update).Start()
-
-    def _save_button_changed(self):
-        filename = get_save_as_filename()
-        if filename is None:
-            return
-        self.plots[self.plot_type].save_as(filename)
-        open_file_with_default_handler(filename)
-
-    def _copy_button_changed(self):
-        self.plots[self.plot_type].copy_to_clipboard()
-
-    def _plot_type_changed(self, replot=False):
-        self._update_status('Generating plot...')
-        new_plot = self._generate_plot(replot=replot)
-        if new_plot is not None:
-            if self.plot:
-                self.plot_container.remove(self.plot)
-            self.plot = new_plot
-            self.plot_container.add(new_plot)
-            self.plot_container.request_redraw()
-        self._update_status('Done')
-
-    def _generate_plot(self, replot=False):
-        if self.plot_type not in self.cached_data or replot:
-            x, y, z = self.plots[self.plot_type].prepare_data(self.datasets)
-            z = rescale(z, method=self.scale)
-            self.cached_data[self.plot_type] = x, y, z
-
-        x, y, z = self.cached_data[self.plot_type]
-        if self.plot_type == PlotGenerator.PLOT_STACKED and self.flip_order:
-            z = z[::-1,:]
-        return self.plots[self.plot_type].plot(x, y, z, scale=self.scale)
-
-
 class HelpBox(HasTraits):
     help_text = Str
 
@@ -532,25 +408,6 @@ Right click = Undo zoom
 Esc = Reset zoom/pan
 Mousewheel = Zoom in/out
 """
-
-
-def get_save_as_filename():
-    wildcard =  'PNG file (.png)|*.png|TIFF file (.tiff)|*.tiff|EPS file (.eps)|*.eps|SVG file (.svg)|*.svg|'
-    dialog = FileDialog(action='save as', title='Save as', wildcard=wildcard)
-    if dialog.open() == OK:
-        filename = dialog.path
-        if filename:
-            return filename
-    return None
-
-
-def open_file_with_default_handler(filename):
-    try:
-        import webbrowser
-        webbrowser.open_new_tab(filename)
-    except:
-        pass
-
 
 
 def main():
