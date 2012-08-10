@@ -84,7 +84,6 @@ def bin_data(data, num_bins):
 
 
 def stack_datasets(datasets):
-    #normalise_datasets(datasets)
     shapes = [ len(dataset.data) for dataset in datasets ]
     min_x_len = np.min(shapes)
     data = [ dataset.data[:min_x_len] for dataset in datasets ]
@@ -226,12 +225,22 @@ def regrid_data(data, start=None, end=None, interval=0.00375):
     return np.vstack((xs, np.interp(xs, data[:,0], data[:,1]))).T
 
 
-def normalise_datasets(datasets):
+def normalise_dataset(datasets, dataset_pair):
+    dataset1_key, dataset2_key = dataset_pair
+    dataset1 = datasets[dataset1_key]
+    dataset2 = datasets[dataset2_key]
     key = 'Integrated Ion Chamber Count(counts)'
-    counts = array([ dataset.metadata[key] for dataset in datasets ])
-    max_count = counts.max()
-    for dataset in datasets:
-        dataset.data[:,1] *= max_count / dataset.metadata[key]
+    data = dataset2.data[:]
+    data[:,1] *= dataset1.metadata[key] / dataset2.metadata[key]
+    return data
+
+
+def get_reference_dataset_name(datasets):
+    """
+    Returns the name of the reference dataset used as a key in the datasets dictionary,
+    i.e. the one with the lowest filename according to Python's sort rules.
+    """
+    return sorted(datasets.keys())[0]
 
 
 def get_peak_offsets_for_all_dataseries(range_low, range_high, datasets):
@@ -256,7 +265,7 @@ def get_peak_offsets_for_all_dataseries(range_low, range_high, datasets):
         dataset.add_param('peak_fit', fit_centre)
 
 
-def fit_peaks_for_a_dataset_pair(range_low, range_high, dataset_pair):
+def fit_peaks_for_a_dataset_pair(range_low, range_high, datasets, dataset_pair, normalise_checked):
     """
     Perform peak detection within the defined range <range_low> to <range_high> for a
     dataset pair. <dataset_pair> is a tuple taken from the MainApp.dataset_pairs set
@@ -271,7 +280,7 @@ def fit_peaks_for_a_dataset_pair(range_low, range_high, dataset_pair):
     dataset, dataset2 = dataset_pair
     x_range = (dataset.x() >= range_low) & (dataset.x() <= range_high)
     data_x, data_y = dataset.data[x_range].T
-
+    
     # I want to be able to turn on median filtering easily so leave this code here for now.
     # Fit the first position dataset.
     enable_filter = False
@@ -293,6 +302,12 @@ def fit_peaks_for_a_dataset_pair(range_low, range_high, dataset_pair):
     # First dataset was fit successfully, fit the other dataset with the peak fitting result.
     x_range = (dataset2.x() >= range_low) & (dataset2.x() <= range_high)
     data_x, data_y = dataset2.data[x_range].T
+    
+    # Normalise the second dataset's y values if necessary
+    if normalise_checked:
+        key = 'Integrated Ion Chamber Count(counts)'
+        data_y *= dataset.metadata[key] / dataset2.metadata[key]
+
     fit2_centre, fit2_successful = fit_modeled_peak_to_data(data_x, data_y, fit_parameters, plot=True)
     # Store the fit results if both data series were successfully fitted.
     if fit2_successful:

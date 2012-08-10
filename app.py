@@ -50,7 +50,9 @@ class MainApp(HasTraits):
     bt_select_peak = UItem('bt_select_peak_event_controller',
                           editor = ButtonEditor(label_value='bt_select_peak_label'),
                           enabled_when='object._has_data()')
-    bt_auto_align_series = Button("Auto align series")
+    bt_process = Button("Process")
+    bt_undo_processing = Button("Undo processing")
+    bt_save = Button("Save")
     
     correction = Float(0.0)
 
@@ -81,7 +83,6 @@ class MainApp(HasTraits):
     process_group = VGroup(
         Label('Align series:'),
         bt_select_peak,
-        UItem('bt_auto_align_series', enabled_when='object._has_data()'),
         spring,
         '_',
         spring,
@@ -101,6 +102,9 @@ class MainApp(HasTraits):
             ),
             springy=False,
         ),
+        UItem('bt_process', enabled_when='object._has_data()'),
+        UItem('bt_undo_processing', enabled_when='object._has_data()'),
+        UItem('bt_save', enabled_when='object._has_data()'),
         label='Process',
         springy=False,
     )
@@ -195,10 +199,45 @@ class MainApp(HasTraits):
             range_low, range_high = plot.get_range_selection_tool_limits()
 
             # fit the peak in all loaded dataseries
-            datasets_dict = dict([ (d.name, d) for d in self.datasets ])
-            for filename1, filename2 in self.dataset_pairs:
-                datapair = datasets_dict[filename1], datasets_dict[filename2]
-                processing.fit_peaks_for_a_dataset_pair(range_low, range_high, datapair)
+            for dataset_pair in self.dataset_pairs:
+                processing.fit_peaks_for_a_dataset_pair(range_low, range_high,
+                                                        self.datasets, dataset_pair,
+                                                        self.normalise)
+
+    def _bt_process_changed(self):
+        '''
+        Button click event handler for processing. 
+        '''
+        # Save the unprocessed data series at this point for later undoing
+        for dataset_pair in self.dataset_pairs:
+            dataset1_key, dataset2_key = dataset_pair
+            data1 = self.datasets[dataset1_key].data
+            data2 = self.datasets[dataset2_key].data
+
+            # normalise
+            if self.normalise:
+                data2 = processing.normalise_dataset(self.datasets, dataset_pair)
+
+            # trim data from gap edges prior to merging
+            data1 = processing.clean_gaps(data1)
+            data2 = processing.clean_gaps(data2)
+
+            # zero correct i.e. shift x values
+            if self.correction != 0.0:
+                data1[:,0] += self.correction
+                data2[:,0] += self.correction
+
+            # merge or splice
+            if self.merge_method=='merge':
+                merged_data = processing.combine_by_merge(data1, data2) 
+            elif self.merge_method=='splice':
+                merged_data = processing.combine_by_splice(data1, data2) 
+            elif self.merge_method=='none':
+                raise Exception('TODO:')
+
+            # regrid
+            if self.merge_regrid:
+                merged_data = processing.regrid_data(merged_data)
 
     def _bt_auto_align_series_changed(self):
         # attempt auto alignment
