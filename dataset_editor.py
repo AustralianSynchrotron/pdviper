@@ -68,14 +68,15 @@ class DatasetEditor(HasTraits):
             VGroup(
                 Label('Modify all selected items:'),
                 VGroup(
-                Item('color', editor=ColorEditor()),
-                Item('active'),
-                Item('highlighted'),
+                    Item('color', editor=ColorEditor()),
+                    Item('active'),
+                    Item('highlighted'),
+                    springy=True
                 ),
-                springy=True,
             ),
         ),
-        resizable=True, width=0.5, height=0.5, kind='livemodal'
+        resizable=True, width=0.5, height=0.5, kind='livemodal',
+        title='Edit datasets'
     )
 
     def __init__(self, *args, **kwargs):
