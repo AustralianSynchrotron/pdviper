@@ -50,9 +50,9 @@ class MainApp(HasTraits):
     bt_select_peak = UItem('bt_select_peak_event_controller',
                           editor = ButtonEditor(label_value='bt_select_peak_label'),
                           enabled_when='object._has_data()')
-    bt_process = Button("Process")
-    bt_undo_processing = Button("Undo processing")
-    bt_save = Button("Save")
+    bt_process = Button("Apply")
+    bt_undo_processing = Button("Undo")
+    bt_save = Button("Save...")
     
     correction = Float(0.0)
 
@@ -81,16 +81,6 @@ class MainApp(HasTraits):
     )
 
     process_group = VGroup(
-        Label('Align series:'),
-        bt_select_peak,
-        spring,
-        '_',
-        spring,
-        Label('Correction:'),
-        UItem('correction', enabled_when='object._has_data()'),
-        spring,
-        '_',
-        spring,
         Label('Merge method:'),
         UItem('merge_method', enabled_when='object._has_data()'),
         HGroup(
@@ -102,6 +92,19 @@ class MainApp(HasTraits):
             ),
             springy=False,
         ),
+        spring,
+        '_',
+        spring,
+        Label('Align series:'),
+        bt_select_peak,
+        spring,
+        '_',
+        spring,
+        Label('Zero correction:'),
+        UItem('correction', enabled_when='object._has_data()'),
+        spring,
+        '_',
+        spring,
         UItem('bt_process', enabled_when='object._has_data()'),
         UItem('bt_undo_processing', enabled_when='object._has_data()'),
         UItem('bt_save', enabled_when='object._has_data()'),
@@ -254,6 +257,18 @@ class MainApp(HasTraits):
         self.datasets = merged_datasets
         self._plot_datasets()
 
+    def _bt_save_changed(self):
+        wildcard = 'All files (*.*)|*.*'
+        _, _, parts = self._get_general_file_path_parts(self.datasets[0].source)
+        default_filename = 'prefix'
+        dlg = FileDialog(title='Save results', action='save as', default_filename=default_filename, wildcard=wildcard)
+        if dlg.open() == OK:
+            filename_prefix = dlg.path
+            for dataset in self.datasets:
+                current_directory, filename, parts = self._get_general_file_path_parts(dataset.source)
+                filename = os.path.join(current_directory, '{}_{}_{}.xye'.format(filename_prefix, parts[1], parts[2]))
+                dataset.save_xye_data(filename)
+
     def _bt_auto_align_series_changed(self):
         # attempt auto alignment
         print 'Auto align series'
@@ -289,6 +304,20 @@ class MainApp(HasTraits):
         current_directory, filename = os.path.split(filename)
         # root, ext = os.path.splitext(filename)
         parts = re.split(r'(.+)_p(\d+)(.*)_(\d+)\.(.+)', filename)
+        return current_directory, filename, parts
+
+    def _get_general_file_path_parts(self, filename):
+        """
+        A helper function that parses a filename and returns the filename split into
+        useful parts as follows:
+        Example filenames:
+            path/foo_0000.xye
+        The filename path/foo_0123.xye returns the tuple
+        ('path', 'foo_0000.xye', ['', 'foo', '0123', 'xye', ''])
+        """
+        current_directory, filename = os.path.split(filename)
+        # root, ext = os.path.splitext(filename)
+        parts = re.split(r'(.+)_(\d+)\.(.+)', filename)
         return current_directory, filename, parts
 
     def _add_dataset_pair(self, filename):

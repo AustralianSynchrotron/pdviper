@@ -1,5 +1,5 @@
 from os.path import basename
-from numpy import loadtxt
+from numpy import loadtxt, savetxt
 
 from parab import load_params
 
@@ -8,6 +8,9 @@ class XYEDataset(object):
     @staticmethod
     def _load_xye_data(filename):
         return loadtxt(filename)
+
+    def save_xye_data(self, filename):
+        savetxt(filename, self.data, fmt='%1.6f')
 
     @staticmethod
     def from_file(filename, positions=2):
