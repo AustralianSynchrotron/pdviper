@@ -94,16 +94,21 @@ class RawDataPlot(HasTraits):
     def get_plot(self):
         return self.plot
 
-    def add_range_selection_tool(self):
+    def start_range_select(self):
         self.plot0renderer.tools.append(self.range_selection_tool)
         self.plot0renderer.overlays.append(self.range_selection_overlay)
+        # disable zoom tool and change selection cursor to a vertical line
+        self.zoom_tool.drag_button = None
+        self.crosslines[1].visible = False
 
-    def remove_range_selection_tool(self):
+    def end_range_select(self):
         self.plot0renderer.tools.remove(self.range_selection_tool)
         self.plot0renderer.overlays.remove(self.range_selection_overlay)
-
-    def get_range_selection_tool_limits(self):
-        return self.range_selection_tool._get_selection()
+        # reenable zoom tool and change selection cursor back to crossed lines
+        self.zoom_tool.drag_button = 'left'
+        self.crosslines[1].visible = True
+        range_low, range_high = self.range_selection_tool._get_selection()
+        return range_low, range_high
 
     def _setup_plot(self):
         self.plot_data = ArrayPlotData()

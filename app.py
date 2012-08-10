@@ -180,22 +180,13 @@ class MainApp(HasTraits):
         Button click event handler for peak alignment. Controls enabling and disabling the
         range selection tool and cycling the button label that indicates the bottun mode. 
         '''
-        plot = self.raw_data_plot
         # Use the button label to determine the button state
         if self.bt_select_peak_label == 'Select peak':
-            plot.add_range_selection_tool()
-            # disable zoom tool and change selection cursor to a vertical line
-            plot.zoom_tool.drag_button = None
-            plot.crosslines[1].visible = False
+            self.raw_data_plot.start_range_select()
             self.bt_select_peak_label = 'Align series'
         elif self.bt_select_peak_label == 'Align series':
-            # reenable zoom tool and change selection cursor back to crossed lines
-            plot.remove_range_selection_tool()
-            plot.zoom_tool.drag_button = 'left'
-            plot.crosslines[1].visible = True
+            range_low, range_high = self.raw_data_plot.end_range_select()
             self.bt_select_peak_label = 'Select peak'
-
-            range_low, range_high = plot.get_range_selection_tool_limits()
 
             # fit the peak in all loaded dataseries
             for datapair in self._get_dataset_pairs():
