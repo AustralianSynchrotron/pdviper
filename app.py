@@ -1,6 +1,5 @@
 import os
 import re
-from os.path import basename
 
 from enable.api import ComponentEditor
 from traits.api import List, Str, Float, HasTraits, Instance, Button, Enum, Bool, Event
@@ -16,6 +15,7 @@ from mpl_plot import MplPlot
 from chaco_plot import StackedPlot, Surface2DPlot
 from fixes import fix_background_color
 from dataset_editor import DatasetEditor, DatasetUI
+from copy import deepcopy
 
 import processing
 
@@ -50,7 +50,9 @@ class MainApp(HasTraits):
     bt_select_peak = UItem('bt_select_peak_event_controller',
                           editor = ButtonEditor(label_value='bt_select_peak_label'),
                           enabled_when='object._has_data()')
-    bt_auto_align_series = Button("Auto align series")
+    bt_process = Button("Apply")
+    bt_undo_processing = Button("Undo")
+    bt_save = Button("Save...")
     
     correction = Float(0.0)
 
@@ -79,17 +81,6 @@ class MainApp(HasTraits):
     )
 
     process_group = VGroup(
-        Label('Align series:'),
-        bt_select_peak,
-        UItem('bt_auto_align_series', enabled_when='object._has_data()'),
-        spring,
-        '_',
-        spring,
-        Label('Correction:'),
-        UItem('correction', enabled_when='object._has_data()'),
-        spring,
-        '_',
-        spring,
         Label('Merge method:'),
         UItem('merge_method', enabled_when='object._has_data()'),
         HGroup(
@@ -101,6 +92,22 @@ class MainApp(HasTraits):
             ),
             springy=False,
         ),
+        spring,
+        '_',
+        spring,
+        Label('Align series:'),
+        bt_select_peak,
+        spring,
+        '_',
+        spring,
+        Label('Zero correction:'),
+        UItem('correction', enabled_when='object._has_data()'),
+        spring,
+        '_',
+        spring,
+        UItem('bt_process', enabled_when='object._has_data()'),
+        UItem('bt_undo_processing', enabled_when='object._has_data()'),
+        UItem('bt_save', enabled_when='object._has_data()'),
         label='Process',
         springy=False,
     )
@@ -151,7 +158,6 @@ class MainApp(HasTraits):
         self._options = [ 'Show legend', 'Show gridlines', 'Show crosslines' ]
         # The list of currently set options, updated by the UI.
         self.options = self._options
-#        self.file_paths = [ "0.xye", "1.xye" ]
         self.file_paths = []
 
     def _open_files_changed(self):
@@ -195,10 +201,73 @@ class MainApp(HasTraits):
             range_low, range_high = plot.get_range_selection_tool_limits()
 
             # fit the peak in all loaded dataseries
-            datasets_dict = dict([ (d.name, d) for d in self.datasets ])
-            for filename1, filename2 in self.dataset_pairs:
-                datapair = datasets_dict[filename1], datasets_dict[filename2]
-                processing.fit_peaks_for_a_dataset_pair(range_low, range_high, datapair)
+            for datapair in self._get_dataset_pairs():
+                processing.fit_peaks_for_a_dataset_pair(range_low, range_high, datapair, self.normalise)
+
+    def _get_dataset_pairs(self):
+        datasets_dict = dict([ (d.name, d) for d in self.datasets ])
+        return [ (datasets_dict[file1], datasets_dict[file2]) for file1, file2 in self.dataset_pairs ]
+
+    def _bt_process_changed(self):
+        '''
+        Button click event handler for processing. 
+        '''
+        # Save the unprocessed data series at this point for later undoing
+        merged_datasets = []
+        for dataset_pair in self._get_dataset_pairs():
+            dataset1, dataset2 = dataset_pair
+            data1 = dataset1.data
+            data2 = dataset2.data
+
+            # normalise
+            if self.normalise:
+                data2 = processing.normalise_dataset(self.datasets, dataset_pair)
+
+            # trim data from gap edges prior to merging
+            data1 = processing.clean_gaps(data1)
+            data2 = processing.clean_gaps(data2)
+
+            # zero correct i.e. shift x values
+            if self.correction != 0.0:
+                data1[:,0] += self.correction
+                data2[:,0] += self.correction
+
+            # merge or splice
+            if self.merge_method=='merge':
+                merged_data = processing.combine_by_merge(data1, data2) 
+            elif self.merge_method=='splice':
+                merged_data = processing.combine_by_splice(data1, data2) 
+            elif self.merge_method=='none':
+                raise Exception('TODO:')
+
+            # regrid
+            if self.merge_regrid:
+                merged_data = processing.regrid_data(merged_data)
+
+            # add merged dataset to our collection
+            current_directory, _, parts = self._get_file_path_parts(dataset1.source)
+            merged_data_filebase = u'{}{}_{}.{}'.format(parts[1], parts[3], parts[4], parts[5])
+            merged_data_filename = os.path.join(current_directory, merged_data_filebase)
+            merged_dataset = XYEDataset(merged_data, merged_data_filebase,
+                                              merged_data_filename,
+                                              deepcopy(dataset1.metadata))
+            merged_datasets.append(merged_dataset)
+            merged_dataset.metadata['ui'].name = merged_data_filebase
+            self.dataset_pairs.remove((dataset1.name, dataset2.name))
+        self.datasets = merged_datasets
+        self._plot_datasets()
+
+    def _bt_save_changed(self):
+        wildcard = 'All files (*.*)|*.*'
+        _, _, parts = self._get_general_file_path_parts(self.datasets[0].source)
+        default_filename = 'prefix'
+        dlg = FileDialog(title='Save results', action='save as', default_filename=default_filename, wildcard=wildcard)
+        if dlg.open() == OK:
+            filename_prefix = dlg.path
+            for dataset in self.datasets:
+                current_directory, filename, parts = self._get_general_file_path_parts(dataset.source)
+                filename = os.path.join(current_directory, '{}_{}_{}.xye'.format(filename_prefix, parts[1], parts[2]))
+                dataset.save_xye_data(filename)
 
     def _bt_auto_align_series_changed(self):
         # attempt auto alignment
@@ -235,6 +304,20 @@ class MainApp(HasTraits):
         current_directory, filename = os.path.split(filename)
         # root, ext = os.path.splitext(filename)
         parts = re.split(r'(.+)_p(\d+)(.*)_(\d+)\.(.+)', filename)
+        return current_directory, filename, parts
+
+    def _get_general_file_path_parts(self, filename):
+        """
+        A helper function that parses a filename and returns the filename split into
+        useful parts as follows:
+        Example filenames:
+            path/foo_0000.xye
+        The filename path/foo_0123.xye returns the tuple
+        ('path', 'foo_0000.xye', ['', 'foo', '0123', 'xye', ''])
+        """
+        current_directory, filename = os.path.split(filename)
+        # root, ext = os.path.splitext(filename)
+        parts = re.split(r'(.+)_(\d+)\.(.+)', filename)
         return current_directory, filename, parts
 
     def _add_dataset_pair(self, filename):

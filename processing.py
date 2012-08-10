@@ -84,7 +84,6 @@ def bin_data(data, num_bins):
 
 
 def stack_datasets(datasets):
-    #normalise_datasets(datasets)
     shapes = [ len(dataset.data) for dataset in datasets ]
     min_x_len = np.min(shapes)
     data = [ dataset.data[:min_x_len] for dataset in datasets ]
@@ -226,12 +225,16 @@ def regrid_data(data, start=None, end=None, interval=0.00375):
     return np.vstack((xs, np.interp(xs, data[:,0], data[:,1]))).T
 
 
-def normalise_datasets(datasets):
+def normalise_dataset(datasets, dataset_pair):
+    """
+    For a pair of datasets, normalise the y-values of the second dataset with respect
+    to the first, based on the measured beam intensity.
+    """
+    dataset1, dataset2 = dataset_pair
     key = 'Integrated Ion Chamber Count(counts)'
-    counts = array([ dataset.metadata[key] for dataset in datasets ])
-    max_count = counts.max()
-    for dataset in datasets:
-        dataset.data[:,1] *= max_count / dataset.metadata[key]
+    data = dataset2.data[:]
+    data[:,1] *= dataset1.metadata[key] / dataset2.metadata[key]
+    return data
 
 
 def get_peak_offsets_for_all_dataseries(range_low, range_high, datasets):
@@ -256,7 +259,7 @@ def get_peak_offsets_for_all_dataseries(range_low, range_high, datasets):
         dataset.add_param('peak_fit', fit_centre)
 
 
-def fit_peaks_for_a_dataset_pair(range_low, range_high, dataset_pair):
+def fit_peaks_for_a_dataset_pair(range_low, range_high, dataset_pair, normalise_checked):
     """
     Perform peak detection within the defined range <range_low> to <range_high> for a
     dataset pair. <dataset_pair> is a tuple taken from the MainApp.dataset_pairs set
@@ -293,6 +296,12 @@ def fit_peaks_for_a_dataset_pair(range_low, range_high, dataset_pair):
     # First dataset was fit successfully, fit the other dataset with the peak fitting result.
     x_range = (dataset2.x() >= range_low) & (dataset2.x() <= range_high)
     data_x, data_y = dataset2.data[x_range].T
+
+    # Normalise the second dataset's y values if necessary
+    if normalise_checked:
+        key = 'Integrated Ion Chamber Count(counts)'
+        data_y *= dataset.metadata[key] / dataset2.metadata[key]
+
     fit2_centre, fit2_successful = fit_modeled_peak_to_data(data_x, data_y, fit_parameters, plot=True)
     # Store the fit results if both data series were successfully fitted.
     if fit2_successful:
@@ -407,82 +416,3 @@ def fit_modeled_peak_to_data(data_x, data_y, p0, plot=False):
         plt.show()
 
     return (p0[1]+x_offset[0] if p0[0] > p0[3] else p0[4]+x_offset[0], success==1)
-
-
-def fit_peaks_2theta(dataset, low_index=None, high_index=None, plot=False):
-    """
-    Returns a tuple containing two lists.
-
-    The second list contains the 0/1 fit success flag for the corresponding peak.
-    The first list contains the 2theta values of the 1st moment/mean of all peaks
-    according to a maximum likelihood fit of a linear combination of a Gaussian+Lorentzian
-    or it contains None if the fit was unsuccessful.
-    <dataset> is an XYEDataset instance
-    <low_index> and <high_index> if provided constrain the search range
-    The data is filtered by a windowing filter in order to ignore any rogue samples
-    due to noise.
-    A threshold is then applied to locate candidate peaks.
-    A fit is attempted on the highest peak.
-    If successful, the central x value of each peak is returned.
-
-    Note, scipy v0.11 has a wavelet-based peak finding function
-    scipy.signal.find_peaks_cwt which should do a much better job than the approach
-    taken here according to http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2631518/.
-    """
-    data_x = dataset.x()
-    data_y = dataset.y()
-    # Get the baseline by using a median filter about 3x as long as the widest anticipated peak width
-    y_baseline = sn.filters.median_filter(data_y, size=(500,), mode='nearest')
-    # smooth the ys (Intensities) a bit by using ndimage grey_opening then subtract off the background
-    foreground_ys = sn.grey_opening(data_y, size=(2,), mode='nearest') - y_baseline
-    # choose a threshold of 1/10 of the height of the biggest peak in the filtered and backgrounded data
-    y_threshold = foreground_ys.max()/10.0
-    # Get the ranges exceeding the threshold and use their centres and widths as starting points for
-    # Gaussian+Lorentzian fits
-    zero_crossing_indices = np.where(np.diff(np.sign(data_y > y_threshold)))[0] # indices of threshold crossings
-    assert zero_crossing_indices.size&1 == 0             # verify we have an even number of zero crossings
-    peak_nearby_indices = zero_crossing_indices.reshape(-1, 2).mean(axis=1).round().astype(int) # rough indices of peak centres
-    # peaks lie in the middle of the zero crossing pairs - get these positions
-    x_peak_candidate_centres = data_x[zero_crossing_indices].reshape(-1, 2).mean(axis=1)
-    x_peak_candidate_widths = np.diff(data_x[zero_crossing_indices].reshape(-1, 2), axis=1) / 2.0
-
-    # Gaussian + Lorentzian function - both centred around p[1]
-    # p[0] and p[3] are the amplitudes of the respective components
-    # p[2] and p[4] are the fit parameters of the respective functions
-    fit_function = lambda p, x: p[0]*exp(-((x-p[1])/p[2])**2/2.0) + \
-                                p[3]*(p[4]**2/((x-p[1])**2 + p[4]**2))
-    fit_function_error = lambda p, x, y: (fit_function(p,x) - y)    # 1d Gaussian + Lorentzian fit
-
-    ps = []
-    successes = []
-    for i in range(x_peak_candidate_centres.size):
-        low, high = zero_crossing_indices.reshape(-1, 2)[i]
-        # expand the index range to cover the peak and tails
-        width_multiplier = 3
-        peak_index_low = low - (high-low)*width_multiplier
-        peak_index_high = high + (high-low)*width_multiplier
-        peak_index_range = arange(peak_index_low, peak_index_high+1)
-    
-        p0 = np.r_[data_y[peak_nearby_indices[i]]/2.0,
-                   x_peak_candidate_centres[i],
-                   x_peak_candidate_widths[i],
-                   data_y[peak_nearby_indices[i]]/2.0,
-                   x_peak_candidate_widths[i]]
-        p, success = so.leastsq(fit_function_error, p0[:],
-                     args=(data_x[peak_index_range], foreground_ys[peak_index_range]))
-        if success:
-            ps.append(p[1])
-        else:
-            ps.append(None)
-        successes.append(success)
-
-        if plot and success:
-            plt.plot(data_x[peak_index_range], foreground_ys[peak_index_range])
-            x_samples = np.linspace(data_x[peak_index_range][0], data_x[peak_index_range][-1], 1000)
-            plt.plot(x_samples, fit_function(p, x_samples))
-
-    if plot:
-        plt.show()
-
-    return ps, successes
-
