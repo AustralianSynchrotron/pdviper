@@ -1,6 +1,5 @@
 import os
 import re
-from os.path import basename
 
 from enable.api import ComponentEditor
 from traits.api import List, Str, Float, HasTraits, Instance, Button, Enum, Bool, Event
@@ -16,6 +15,7 @@ from mpl_plot import MplPlot
 from chaco_plot import StackedPlot, Surface2DPlot
 from fixes import fix_background_color
 from dataset_editor import DatasetEditor, DatasetUI
+from copy import deepcopy
 
 import processing
 
@@ -155,7 +155,6 @@ class MainApp(HasTraits):
         self._options = [ 'Show legend', 'Show gridlines', 'Show crosslines' ]
         # The list of currently set options, updated by the UI.
         self.options = self._options
-#        self.file_paths = [ "0.xye", "1.xye" ]
         self.file_paths = []
 
     def _open_files_changed(self):
@@ -199,20 +198,23 @@ class MainApp(HasTraits):
             range_low, range_high = plot.get_range_selection_tool_limits()
 
             # fit the peak in all loaded dataseries
-            for dataset_pair in self.dataset_pairs:
-                processing.fit_peaks_for_a_dataset_pair(range_low, range_high,
-                                                        self.datasets, dataset_pair,
-                                                        self.normalise)
+            for datapair in self._get_dataset_pairs():
+                processing.fit_peaks_for_a_dataset_pair(range_low, range_high, datapair, self.normalise)
+
+    def _get_dataset_pairs(self):
+        datasets_dict = dict([ (d.name, d) for d in self.datasets ])
+        return [ (datasets_dict[file1], datasets_dict[file2]) for file1, file2 in self.dataset_pairs ]
 
     def _bt_process_changed(self):
         '''
         Button click event handler for processing. 
         '''
         # Save the unprocessed data series at this point for later undoing
-        for dataset_pair in self.dataset_pairs:
-            dataset1_key, dataset2_key = dataset_pair
-            data1 = self.datasets[dataset1_key].data
-            data2 = self.datasets[dataset2_key].data
+        merged_datasets = []
+        for dataset_pair in self._get_dataset_pairs():
+            dataset1, dataset2 = dataset_pair
+            data1 = dataset1.data
+            data2 = dataset2.data
 
             # normalise
             if self.normalise:
@@ -238,6 +240,19 @@ class MainApp(HasTraits):
             # regrid
             if self.merge_regrid:
                 merged_data = processing.regrid_data(merged_data)
+
+            # add merged dataset to our collection
+            current_directory, _, parts = self._get_file_path_parts(dataset1.source)
+            merged_data_filebase = u'{}{}_{}.{}'.format(parts[1], parts[3], parts[4], parts[5])
+            merged_data_filename = os.path.join(current_directory, merged_data_filebase)
+            merged_dataset = XYEDataset(merged_data, merged_data_filebase,
+                                              merged_data_filename,
+                                              deepcopy(dataset1.metadata))
+            merged_datasets.append(merged_dataset)
+            merged_dataset.metadata['ui'].name = merged_data_filebase
+            self.dataset_pairs.remove((dataset1.name, dataset2.name))
+        self.datasets = merged_datasets
+        self._plot_datasets()
 
     def _bt_auto_align_series_changed(self):
         # attempt auto alignment
