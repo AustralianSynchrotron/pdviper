@@ -359,15 +359,16 @@ class MainApp(HasTraits):
         self._plot_datasets()
         self.datasets.sort(key=lambda d: d.name)
 
-    def _plot_datasets(self):
-        self.raw_data_plot.plot_datasets(self.datasets, scale=self.scale)
+    def _plot_datasets(self, reset_view=True):
+        self.raw_data_plot.plot_datasets(self.datasets, scale=self.scale,
+                                         reset_view=reset_view)
         self._options_changed(self.options)
         self.container.request_redraw()
 
     def _edit_datasets_changed(self):
         editor = DatasetEditor(datasets=self.datasets)
         editor.edit_traits()
-        self._plot_datasets()
+        self._plot_datasets(reset_view=False)
 
     def _generate_plot_changed(self):
         if self.datasets:

@@ -21,14 +21,14 @@ class RawDataPlot(HasTraits):
         self.plots = {}
         self._setup_plot()
 
-    def plot_datasets(self, datasets, scale='linear'):
+    def plot_datasets(self, datasets, scale='linear', reset_view=True):
         if self.plots:
-            self.plot.delplot(*self.plots.keys())
+            self.plot.delplot(*self.plot.plots.keys())
             self.plots = {}
-        for dataset in datasets:
+        active = filter(lambda d: d.metadata['ui'].active, datasets)
+        hilite = filter(lambda d: d.metadata['ui'].highlighted, active)
+        for dataset in active:
             ui = dataset.metadata['ui']
-            if not ui.active:
-                continue
             data = dataset.data
             name = ui.name or dataset.name
             x, y = np.transpose(data[:, [0,1]])
@@ -40,7 +40,19 @@ class RawDataPlot(HasTraits):
             plot = self.plot.plot((name + '_x', name + '_y'),
                                   name=name, type='line', color=color)
             if color == 'auto':
-                ui.color = tuple((np.array(plot[0].color_) * 255).astype('uint8').tolist())
+                ui.color = tuple(
+                    (np.array(plot[0].color_) * 255).astype('uint8').tolist())
+            self.plots[name] = plot
+
+        for dataset in hilite:
+            ui = dataset.metadata['ui']
+            data = dataset.data
+            name = ui.name or dataset.name
+            # Overlay a scatter plot on the original line plot to highlight
+            # data points as circles.
+            plot = self.plot.plot((name + '_x', name + '_y'),
+                              name=name + '_selection', type='scatter',
+                              color=ui.color)
             self.plots[name] = plot
 
         if len(datasets) > 0:
@@ -48,7 +60,11 @@ class RawDataPlot(HasTraits):
             self.range_selection_tool = RangeSelection(self.plot0renderer, left_button_selects=True)
             self.range_selection_overlay = RangeSelectionOverlay(component=self.plot0renderer)
 
-        self.reset_view()
+        if reset_view:
+            self.reset_view()
+        # Since highlighted datasets are plotted twice, both plots show up in
+        # the legend. This fixes that.
+        self.plot.legend.plots = self.plots
         self.show_legend(True)
         self._set_scale(scale)
 
