@@ -85,9 +85,9 @@ def bin_data(data, num_bins):
 
 def stack_datasets(datasets):
     #normalise_datasets(datasets)
-    shapes = [ len(dataset.data) for name, dataset in datasets.iteritems() ]
+    shapes = [ len(dataset.data) for dataset in datasets ]
     min_x_len = np.min(shapes)
-    data = [ dataset.data[:min_x_len] for name, dataset in datasets.iteritems() ]
+    data = [ dataset.data[:min_x_len] for dataset in datasets ]
     stack = np.vstack([data])
     return stack
 
@@ -228,18 +228,10 @@ def regrid_data(data, start=None, end=None, interval=0.00375):
 
 def normalise_datasets(datasets):
     key = 'Integrated Ion Chamber Count(counts)'
-    counts = array([ dataset.metadata[key] for dataset in datasets.values() ])
+    counts = array([ dataset.metadata[key] for dataset in datasets ])
     max_count = counts.max()
-    for dataset in datasets.values():
+    for dataset in datasets:
         dataset.data[:,1] *= max_count / dataset.metadata[key]
-
-
-def get_reference_dataset_name(datasets):
-    """
-    Returns the name of the reference dataset used as a key in the datasets dictionary,
-    i.e. the one with the lowest filename according to Python's sort rules.
-    """
-    return sorted(datasets.keys())[0]
 
 
 def get_peak_offsets_for_all_dataseries(range_low, range_high, datasets):
@@ -248,7 +240,7 @@ def get_peak_offsets_for_all_dataseries(range_low, range_high, datasets):
     If successful, the fit result is appended to the XYEDataset item metadata.
     The fit result can be a float or None in the case of a series that could not be fitted.
     """
-    for dataset in datasets.values():
+    for dataset in datasets:
         x_range = (dataset.x() >= range_low) & (dataset.x() <= range_high)
         # Get the baseline by using a median filter 3x as long as the selection
         filter_length = 3*int(len(dataset.x())*(range_high-range_low)/(dataset.x()[-1]-dataset.x()[0]))
@@ -264,7 +256,7 @@ def get_peak_offsets_for_all_dataseries(range_low, range_high, datasets):
         dataset.add_param('peak_fit', fit_centre)
 
 
-def fit_peaks_for_a_dataset_pair(range_low, range_high, datasets, dataset_pair):
+def fit_peaks_for_a_dataset_pair(range_low, range_high, dataset_pair):
     """
     Perform peak detection within the defined range <range_low> to <range_high> for a
     dataset pair. <dataset_pair> is a tuple taken from the MainApp.dataset_pairs set
@@ -276,8 +268,7 @@ def fit_peaks_for_a_dataset_pair(range_low, range_high, datasets, dataset_pair):
     The fit result can be a float or None in the case of a series that could not be fitted.
     Returns True if the peaks were fitted successfully in both positions, else returns False.
     """
-    dataset1_key, dataset2_key = dataset_pair
-    dataset = datasets[dataset1_key]
+    dataset, dataset2 = dataset_pair
     x_range = (dataset.x() >= range_low) & (dataset.x() <= range_high)
     data_x, data_y = dataset.data[x_range].T
 
@@ -300,7 +291,6 @@ def fit_peaks_for_a_dataset_pair(range_low, range_high, datasets, dataset_pair):
     
     # If the fit was successful, fit the second dataset.
     # First dataset was fit successfully, fit the other dataset with the peak fitting result.
-    dataset2 = datasets[dataset2_key]
     x_range = (dataset2.x() >= range_low) & (dataset2.x() <= range_high)
     data_x, data_y = dataset2.data[x_range].T
     fit2_centre, fit2_successful = fit_modeled_peak_to_data(data_x, data_y, fit_parameters, plot=True)

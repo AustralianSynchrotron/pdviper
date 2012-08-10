@@ -25,11 +25,12 @@ class RawDataPlot(HasTraits):
         if self.plots:
             self.plot.delplot(*self.plots.keys())
             self.plots = {}
-        for name, dataset in datasets.iteritems():
+        for dataset in datasets:
             ui = dataset.metadata['ui']
             if not ui.active:
                 continue
             data = dataset.data
+            name = ui.name or dataset.name
             x, y = np.transpose(data[:, [0,1]])
             self.plot_data.set_data(name + '_x', x)
             self.plot_data.set_data(name + '_y', rescale(y, method=scale))

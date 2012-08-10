@@ -139,9 +139,8 @@ class MainApp(HasTraits):
                            ('BZA-scan_p1_0026.xye', 'BZA-scan_p2_0026.xye')])
         """
         super(MainApp, self).__init__(*args, **kws)
-        self.datasets = {}
+        self.datasets = []
         self.dataset_pairs = set()
-        self.uidatasets = []
         self.raw_data_plot = RawDataPlot(self.datasets)
         self.plot = self.raw_data_plot.get_plot()
         self.container = OverlayPlotContainer(self.plot,
@@ -196,9 +195,10 @@ class MainApp(HasTraits):
             range_low, range_high = plot.get_range_selection_tool_limits()
 
             # fit the peak in all loaded dataseries
-            for datapairs in self.dataset_pairs:
-                processing.fit_peaks_for_a_dataset_pair(range_low, range_high, self.datasets, datapairs)
-
+            datasets_dict = dict([ (d.name, d) for d in self.datasets ])
+            for filename1, filename2 in self.dataset_pairs:
+                datapair = datasets_dict[filename1], datasets_dict[filename2]
+                processing.fit_peaks_for_a_dataset_pair(range_low, range_high, datapair)
 
     def _bt_auto_align_series_changed(self):
         # attempt auto alignment
@@ -271,14 +271,13 @@ class MainApp(HasTraits):
         * - Positions are always paired e.g. 1 and 2, or 3 and 4, so a selection with
         either 1 or 2 should generate the pair 1 and 2.
         """
-        self.datasets = {}
+        self.datasets = []
         self.dataset_pairs = set()
-        self.uidatasets = []
         # self.file_paths is modified by _add_dataset_pair() so iterate over a copy of it.
         for filename in self.file_paths[:]:
             self._add_dataset_pair(filename)
         self._plot_datasets()
-        self.uidatasets.sort(key=lambda d: d.name)
+        self.datasets.sort(key=lambda d: d.name)
 
     def _plot_datasets(self):
         self.raw_data_plot.plot_datasets(self.datasets, scale=self.scale)
@@ -286,7 +285,7 @@ class MainApp(HasTraits):
         self.container.request_redraw()
 
     def _edit_datasets_changed(self):
-        editor = DatasetEditor(datasets=self.uidatasets)
+        editor = DatasetEditor(datasets=self.datasets)
         editor.edit_traits()
         self._plot_datasets()
 
@@ -307,9 +306,8 @@ class MainApp(HasTraits):
             dataset = XYEDataset.from_file(file_path)
         except IOError:
             return
-        filename = basename(file_path)
-        self.datasets[filename] = dataset
-        self.uidatasets.append(create_datasetui(dataset))
+        self.datasets.append(dataset)
+        create_datasetui(dataset)
 
 
 class PlotGenerator(HasTraits):

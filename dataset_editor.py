@@ -79,6 +79,7 @@ class DatasetEditor(HasTraits):
     )
 
     def __init__(self, *args, **kwargs):
+        self.datasets = map(lambda d: d.metadata['ui'], kwargs.pop('datasets'))
         super(DatasetEditor, self).__init__(*args, **kwargs)
         self.dataset_editor.on_select = self._selection_changed
         self.selecting = False
