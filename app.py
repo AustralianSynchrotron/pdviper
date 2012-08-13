@@ -2,8 +2,8 @@ import os
 import re
 
 from enable.api import ComponentEditor
-from traits.api import List, Str, Float, HasTraits, Instance, Button, Enum, Bool, Event
-from traitsui.api import Item, UItem, HGroup, VGroup, View, spring, Label, CheckListEditor, ButtonEditor, Tabbed
+from traits.api import List, Str, Float, HasTraits, Instance, Button, Enum, Bool
+from traitsui.api import Item, UItem, HGroup, VGroup, View, spring, Label, CheckListEditor, Tabbed
 from pyface.api import FileDialog, OK
 from chaco.api import OverlayPlotContainer
 
@@ -44,15 +44,13 @@ class MainApp(HasTraits):
 
     # To update the button label based on a state machine state, do this:
     # http://osdir.com/ml/python.enthought.devel/2006-10/msg00144.html
-    bt_select_peak_event_controller = Event
+    bt_start_peak_select = Button
+    bt_end_peak_select = Button
     bt_select_peak_label = Str("Select peak")
-    bt_select_peak = UItem('bt_select_peak_event_controller',
-                          editor = ButtonEditor(label_value='bt_select_peak_label'),
-                          enabled_when='object._has_data()')
     bt_process = Button("Apply")
     bt_undo_processing = Button("Undo")
     bt_save = Button("Save...")
-    
+
     correction = Float(0.0)
 
     help_button = Button("Help...")
@@ -62,6 +60,8 @@ class MainApp(HasTraits):
     merge_method = Enum('none', 'merge', 'splice')('splice')
     merge_regrid = Bool(False)
     normalise = Bool(True)
+    align_positions = Bool(False)
+    peak_selecting = Bool(False)
 
     raw_data_plot = Instance(RawDataPlot)
 
@@ -92,12 +92,13 @@ class MainApp(HasTraits):
             springy=False,
         ),
         spring,
-        '_',
-        spring,
-        Label('Align series:'),
-        bt_select_peak,
-        spring,
-        '_',
+        HGroup(Item('align_positions')),
+        HGroup(
+            UItem('bt_start_peak_select', label='Select peak',
+                  enabled_when='object.align_positions and not object.peak_selecting'),
+            UItem('bt_end_peak_select', label='Done',
+                  enabled_when='object.peak_selecting'),
+        ),
         spring,
         Label('Zero correction:'),
         UItem('correction', enabled_when='object._has_data()'),
@@ -175,22 +176,16 @@ class MainApp(HasTraits):
         self.raw_data_plot.show_crosslines(all_options['Show crosslines'])
         self.container.request_redraw()
 
-    def _bt_select_peak_event_controller_fired(self):
-        '''
-        Button click event handler for peak alignment. Controls enabling and disabling the
-        range selection tool and cycling the button label that indicates the bottun mode. 
-        '''
-        # Use the button label to determine the button state
-        if self.bt_select_peak_label == 'Select peak':
-            self.raw_data_plot.start_range_select()
-            self.bt_select_peak_label = 'Align series'
-        elif self.bt_select_peak_label == 'Align series':
-            range_low, range_high = self.raw_data_plot.end_range_select()
-            self.bt_select_peak_label = 'Select peak'
+    def _bt_start_peak_select_changed(self):
+        self.raw_data_plot.start_range_select()
+        self.peak_selecting = True
 
-            # fit the peak in all loaded dataseries
-            for datapair in self._get_dataset_pairs():
-                processing.fit_peaks_for_a_dataset_pair(range_low, range_high, datapair, self.normalise)
+    def _bt_end_peak_select_changed(self):
+        range_low, range_high = self.raw_data_plot.end_range_select()
+        # fit the peak in all loaded dataseries
+        for datapair in self._get_dataset_pairs():
+            processing.fit_peaks_for_a_dataset_pair(range_low, range_high, datapair, self.normalise)
+        self.peak_selecting = False
 
     def _get_dataset_pairs(self):
         datasets_dict = dict([ (d.name, d) for d in self.datasets ])
