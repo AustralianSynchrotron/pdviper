@@ -105,11 +105,12 @@ class MainApp(HasTraits):
         spring,
         '_',
         spring,
-        UItem('bt_process', enabled_when='object._has_data()'),
-        UItem('bt_undo_processing', enabled_when='object._has_data()'),
+        UItem('bt_process', enabled_when='len(object.dataset_pairs) != 0'),
+        UItem('bt_undo_processing', enabled_when='object.undo_state is not None'),
         UItem('bt_save', enabled_when='object._has_data()'),
         label='Process',
         springy=False,
+        enabled_when='object._has_data()',
     )
 
     traits_view = View(
@@ -148,6 +149,7 @@ class MainApp(HasTraits):
         super(MainApp, self).__init__(*args, **kws)
         self.datasets = []
         self.dataset_pairs = set()
+        self.undo_state = None
         self.raw_data_plot = RawDataPlot(self.datasets)
         self.plot = self.raw_data_plot.get_plot()
         self.container = OverlayPlotContainer(self.plot,
@@ -236,8 +238,21 @@ class MainApp(HasTraits):
                                               deepcopy(dataset1.metadata))
             merged_datasets.append(merged_dataset)
             merged_dataset.metadata['ui'].name = merged_data_filebase
-            self.dataset_pairs.remove((dataset1.name, dataset2.name))
+        self._save_state()
         self.datasets = merged_datasets
+        self.dataset_pairs = set()
+        self._plot_datasets()
+
+    def _save_state(self):
+        self.undo_state = (self.datasets, self.dataset_pairs)
+
+    def _restore_state(self):
+        if self.undo_state is not None:
+            self.datasets, self.dataset_pairs = self.undo_state
+            self.undo_state = None
+
+    def _bt_undo_processing_changed(self):
+        self._restore_state()
         self._plot_datasets()
 
     def _bt_save_changed(self):
