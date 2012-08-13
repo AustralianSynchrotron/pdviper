@@ -13,7 +13,7 @@ from raw_data_plot import RawDataPlot
 from fixes import fix_background_color
 from dataset_editor import DatasetEditor, DatasetUI
 from copy import deepcopy
-from ui_helpers import get_save_as_filename, open_file_with_default_handler, get_file_list_from_dialog
+from ui_helpers import get_save_as_filename, open_file_dir_with_default_handler, get_file_list_from_dialog
 import processing
 from plot_generator import PlotGenerator
 
@@ -273,10 +273,7 @@ class MainApp(HasTraits):
                 current_directory, filename, parts = self._get_general_file_path_parts(dataset.source)
                 filename = os.path.join(current_directory, '{}_{}_{}.xye'.format(filename_prefix, parts[1], parts[2]))
                 dataset.save(filename)
-
-    def _bt_auto_align_series_changed(self):
-        # attempt auto alignment
-        print 'Auto align series'
+            open_file_dir_with_default_handler(filename_prefix)
 
     def _save_as_image_changed(self):
         if len(self.datasets) == 0:
@@ -284,7 +281,7 @@ class MainApp(HasTraits):
         filename = get_save_as_filename()
         if filename:
             PlotOutput.save_as_image(self.container, filename)
-            open_file_with_default_handler(filename)
+            open_file_dir_with_default_handler(filename)
 
     def _copy_to_clipboard_changed(self):
         if self.datasets:

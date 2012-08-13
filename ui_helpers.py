@@ -1,3 +1,5 @@
+import os
+import subprocess
 from pyface.api import FileDialog, OK
 
 
@@ -19,9 +21,14 @@ def get_file_list_from_dialog():
     return []
 
 def open_file_with_default_handler(filename):
+    startfile(filename)
+
+def open_file_dir_with_default_handler(filename):
+    startfile(os.path.split(filename)[0])
+
+def startfile(filename):
     try:
-        import webbrowser
-        webbrowser.open_new_tab(filename)
+        os.startfile(filename)
     except:
-        pass
+        subprocess.Popen(['xdg-open', filename])
 
