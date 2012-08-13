@@ -272,7 +272,7 @@ class MainApp(HasTraits):
             for dataset in self.datasets:
                 current_directory, filename, parts = self._get_general_file_path_parts(dataset.source)
                 filename = os.path.join(current_directory, '{}_{}_{}.xye'.format(filename_prefix, parts[1], parts[2]))
-                dataset.save_xye_data(filename)
+                dataset.save(filename)
 
     def _bt_auto_align_series_changed(self):
         # attempt auto alignment
