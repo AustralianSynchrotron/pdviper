@@ -12,12 +12,14 @@ from chaco.api import OverlayPlotContainer
 
 class OutputTest(unittest.TestCase):
     def setUp(self):
-        raise SkipTest('Output tests are slow - use --no-skip option to test them')
+        if 'OUTPUT_TESTS' not in os.environ:
+            raise SkipTest('Slow: define OUTPUT_TESTS to run')
         self.data = xye.XYEDataset.from_file(r'tests/testdata/si640c_low_temp_cal_p1_scan0.000000_adv0_0000.xye')
         class UI(object):
             color = None
             name = ''
             active = True
+            highlighted = False
         self.data.metadata['ui'] = UI()
         self.datasets = [ self.data ]
         self.plot = RawDataPlot(self.datasets)
@@ -26,11 +28,11 @@ class OutputTest(unittest.TestCase):
             bgcolor="white", use_backbuffer=True,
             border_visible=False)
         self.container.request_redraw()
-        self.basedir = 'tests/tmp/'
+        self.basedir = os.path.join('tests', 'tmp')
         try:
             os.mkdir(self.basedir)
-        except:
-            pass
+        except OSError, e:
+            assert 'exists' in str(e)
 
     def _save_plot(self, filename):
         PlotOutput.save_as_image(self.container, self.basedir + filename, width=800, height=600)
