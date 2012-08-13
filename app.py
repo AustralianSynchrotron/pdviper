@@ -217,6 +217,13 @@ class MainApp(HasTraits):
                 data1[:,0] += self.correction
                 data2[:,0] += self.correction
 
+            if self.align_positions:
+                if 'peak_fit' in dataset1.metadata and \
+                   'peak_fit' in dataset2.metadata:
+                    x_offset = dataset1.metadata['peak_fit'] - \
+                                dataset2.metadata['peak_fit']
+                    data2[:,0] += x_offset
+
             # merge or splice
             if self.merge_method=='merge':
                 merged_data = processing.combine_by_merge(data1, data2) 
