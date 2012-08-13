@@ -2,7 +2,7 @@ import numpy as np
 from numpy import array
 
 from enable.api import Component
-from traits.api import HasTraits, Instance, Range
+from traits.api import Instance, Range, Bool
 from chaco.api import Plot, ArrayPlotData, jet, ColorBar, LinearMapper, HPlotContainer, PlotAxis, PlotLabel, create_line_plot, OverlayPlotContainer, LinePlot
 from chaco.tools.api import TraitsTool
 from chaco.default_colormaps import fix
@@ -14,8 +14,12 @@ from base_plot import BasePlot
 from labels import get_value_scale_label
 import settings
 
+from traits_extensions import HasTraitsGroup
+from traitsui.api import Group, UItem, VGroup, Item, HGroup
+from enable.api import ComponentEditor
 
-class ChacoPlot(BasePlot, HasTraits):
+
+class ChacoPlot(BasePlot, HasTraitsGroup):
     component = Instance(Component)
 
     def redraw(self):
@@ -27,9 +31,59 @@ class ChacoPlot(BasePlot, HasTraits):
     def save_as(self, filename):
         PlotOutput.save_as_image(self.component, filename)
 
+    def _get_traits_group(self):
+        return Group(UItem('component', editor=ComponentEditor()))
+
 
 class StackedPlot(ChacoPlot):
-    offset = Range(0.0, 2.0, 1.0)
+    offset = Range(0.0, 1.0, 0.1)
+    flip_order = Bool(False)
+
+    def _get_traits_group(self):
+        return VGroup(
+                   HGroup(
+                       Item('flip_order'),
+                       Item('offset'),
+                   ),
+                   UItem('component', editor=ComponentEditor()),
+               )
+
+    def __init__(self):
+        super(StackedPlot, self).__init__()
+        self.container = OverlayPlotContainer(bgcolor='white',
+                                         use_backbuffer=True,
+                                         border_visible=True,
+                                         padding=50,
+                                         padding_left=110,
+                                         fill_padding=True
+                                             )
+        self.data = ArrayPlotData()
+        self.chaco_plot = None
+        self.value_mapper = None
+        self.index_mapper = None
+        self.x_axis = PlotAxis(component=self.container,
+                          orientation='bottom',
+                          title=u'Angle (2\u0398)',
+                          title_font=settings.axis_title_font,
+                          tick_label_font=settings.tick_font)
+        y_axis_title = 'Normalized intensity (%s)' % get_value_scale_label('linear')
+        self.y_axis = PlotAxis(component=self.container,
+                          orientation='left',
+                          title=y_axis_title,
+                          title_font=settings.axis_title_font,
+                          tick_label_font=settings.tick_font)
+        self.container.overlays.extend([self.x_axis, self.y_axis])
+        self.container.tools.append(
+            TraitsTool(self.container, classes=[LinePlot,PlotAxis]))
+
+
+    def _flip_order_changed(self):
+        self._plot(self.data_x, None, self.data_z, self.scale)
+        self.container.request_redraw()
+
+    def _offset_changed(self):
+        self._plot(self.data_x, None, self.data_z, self.scale)
+        self.container.request_redraw()
 
     def _prepare_data(self, datasets):
         interpolate = True
@@ -39,26 +93,27 @@ class StackedPlot(ChacoPlot):
             x = array([x] * len(datasets))
         else:
             x, z = map(np.transpose, np.transpose(stack))
-        y = array([ [i] * z.shape[1] for i in range(1, len(datasets) + 1) ])
-        return x, y, z
+        return x, None, z
 
     def _plot(self, x, y, z, scale):
-        self.container = OverlayPlotContainer(bgcolor='white',
-                                         use_backbuffer=True,
-                                         border_visible=True,
-                                         padding=50,
-                                         padding_left=110,
-                                         fill_padding=True
-                                             )
+        self.data_x, self.data_z, self.scale = x, z, scale
+        if self.container.components:
+            self.container.remove(*self.container.components)
+        self.chaco_plot = Plot(self.data)
+        self.chaco_plot.bgcolor = 'white'
         self.value_mapper = None
         self.index_mapper = None
-        use_downsampling = False
+
+        if self.flip_order:
+            z = z[::-1]
 
         offset = (z.max(axis=1) - z.min(axis=1)).min() * self.offset
         for i, (x_row, z_row) in enumerate(zip(x, z)):
-            plot = create_line_plot((x_row, z_row + i * offset), color='black')
-            plot.bgcolor = 'white'
-            plot.use_downsampling = use_downsampling
+            self.data.set_data('data_x_' + str(i), x_row)
+            self.data.set_data('data_y_offset_' + str(i), z_row + offset * i)
+            plots = self.chaco_plot.plot(('data_x_' + str(i), 'data_y_offset_' + str(i)), color='black', type='line')
+            plot = plots[0]
+            self.container.add(plot)
 
             if self.value_mapper is None:
                 self.index_mapper = plot.index_mapper
@@ -68,36 +123,17 @@ class StackedPlot(ChacoPlot):
                 self.value_mapper.range.add(plot.value)
                 plot.index_mapper = self.index_mapper
                 self.index_mapper.range.add(plot.index)
-            self.container.add(plot)
-
-        x_axis = PlotAxis(component=self.container,
-                          mapper=self.index_mapper,
-                          orientation='bottom',
-                          title=u'Angle (2\u0398)',
-                          title_font=settings.axis_title_font,
-                          tick_label_font=settings.tick_font)
-        y_axis_title = 'Normalized intensity (%s)' % get_value_scale_label(scale)
-        y_axis = PlotAxis(component=self.container,
-                          mapper=self.value_mapper,
-                          orientation='left',
-                          title=y_axis_title,
-                          title_font=settings.axis_title_font,
-                          tick_label_font=settings.tick_font)
-        self.container.overlays.extend([x_axis, y_axis])
-
+        self.x_axis.mapper = self.index_mapper
+        self.y_axis.mapper = self.value_mapper
+        self.y_axis.title = 'Normalized intensity (%s)' % \
+                get_value_scale_label(scale)
         self.zoom_tool = ClickUndoZoomTool(
             plot, tool_mode="box", always_on=True, pointer="cross",
             drag_button=settings.zoom_button,
             undo_button=settings.undo_button,
         )
         plot.overlays.append(self.zoom_tool)
-
-        self.container.tools.append(
-            TraitsTool(self.container, classes=[LinePlot,PlotAxis]))
-
-        container = HPlotContainer(use_backbuffer=True)
-        container.add(self.container)
-        return container
+        return self.container
 
     def _reset_view(self):
         self.zoom_tool.revert_history_all()
@@ -180,6 +216,7 @@ class Surface2DPlot(ChacoPlot):
             font=settings.axis_title_font,
         )
         colorbar.overlays.append(colorbar_label)
+        colorbar.tools.append(TraitsTool(colorbar))
 
         # Add the plot and colorbar side-by-side
         container = HPlotContainer(use_backbuffer=True)
