@@ -1,9 +1,10 @@
 import numpy as np
 from numpy import array
 
-from enable.api import Component
-from traits.api import Instance, Range, Bool
-from chaco.api import Plot, ArrayPlotData, jet, ColorBar, LinearMapper, HPlotContainer, PlotAxis, PlotLabel, create_line_plot, OverlayPlotContainer, LinePlot
+from enable.api import Component, ComponentEditor
+from traits.api import Instance, Range, Bool, on_trait_change
+from traitsui.api import Group, UItem, VGroup, Item, HGroup
+from chaco.api import Plot, ArrayPlotData, jet, ColorBar, LinearMapper, HPlotContainer, PlotAxis, PlotLabel, OverlayPlotContainer, LinePlot
 from chaco.tools.api import TraitsTool
 from chaco.default_colormaps import fix
 
@@ -13,10 +14,26 @@ from processing import stack_datasets, interpolate_datasets, bin_data, cubic_int
 from base_plot import BasePlot
 from labels import get_value_scale_label
 import settings
-
 from traits_extensions import HasTraitsGroup
-from traitsui.api import Group, UItem, VGroup, Item, HGroup
-from enable.api import ComponentEditor
+
+
+class ClickableLinePlot(LinePlot):
+    def is_in(self, x, y, threshold=2.):
+        screen_pt = x, y
+        data_x = self.map_data(screen_pt)
+        xmin, xmax = self.index.get_bounds()
+        if xmin <= data_x <= xmax:
+            if self.orientation == "h":
+                sy = screen_pt[1]
+            else:
+                sy = screen_pt[0]
+
+            interp_y = self.interpolate(data_x)
+            interp_y = self.value_mapper.map_screen(interp_y)
+
+            if abs(sy - interp_y) <= threshold:
+                return True
+        return False
 
 
 class ChacoPlot(BasePlot, HasTraitsGroup):
@@ -36,7 +53,8 @@ class ChacoPlot(BasePlot, HasTraitsGroup):
 
 
 class StackedPlot(ChacoPlot):
-    offset = Range(0.0, 1.0, 0.1)
+    offset = Range(0.0, 1.0, 0.015)
+    value_range = Range(0.01, 1.05, 1.00)
     flip_order = Bool(False)
 
     def _get_traits_group(self):
@@ -44,6 +62,7 @@ class StackedPlot(ChacoPlot):
                    HGroup(
                        Item('flip_order'),
                        Item('offset'),
+                       Item('value_range'),
                    ),
                    UItem('component', editor=ComponentEditor()),
                )
@@ -75,13 +94,11 @@ class StackedPlot(ChacoPlot):
         self.container.overlays.extend([self.x_axis, self.y_axis])
         self.container.tools.append(
             TraitsTool(self.container, classes=[LinePlot,PlotAxis]))
+        self.colors = []
+        self.last_flip_order = self.flip_order
 
-
-    def _flip_order_changed(self):
-        self._plot(self.data_x, None, self.data_z, self.scale)
-        self.container.request_redraw()
-
-    def _offset_changed(self):
+    @on_trait_change('offset, value_range, flip_order')
+    def _replot_data(self):
         self._plot(self.data_x, None, self.data_z, self.scale)
         self.container.request_redraw()
 
@@ -98,22 +115,36 @@ class StackedPlot(ChacoPlot):
     def _plot(self, x, y, z, scale):
         self.data_x, self.data_z, self.scale = x, z, scale
         if self.container.components:
+            self.colors = map(lambda plot: plot.color, self.container.components)
+            if self.last_flip_order != self.flip_order:
+                self.colors.reverse()
             self.container.remove(*self.container.components)
-        self.chaco_plot = Plot(self.data)
+        # Use a custom renderer so plot lines are clickable
+        self.chaco_plot = Plot(self.data,
+                               renderer_map={ 'line': ClickableLinePlot })
         self.chaco_plot.bgcolor = 'white'
         self.value_mapper = None
         self.index_mapper = None
 
+        if len(self.data_x) == len(self.colors):
+            colors = self.colors[:]
+        else:
+            colors = ['black'] * len(self.data_x)
+
         if self.flip_order:
             z = z[::-1]
 
-        offset = (z.max(axis=1) - z.min(axis=1)).min() * self.offset
+        spacing = (z.max(axis=1) - z.min(axis=1)).min() * self.value_range
+        offset = spacing * self.offset
         for i, (x_row, z_row) in enumerate(zip(x, z)):
             self.data.set_data('data_x_' + str(i), x_row)
-            self.data.set_data('data_y_offset_' + str(i), z_row + offset * i)
-            plots = self.chaco_plot.plot(('data_x_' + str(i), 'data_y_offset_' + str(i)), color='black', type='line')
+            self.data.set_data('data_y_offset_' + str(i), z_row * self.value_range + offset * i)
+            plots = self.chaco_plot.plot(('data_x_' + str(i), 'data_y_offset_' + str(i)), color=colors[i], type='line')
             plot = plots[0]
             self.container.add(plot)
+            # Required for double-clicking plots
+            plot.index.sort_order = 'ascending'
+            plot.value.sort_order = 'ascending'
 
             if self.value_mapper is None:
                 self.index_mapper = plot.index_mapper
@@ -123,6 +154,8 @@ class StackedPlot(ChacoPlot):
                 self.value_mapper.range.add(plot.value)
                 plot.index_mapper = self.index_mapper
                 self.index_mapper.range.add(plot.index)
+        range = self.value_mapper.range
+        range.high = (range.high - range.low) * self.value_range + range.low
         self.x_axis.mapper = self.index_mapper
         self.y_axis.mapper = self.value_mapper
         self.y_axis.title = 'Normalized intensity (%s)' % \
@@ -133,6 +166,7 @@ class StackedPlot(ChacoPlot):
             undo_button=settings.undo_button,
         )
         plot.overlays.append(self.zoom_tool)
+        self.last_flip_order = self.flip_order
         return self.container
 
     def _reset_view(self):
