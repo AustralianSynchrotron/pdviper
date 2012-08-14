@@ -225,7 +225,7 @@ def regrid_data(data, start=None, end=None, interval=0.00375):
     return np.vstack((xs, np.interp(xs, data[:,0], data[:,1]))).T
 
 
-def normalise_dataset(datasets, dataset_pair):
+def normalise_dataset(dataset_pair):
     """
     For a pair of datasets, normalise the y-values of the second dataset with respect
     to the first, based on the measured beam intensity.

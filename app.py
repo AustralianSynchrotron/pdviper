@@ -186,12 +186,14 @@ class MainApp(HasTraits):
         range_low, range_high = self.raw_data_plot.end_range_select()
         # fit the peak in all loaded dataseries
         for datapair in self._get_dataset_pairs():
-            processing.fit_peaks_for_a_dataset_pair(range_low, range_high, datapair, self.normalise)
+            processing.fit_peaks_for_a_dataset_pair(
+                range_low, range_high, datapair, self.normalise)
         self.peak_selecting = False
 
     def _get_dataset_pairs(self):
         datasets_dict = dict([ (d.name, d) for d in self.datasets ])
-        return [ (datasets_dict[file1], datasets_dict[file2]) for file1, file2 in self.dataset_pairs ]
+        return [ (datasets_dict[file1], datasets_dict[file2]) \
+                    for file1, file2 in self.dataset_pairs ]
 
     def _bt_process_changed(self):
         '''
@@ -206,7 +208,7 @@ class MainApp(HasTraits):
 
             # normalise
             if self.normalise:
-                data2 = processing.normalise_dataset(self.datasets, dataset_pair)
+                data2 = processing.normalise_dataset(dataset_pair)
 
             # trim data from gap edges prior to merging
             data1 = processing.clean_gaps(data1)
@@ -237,8 +239,8 @@ class MainApp(HasTraits):
                 merged_data = processing.regrid_data(merged_data)
 
             # add merged dataset to our collection
-            current_directory, _, parts = self._get_file_path_parts(dataset1.source)
-            merged_data_filebase = u'{}{}_{}.{}'.format(parts[1], parts[3], parts[4], parts[5])
+            current_directory, filebase = os.path.split(dataset1.source)
+            merged_data_filebase = re.sub('_p[0-3]_', '_', filebase)
             merged_data_filename = os.path.join(current_directory, merged_data_filebase)
             merged_dataset = XYEDataset(merged_data, merged_data_filebase,
                                               merged_data_filename,
@@ -264,16 +266,14 @@ class MainApp(HasTraits):
 
     def _bt_save_changed(self):
         wildcard = 'All files (*.*)|*.*'
-        _, _, parts = self._get_general_file_path_parts(self.datasets[0].source)
         default_filename = 'prefix'
-        dlg = FileDialog(title='Save results', action='save as', default_filename=default_filename, wildcard=wildcard)
+        dlg = FileDialog(title='Save results', action='save as',
+                         default_filename=default_filename, wildcard=wildcard)
         if dlg.open() == OK:
-            filename_prefix = dlg.path
             for dataset in self.datasets:
-                current_directory, filename, parts = self._get_general_file_path_parts(dataset.source)
-                filename = os.path.join(current_directory, '{}_{}_{}.xye'.format(filename_prefix, parts[1], parts[2]))
+                filename = os.path.join(dlg.directory, dlg.filename + '_'  + dataset.name)
                 dataset.save(filename)
-            open_file_dir_with_default_handler(filename_prefix)
+            open_file_dir_with_default_handler(dlg.path)
 
     def _save_as_image_changed(self):
         if len(self.datasets) == 0:
@@ -290,53 +290,34 @@ class MainApp(HasTraits):
     def _scale_changed(self):
         self._plot_datasets()
 
-    def _get_file_path_parts(self, filename):
-        """
-        A helper function that parses a filename and returns the filename split into
-        useful parts as follows:
-        Example filenames:
-            path/si640c_low_temp_cal_p1_scan0.000000_adv0_0000.xye
-            path/BZA-scan_p2_0026.xye
-        The filename path/foo_p1_bar_0123.xye returns the tuple
-        ('path', 'foo_p1_bar_0123.xye', ['', 'foo', '1', '_bar', '0123', 'xye', ''])
-        The filename path/foo_p1_0123.xye returns the tuple
-        ('path', 'foo_p1_0123.xye',
-            ['', 'foo', '1', '', '0123', 'xye', ''])
-        """
-        current_directory, filename = os.path.split(filename)
-        # root, ext = os.path.splitext(filename)
-        parts = re.split(r'(.+)_p(\d+)(.*)_(\d+)\.(.+)', filename)
-        return current_directory, filename, parts
-
-    def _get_general_file_path_parts(self, filename):
-        """
-        A helper function that parses a filename and returns the filename split into
-        useful parts as follows:
-        Example filenames:
-            path/foo_0000.xye
-        The filename path/foo_0123.xye returns the tuple
-        ('path', 'foo_0000.xye', ['', 'foo', '0123', 'xye', ''])
-        """
-        current_directory, filename = os.path.split(filename)
-        # root, ext = os.path.splitext(filename)
-        parts = re.split(r'(.+)_(\d+)\.(.+)', filename)
-        return current_directory, filename, parts
-
     def _add_dataset_pair(self, filename):
         """
         Adds two datasets (one referred to by filename and its partnered position) to the
         self.datasets dictionary and the dataset_pairs set.
         """
-        current_directory, filebase, parts = self._get_file_path_parts(filename)
-        position_index = int(parts[2])      # e.g. equals 1 when the filename contains _p1_
+        def get_position(filename):
+            m = re.search('_p([0-9])_', filename)
+            try:
+                return int(m.group(1))
+            except (AttributeError, ValueError):
+                return None
+
+        current_directory, filebase = os.path.split(filename)
+        position_index = get_position(filename)
+        if position_index is None:
+            return
+
         # get the index of the associated position, e.g. 2=>1, 1=>2, 5=>6, 6=>5 etc.
         other_position_index = ((position_index-1)^1)+1
         # base filename for the associated position.
-        other_filebase = u'{}_p{}{}_{}.{}'.format(parts[1], str(other_position_index),
-                                                  parts[3], parts[4], parts[5])
+        other_filebase = re.sub('_p[0-9]_',
+                                '_p{}_'.format(str(other_position_index)),
+                                filebase)
         other_filename = os.path.join(current_directory, other_filebase)
+        if not os.path.exists(other_filename):
+            return
+
         # OK, we've got the names and paths, now add the actual data and references.
-        self._add_xye_dataset(filename)
         if other_filename not in self.file_paths:
             self._add_xye_dataset(other_filename)
             # We also need to append the new path to the file_paths List trait which is
@@ -360,6 +341,7 @@ class MainApp(HasTraits):
         self.dataset_pairs = set()
         # self.file_paths is modified by _add_dataset_pair() so iterate over a copy of it.
         for filename in self.file_paths[:]:
+            self._add_xye_dataset(filename)
             self._add_dataset_pair(filename)
         self._plot_datasets()
         self.datasets.sort(key=lambda d: d.name)
