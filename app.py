@@ -38,30 +38,27 @@ class MainApp(HasTraits):
     file_paths = List(Str)
     open_files = Button("Open files...")
     edit_datasets = Button("Edit datasets...")
+    generate_plot = Button("Generate plot...")
+    help_button = Button("Help...")
+
+    scale = Enum('linear', 'log', 'sqrt')
+    options = List
+    reset_button = Button("Reset view")
     copy_to_clipboard = Button("Copy to clipboard")
     save_as_image = Button("Save as image...")
-    generate_plot = Button("Generate plot...")
 
-    # To update the button label based on a state machine state, do this:
-    # http://osdir.com/ml/python.enthought.devel/2006-10/msg00144.html
-    bt_start_peak_select = Button
-    bt_end_peak_select = Button
-    bt_select_peak_label = Str("Select peak")
-    bt_process = Button("Apply")
-    bt_undo_processing = Button("Undo")
-    bt_save = Button("Save...")
-
-    correction = Float(0.0)
-
-    help_button = Button("Help...")
-    reset_button = Button("Reset view")
-    options = List
-    scale = Enum('linear', 'log', 'sqrt')
     merge_method = Enum('none', 'merge', 'splice')('splice')
     merge_regrid = Bool(False)
     normalise = Bool(True)
+    correction = Float(0.0)
     align_positions = Bool(False)
+    bt_start_peak_select = Button
+    bt_end_peak_select = Button
     peak_selecting = Bool(False)
+
+    bt_process = Button("Apply")
+    bt_undo_processing = Button("Undo")
+    bt_save = Button("Save...")
 
     raw_data_plot = Instance(RawDataPlot)
 
