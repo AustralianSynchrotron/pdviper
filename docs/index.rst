@@ -6,7 +6,7 @@
 Welcome to sculpd's documentation!
 ==================================
 
-sculpd is a data analysis program developed for use on the Australian Synchhrotron Powder Diffraction beamline.
+sculpd is a data analysis program developed for use on the Australian Synchrotron Powder Diffraction beamline.
 
 Contents:
 =========

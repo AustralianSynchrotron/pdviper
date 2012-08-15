@@ -10,16 +10,16 @@ Features
     - Raw data
     - Stacked (y-offset) plots
     - 2D/3D colour surface plots
-    - TIFF/PNG/JPG output
-    - linear/log/sqrt scale
-
-Future features
----------------
+    - TIFF/PNG/JPG raster output
+    - PDF/SVG/EPS vector output
 - Data processing
     - Merging
     - Scaling
     - Normalisation
     - Zero/reference angle correction
+
+Future features
+---------------
 - Metadata collation
 
 Requirements
