@@ -107,7 +107,6 @@ class MainApp(HasTraits):
         UItem('bt_save', enabled_when='object._has_data()'),
         label='Process',
         springy=False,
-        enabled_when='object._has_data()',
     )
 
     traits_view = View(
