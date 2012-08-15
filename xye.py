@@ -3,6 +3,7 @@ from numpy import loadtxt, savetxt, asfarray
 from csv import reader
 
 from parab import load_params
+from copy import deepcopy
 
 
 class XYEDataset(object):
@@ -57,4 +58,7 @@ class XYEDataset(object):
 
     def save(self, filename):
         savetxt(filename, self.data, fmt='%1.6f')
+
+    def copy(self):
+        return deepcopy(self)
 

@@ -34,6 +34,14 @@ class DatasetLoadingTest(unittest.TestCase):
         data = XYEDataset._load_xye_data(f)
         eq_(data.shape, (20458, 3))
 
+    def xye_copy_test(self):
+        filename = join(self.basedir,
+                        'si640c_low_temp_cal_p1_scan0.000000_adv0_0000.xye')
+        dataset = XYEDataset.from_file(filename)
+        copied_dataset = dataset.copy()
+        eq_(dataset.data, copied_dataset.data)
+
+
 
 if __name__ == '__main__':
     nose.main()
