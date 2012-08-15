@@ -3,7 +3,7 @@ import re
 
 from enable.api import ComponentEditor
 from traits.api import List, Str, Float, HasTraits, Instance, Button, Enum, Bool
-from traitsui.api import Item, UItem, HGroup, VGroup, View, spring, Label, CheckListEditor, Tabbed
+from traitsui.api import Item, UItem, HGroup, VGroup, View, spring, Label, CheckListEditor, Tabbed, DefaultOverride
 from pyface.api import FileDialog, OK
 from chaco.api import OverlayPlotContainer
 
@@ -12,9 +12,9 @@ from chaco_output import PlotOutput
 from raw_data_plot import RawDataPlot
 from fixes import fix_background_color
 from dataset_editor import DatasetEditor, DatasetUI
-from copy import deepcopy
 from ui_helpers import get_save_as_filename, open_file_dir_with_default_handler, get_file_list_from_dialog
 import processing
+from processing import DatasetProcessor
 from plot_generator import PlotGenerator
 
 # Linux/Ubuntu themes cause the background of windows to be ugly and dark
@@ -47,6 +47,7 @@ class MainApp(HasTraits):
     copy_to_clipboard = Button("Copy to clipboard")
     save_as_image = Button("Save as image...")
 
+    load_positions = Button
     merge_method = Enum('none', 'merge', 'splice')('splice')
     merge_regrid = Bool(False)
     normalise = Bool(True)
@@ -55,6 +56,8 @@ class MainApp(HasTraits):
     bt_start_peak_select = Button
     bt_end_peak_select = Button
     peak_selecting = Bool(False)
+
+    what_to_plot = Enum('Plot new', 'Plot old and new')('Plot old and new')
 
     bt_process = Button("Apply")
     bt_undo_processing = Button("Undo")
@@ -77,6 +80,8 @@ class MainApp(HasTraits):
     )
 
     process_group = VGroup(
+        UItem('load_positions'),
+        spring,
         Label('Merge method:'),
         UItem('merge_method', enabled_when='object._has_data()'),
         HGroup(
@@ -100,7 +105,7 @@ class MainApp(HasTraits):
         Label('Zero correction:'),
         UItem('correction', enabled_when='object._has_data()'),
         spring,
-        '_',
+        UItem('what_to_plot', editor=DefaultOverride(cols=1), style='custom'),
         spring,
         UItem('bt_process', enabled_when='len(object.dataset_pairs) != 0'),
         UItem('bt_undo_processing', enabled_when='object.undo_state is not None'),
@@ -136,11 +141,10 @@ class MainApp(HasTraits):
 
     def __init__(self, *args, **kws):
         """
-        <datasets> is a dictionary whose entries are XYEDataset objects with keys equal to
-        the filename of the dataset, e.g. {'BZA-scan_p2_0027.xye', <XYEDataset>}
-        <dataset_pairs> is a set containing the keys of (odd,even) pairs of datasets to
-        process, e.g. set([('BZA-scan_p1_0025.xye', 'BZA-scan_p2_0025.xye'),
-                           ('BZA-scan_p1_0026.xye', 'BZA-scan_p2_0026.xye')])
+        self.datasets = [ <XYEDataset>, ..., <XYEDataset> ]
+        self.dataset_pairs = set([ (<XYEDataset-p1>, <XYEDataset-p2>),
+                                   ...,
+                                   (<XYEDataset-p1>, <XYEDataset-p2>) ])
         """
         super(MainApp, self).__init__(*args, **kws)
         self.datasets = []
@@ -196,60 +200,31 @@ class MainApp(HasTraits):
         Button click event handler for processing. 
         '''
         # Save the unprocessed data series at this point for later undoing
-        merged_datasets = []
+        processed_datasets = []
+        processor = DatasetProcessor(self.normalise, self.correction,
+                                     self.align_positions,
+                                     self.merge_method, self.merge_regrid)
         for dataset_pair in self._get_dataset_pairs():
-            dataset1, dataset2 = dataset_pair
-            data1 = dataset1.data
-            data2 = dataset2.data
+            datasets = processor.process_dataset_pair(dataset_pair)
+            for dataset in datasets:
+                dataset.metadata['ui'].name = dataset.name + ' (processed)'
+                dataset.metadata['ui'].color = None
+            processed_datasets.extend(datasets)
 
-            # normalise
-            if self.normalise:
-                data2 = processing.normalise_dataset(dataset_pair)
+        self.processed_datasets = processed_datasets
+        self._plot_processed_datasets()
 
-            # trim data from gap edges prior to merging
-            data1 = processing.clean_gaps(data1)
-            data2 = processing.clean_gaps(data2)
-
-            # zero correct i.e. shift x values
-            if self.correction != 0.0:
-                data1[:,0] += self.correction
-                data2[:,0] += self.correction
-
-            if self.align_positions:
-                if 'peak_fit' in dataset1.metadata and \
-                   'peak_fit' in dataset2.metadata:
-                    x_offset = dataset1.metadata['peak_fit'] - \
-                                dataset2.metadata['peak_fit']
-                    data2[:,0] += x_offset
-
-            # merge or splice
-            if self.merge_method=='merge':
-                merged_data = processing.combine_by_merge(data1, data2) 
-            elif self.merge_method=='splice':
-                merged_data = processing.combine_by_splice(data1, data2) 
-            elif self.merge_method=='none':
-                raise Exception('TODO:')
-
-            # regrid
-            if self.merge_regrid:
-                merged_data = processing.regrid_data(merged_data)
-
-            # add merged dataset to our collection
-            current_directory, filebase = os.path.split(dataset1.source)
-            merged_data_filebase = re.sub('_p[0-3]_', '_', filebase)
-            merged_data_filename = os.path.join(current_directory, merged_data_filebase)
-            merged_dataset = XYEDataset(merged_data, merged_data_filebase,
-                                              merged_data_filename,
-                                              deepcopy(dataset1.metadata))
-            merged_datasets.append(merged_dataset)
-            merged_dataset.metadata['ui'].name = merged_data_filebase
+    def _plot_processed_datasets(self):
         self._save_state()
-        self.datasets = merged_datasets
         self.dataset_pairs = set()
+        if 'old' not in self.what_to_plot:
+            self.datasets = []
+        if 'new' in self.what_to_plot:
+            self.datasets.extend(self.processed_datasets)
         self._plot_datasets()
 
     def _save_state(self):
-        self.undo_state = (self.datasets, self.dataset_pairs)
+        self.undo_state = (self.datasets[:], self.dataset_pairs.copy())
 
     def _restore_state(self):
         if self.undo_state is not None:
@@ -266,7 +241,7 @@ class MainApp(HasTraits):
         dlg = FileDialog(title='Save results', action='save as',
                          default_filename=default_filename, wildcard=wildcard)
         if dlg.open() == OK:
-            for dataset in self.datasets:
+            for dataset in self.processed_datasets:
                 filename = os.path.join(dlg.directory, dlg.filename + '_'  + dataset.name)
                 dataset.save(filename)
             open_file_dir_with_default_handler(dlg.path)
@@ -338,6 +313,11 @@ class MainApp(HasTraits):
         # self.file_paths is modified by _add_dataset_pair() so iterate over a copy of it.
         for filename in self.file_paths[:]:
             self._add_xye_dataset(filename)
+        self._plot_datasets()
+        self.datasets.sort(key=lambda d: d.name)
+
+    def _load_positions_changed(self):
+        for filename in self.file_paths[:]:
             self._add_dataset_pair(filename)
         self._plot_datasets()
         self.datasets.sort(key=lambda d: d.name)

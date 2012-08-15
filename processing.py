@@ -1,9 +1,15 @@
+from os import path
+from copy import deepcopy
+import re
+
 import numpy as np
-from numpy import array, arange, linspace, meshgrid, exp
+from numpy import array, linspace, meshgrid, exp
 from scipy import interpolate
 import scipy.ndimage as sn
 import scipy.optimize as so
 import matplotlib.pyplot as plt
+
+from xye import XYEDataset
 
 __doc__ = \
 """
@@ -53,6 +59,75 @@ Step 5.
 The data is output as an .xye file along with a .parab file.
 A GUI checkbox option enables the .parab file contents to be prepended to the .xye file.
 """
+
+class DatasetProcessor(object):
+    def __init__(self, normalise=True, correction=0.0, align_positions=True,
+                 merge_method='splice', regrid=False):
+        self.normalise = normalise
+        self.correction = correction
+        self.align_positions = align_positions
+        self.merge_method = merge_method
+        self.regrid = regrid
+
+    def process_dataset(self, dataset):
+        # trim data from gap edges prior to merging
+        dataset = dataset.copy()
+        dataset.data = clean_gaps(dataset.data)
+        return dataset
+
+    def process_dataset_pair(self, dataset_pair):
+        dataset_pair = map(lambda d: d.copy(), dataset_pair)
+        dataset1, dataset2 = dataset_pair
+
+        # normalise
+        if self.normalise:
+            dataset2.data = normalise_dataset(dataset_pair)
+
+        # trim data from gap edges prior to merging
+        dataset1.data = clean_gaps(dataset1.data)
+        dataset2.data = clean_gaps(dataset2.data)
+
+        # zero correct i.e. shift x values
+        if self.correction != 0.0:
+            dataset1.data[:,0] += self.correction
+            dataset2.data[:,0] += self.correction
+
+        if self.align_positions:
+            if 'peak_fit' in dataset1.metadata and \
+               'peak_fit' in dataset2.metadata:
+                x_offset = dataset1.metadata['peak_fit'] - \
+                            dataset2.metadata['peak_fit']
+                dataset2.data[:,0] += x_offset
+
+        # merge or splice
+        if self.merge_method == 'none':
+            merged_datasets = [ dataset1, dataset2 ]
+        else:
+            merged_datasets = self._merge_datasets(dataset1, dataset2)
+
+        # regrid
+        if self.regrid:
+            for dataset in merged_datasets:
+                dataset.data = regrid_data(dataset.data)
+        return merged_datasets
+
+    def _merge_datasets(self, dataset1, dataset2):
+        if self.merge_method == 'merge':
+            merged_data = combine_by_merge(dataset1.data, dataset2.data)
+        elif self.merge_method == 'splice':
+            merged_data = combine_by_splice(dataset1.data, dataset2.data)
+        else:
+            raise ValueError('Merge method not understood')
+
+        # Create a new dataset to store the merged data in.
+        current_directory, filebase = path.split(dataset1.source)
+        merged_data_filebase = re.sub('_p[0-3]_', '_', filebase)
+        merged_data_filename = path.join(current_directory, merged_data_filebase)
+        merged_dataset = XYEDataset(merged_data, merged_data_filebase,
+                                          merged_data_filename,
+                                          deepcopy(dataset1.metadata))
+        return [merged_dataset]
+
 
 def cubic_interpolate(x, y, z, x_size, y_size):
     """
