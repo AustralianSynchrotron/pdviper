@@ -43,15 +43,17 @@ class XYEDataset(object):
     def __init__(self, data, name='', source='', metadata={}):
         self.name = name
         self.metadata = metadata
-        self.data = data[:, [0, 1]] #, dtype=[('x', 'f4'), ('y', 'f4')])
-        #self.x, self.y = transpose(data[:, [0, 1]])
+        self.data = data[:, :3]
         self.source = source
+
+    def x(self):
+        return self.data[:, 0]
 
     def y(self):
         return self.data[:, 1]
 
-    def x(self):
-        return self.data[:, 0]
+    def e(self):
+        return self.data[:, 2]
 
     def add_param(self, name, value):
         self.metadata[name] = value

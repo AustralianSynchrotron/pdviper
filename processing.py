@@ -225,7 +225,7 @@ def clean_gaps(data, gap_threshold=0.1, shave_number=5):
 
 def combine_by_merge(d1, d2):
     """
-    d1 and d2 are Nx2 arrays of xy data.
+    d1 and d2 are Nx3 arrays of xye data.
     Merge the datasets by combining all data points in x-sorted order.
     Assumes that the 'gaps' in d1 have been cleaned by a call to clean_gaps().
     If any points have exactly duplicated x values the d2 point is not merged.
@@ -245,14 +245,14 @@ def combine_by_merge(d1, d2):
 
 def combine_by_splice(d1, d2, gap_threshold=0.1):
     """
-    d1 and d2 are Nx2 arrays of xy data.
+    d1 and d2 are Nx3 arrays of xye data.
     Replace the 'gaps' in d1 by valid data in the corresponding parts of d2.
     Assumes that the 'gaps' in d1 have been cleaned by a call to clean_gaps().
     """
     # Identify the gaps in d1
     gap_indices = np.where(np.diff(d1[:,0]) > gap_threshold)[0]
     # get the x or 2theta value ranges for the samples at the edges of the gaps in d1
-    x_edges = np.vstack((d1[:,0][gap_indices], d1[:,0][gap_indices + 1])).T
+    x_edges = np.c_[d1[:,0][gap_indices], d1[:,0][gap_indices + 1]]
     # for each identified gap in d1, insert that segment from d2
     d1 = d1[:]
     for lower, upper in x_edges:
@@ -263,41 +263,43 @@ def combine_by_splice(d1, d2, gap_threshold=0.1):
 
 def regrid_data(data, start=None, end=None, interval=0.00375):
     """
-    data is an Nx2 array of xy data.
-    Returns an Nx2 array of the data resampled at x values starting at start and
+    data is an Nx3 array of xye data.
+    Returns an Nx3 array of the data resampled at x values starting at start and
     spaced by interval.
     If start==None the start x value is the first x value in the input data.
     If end==None the end x value is the last value less than or equal to the last
     x value in the input data.
     """
     data = np.cast[np.double](data)
-    '''
+
     # Looking at the behaviour of the existing IDL code which uses the spline() fitting function with
     # sigma=15 and speaking to Qinfen, linear interpolation will probably work just as well and is extremely fast.
     # If linear interpolation is no good, the two best options appear to be InterpolatedUnivariateSpline and pchip.
     # pchip works beautifully but unfortunately is slow as it has to compute a Hermite polynomial between each data point.
     # Unfortunately it is probably too slow for processing large numbers of datasets.
-    # The KroghInterpolator and BarycentricInterpolator don't work properly on my test data - it is big and ill-conditioned.
+    # The KroghInterpolator and BarycentricInterpolator don't work properly on my test data - it is too big and ill-conditioned.
     # The LSQUnivariateSpline is not useful for close fitting of large data.
-    # interpolator = interpolate.InterpolatedUnivariateSpline(data[:,0], data[:,1], k=5)
-    interpolator = interpolate.pchip(data[:,0], data[:,1])
-    # interpolator = interpolate.interp1d(data[:,0], data[:,1], kind='quadratic')                 # worse than linear InterpolatedUnivariateSpline
-    # interpolator = interpolate.interp1d(data[:,0], data[:,1], kind='cubic')                     # OK, as expected, but not as close at the 
-    # interpolator = interpolate.interp1d(data[:,0], data[:,1], kind='nearest')                   # probably unacceptable?
-    if start==None:
-        start = data[0,0]
-    if end==None:
-        end = data[-1,0]
-    xs = np.arange(start, end, interval)
-    return np.vstack((xs, interpolator(xs))).T
-    '''
-    # linear interpolation
+    # Uncomment one of the following methods:
+    # y_interpolator = interpolate.InterpolatedUnivariateSpline(data[:,0], data[:,1], k=5)
+    # y_interpolator = interpolate.pchip(data[:,0], data[:,1])
+    # y_interpolator = interpolate.interp1d(data[:,0], data[:,1], kind='quadratic')         # worse than linear InterpolatedUnivariateSpline
+    # y_interpolator = interpolate.interp1d(data[:,0], data[:,1], kind='cubic')             # OK, as expected, but not as close at the 
+    # y_interpolator = interpolate.interp1d(data[:,0], data[:,1], kind='nearest')           # probably unacceptable?
+    y_interpolator = lambda xs: np.interp(xs, data[:,0], data[:,1])                         # linear interpolation
+
+    # e_interpolator = interpolate.InterpolatedUnivariateSpline(data[:,0], data[:,2], k=5)
+    # e_interpolator = interpolate.pchip(data[:,0], data[:,2])
+    # e_interpolator = interpolate.interp1d(data[:,0], data[:,2], kind='quadratic')         # worse than linear InterpolatedUnivariateSpline
+    # e_interpolator = interpolate.interp1d(data[:,0], data[:,2], kind='cubic')             # OK, as expected, but not as close at the 
+    # e_interpolator = interpolate.interp1d(data[:,0], data[:,2], kind='nearest')           # probably unacceptable?
+    e_interpolator = lambda xs: np.interp(xs, data[:,0], data[:,2])                         # linear interpolation
+
     if start==None:
         start = data[0,0]
     if end==None:
         end = data[-1,0]
     xs = np.arange(start, end+interval/100.0, interval)
-    return np.vstack((xs, np.interp(xs, data[:,0], data[:,1]))).T
+    return np.c_[xs, y_interpolator(xs), e_interpolator(xs)]
 
 
 def normalise_dataset(dataset_pair):
@@ -307,8 +309,9 @@ def normalise_dataset(dataset_pair):
     """
     dataset1, dataset2 = dataset_pair
     key = 'Integrated Ion Chamber Count(counts)'
-    data = dataset2.data[:]
-    data[:,1] *= dataset1.metadata[key] / dataset2.metadata[key]
+    data = dataset2.data.copy()
+    data[:,1] *= dataset1.metadata[key] / dataset2.metadata[key]            # renormalise y-value
+    data[:,2] *= np.sqrt(dataset1.metadata[key] / dataset2.metadata[key])   # renormalise uncertainty
     return data
 
 
@@ -328,7 +331,7 @@ def get_peak_offsets_for_all_dataseries(range_low, range_high, datasets):
         if filter_length > len(dataset.x())/2:  filter_length = len(dataset.x())/2
         y_baseline = sn.filters.median_filter(dataset.y(), size=filter_length, mode='nearest')
         # get just the data in the range defined by the range_low, range_high parameters
-        data_x, data_y = dataset.data[x_range].T
+        data_x, data_y = dataset.data[x_range][:,:2].T
         data_y_baseline_removed = data_y - y_baseline[x_range]
         fit_centre, _ = fit_peak_2theta(data_x, data_y_baseline_removed, plot=True)
         dataset.add_param('peak_fit', fit_centre)
@@ -348,7 +351,7 @@ def fit_peaks_for_a_dataset_pair(range_low, range_high, dataset_pair, normalise_
     """
     dataset, dataset2 = dataset_pair
     x_range = (dataset.x() >= range_low) & (dataset.x() <= range_high)
-    data_x, data_y = dataset.data[x_range].T
+    data_x, data_y = dataset.data[x_range][:,:2].T
 
     # I want to be able to turn on median filtering easily so leave this code here for now.
     # Fit the first position dataset.
@@ -370,7 +373,7 @@ def fit_peaks_for_a_dataset_pair(range_low, range_high, dataset_pair, normalise_
     # If the fit was successful, fit the second dataset.
     # First dataset was fit successfully, fit the other dataset with the peak fitting result.
     x_range = (dataset2.x() >= range_low) & (dataset2.x() <= range_high)
-    data_x, data_y = dataset2.data[x_range].T
+    data_x, data_y = dataset2.data[x_range][:,:2].T
 
     # Normalise the second dataset's y values if necessary
     if normalise_checked:
