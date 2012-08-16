@@ -17,7 +17,7 @@ import settings
 class RawDataPlot(HasTraits):
     plot = Instance(Component)
 
-    def __init__(self, datasets):
+    def __init__(self):
         self.plots = {}
         self._setup_plot()
 

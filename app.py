@@ -118,7 +118,7 @@ class MainApp(HasTraits):
         HGroup(
             VGroup(
                 UItem('open_files'),
-                UItem('edit_datasets'),
+                UItem('edit_datasets', enabled_when='object._has_data()'),
                 UItem('generate_plot', enabled_when='object._has_data()'),
                 UItem('help_button'),
                 spring,
@@ -150,7 +150,7 @@ class MainApp(HasTraits):
         self.datasets = []
         self.dataset_pairs = set()
         self.undo_state = None
-        self.raw_data_plot = RawDataPlot(self.datasets)
+        self.raw_data_plot = RawDataPlot()
         self.plot = self.raw_data_plot.get_plot()
         self.container = OverlayPlotContainer(self.plot,
             bgcolor="white", use_backbuffer=True,
