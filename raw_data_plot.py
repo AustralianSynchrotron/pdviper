@@ -51,8 +51,9 @@ class RawDataPlot(HasTraits):
             # Overlay a scatter plot on the original line plot to highlight
             # data points as circles.
             plot = self.plot.plot((name + '_x', name + '_y'),
-                              name=name + '_selection', type='scatter',
-                              color=ui.color)
+                                  name=name + '_selection', type='scatter',
+                                  color=ui.color, outline_color=ui.color,
+                                  marker_size=ui.marker_size)
             self.plots[name] = plot
 
         if len(datasets) > 0:

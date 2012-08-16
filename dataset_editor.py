@@ -1,4 +1,4 @@
-from traits.api import Str, List, Bool, HasTraits, Color, on_trait_change, Instance, Event
+from traits.api import Str, List, Bool, HasTraits, Color, on_trait_change, Instance, Event, Float
 
 from traitsui.api import View, Item, TableEditor, VGroup, HGroup, Label
 from traitsui.table_column import ObjectColumn
@@ -13,6 +13,7 @@ class DatasetUI(HasTraits):
     color = Color(allow_none=True)
     active = Bool(True)
     highlighted = Bool(False)
+    marker_size = Float(1.0)
     dataset = Instance(object)
 
     traits_view = View(
@@ -20,6 +21,7 @@ class DatasetUI(HasTraits):
         Item('color'),
         Item('active'),
         Item('highlighted'),
+        Item('marker_size'),
     )
 
 
@@ -41,6 +43,7 @@ class DatasetEditor(HasTraits):
     color = Color
     active = Bool(True)
     highlighted = Bool(False)
+    marker_size = Float(1.0)
 
     table_click = Event
 
@@ -59,6 +62,7 @@ class DatasetEditor(HasTraits):
             ColorColumn(name='color'),
             CheckboxColumn(name='active'),
             CheckboxColumn(name='highlighted'),
+            DatasetColumn(name='marker_size'),
         ]
     )
 
@@ -71,6 +75,7 @@ class DatasetEditor(HasTraits):
                     Item('color', editor=ColorEditor()),
                     Item('active'),
                     Item('highlighted'),
+                    Item('marker_size'),
                     springy=True
                 ),
             ),
@@ -105,6 +110,7 @@ class DatasetEditor(HasTraits):
             self.color = (1,2,3,4)
         self.active = self.selected[0].active
         self.highlighted = self.selected[0].highlighted
+        self.marker_size = self.selected[0].marker_size
         self.selecting = False
 
     @on_trait_change('active, color, highlighted')
