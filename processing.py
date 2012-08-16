@@ -147,7 +147,7 @@ def bin_data(data, num_bins):
     # Make sure the maximum point falls inside the last bin
     xs[-1] += 1
     for dataset in data:
-        x, y = dataset.T
+        x, y, e = dataset.T
         bin_indexes = np.digitize(x, xs)
         binned_y.append([ y[bin_indexes == i] for i in range(1, len(xs)) ])
 
