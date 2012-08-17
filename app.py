@@ -184,14 +184,18 @@ class MainApp(HasTraits):
         self.peak_selecting = True
 
     def _bt_end_peak_select_changed(self):
-        range_low, range_high = self.raw_data_plot.end_range_select()
+        self.peak_selecting = False
+        selection_range = self.raw_data_plot.end_range_select()
+        if not selection_range:
+            return
+
+        range_low, range_high = selection_range
         # fit the peak in all loaded dataseries
         for datapair in self._get_dataset_pairs():
             processing.fit_peaks_for_a_dataset_pair(
                 range_low, range_high, datapair, self.normalise)
-        self.peak_selecting = False
         editor = PeakFitWindow(dataset_pairs=self._get_dataset_pairs(),
-                               range=(range_low, range_high))
+                               range=selection_range)
         editor.edit_traits()
 
     def _get_dataset_pairs(self):
