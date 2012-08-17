@@ -16,6 +16,7 @@ from ui_helpers import get_save_as_filename, open_file_dir_with_default_handler,
 import processing
 from processing import DatasetProcessor
 from plot_generator import PlotGenerator
+from peak_fit_window import PeakFitWindow
 
 # Linux/Ubuntu themes cause the background of windows to be ugly and dark
 # grey. This fixes that.
@@ -189,6 +190,9 @@ class MainApp(HasTraits):
             processing.fit_peaks_for_a_dataset_pair(
                 range_low, range_high, datapair, self.normalise)
         self.peak_selecting = False
+        editor = PeakFitWindow(dataset_pairs=self._get_dataset_pairs(),
+                               range=(range_low, range_high))
+        editor.edit_traits()
 
     def _get_dataset_pairs(self):
         datasets_dict = dict([ (d.name, d) for d in self.datasets ])
