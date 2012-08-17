@@ -49,7 +49,11 @@ class MainApp(HasTraits):
     save_as_image = Button("Save as image...")
 
     load_positions = Button
-    merge_method = Enum('none', 'merge', 'splice')('splice')
+    splice = Bool(True)
+    merge = Bool(False)
+    merge_p12 = Bool(True)
+    merge_p34 = Bool(False)
+    merge_p1234 = Bool(False)
     merge_regrid = Bool(False)
     normalise = Bool(True)
     correction = Float(0.0)
@@ -81,20 +85,26 @@ class MainApp(HasTraits):
     )
 
     process_group = VGroup(
-        UItem('load_positions'),
-        spring,
-        Label('Merge method:'),
-        UItem('merge_method', enabled_when='object._has_data()'),
+        Label('Merge methods:'),
+        HGroup(Item('splice'), Item('merge'), enabled_when='object._has_data()'),
+        Label('Positions to merge:'),
         HGroup(
             VGroup(
+                HGroup(
+                    Item('merge_p12', label='p1 + p2'),
+                    Item('merge_p34', label='p3 + p4'),
+                ),
+                Item('merge_p1234', label='p1 + p2 + p3 + p4'),
+            ),
+            enabled_when='object._has_data()'
+        ),
+        Label('Options:'),
+        VGroup(
+            HGroup(
                 Item('merge_regrid', label='Grid', enabled_when='object._has_data()'),
                 Item('normalise', label='Normalise', enabled_when='object._has_data()'),
-                show_left=True,
-                springy=False,
             ),
-            springy=False,
         ),
-        spring,
         HGroup(Item('align_positions')),
         HGroup(
             UItem('bt_start_peak_select', label='Select peak',
@@ -102,11 +112,10 @@ class MainApp(HasTraits):
             UItem('bt_end_peak_select', label='Done',
                   enabled_when='object.peak_selecting'),
         ),
-        spring,
         Label('Zero correction:'),
         UItem('correction', enabled_when='object._has_data()'),
         spring,
-        UItem('what_to_plot', editor=DefaultOverride(cols=1), style='custom'),
+        UItem('what_to_plot', editor=DefaultOverride(cols=2), style='custom'),
         spring,
         UItem('bt_process', enabled_when='len(object.dataset_pairs) != 0'),
         UItem('bt_undo_processing', enabled_when='object.undo_state is not None'),
@@ -119,6 +128,7 @@ class MainApp(HasTraits):
         HGroup(
             VGroup(
                 UItem('open_files'),
+                UItem('load_positions'),
                 UItem('edit_datasets', enabled_when='object._has_data()'),
                 UItem('generate_plot', enabled_when='object._has_data()'),
                 UItem('help_button'),
