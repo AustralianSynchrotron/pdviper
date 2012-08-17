@@ -333,7 +333,7 @@ def get_peak_offsets_for_all_dataseries(range_low, range_high, datasets):
         # get just the data in the range defined by the range_low, range_high parameters
         data_x, data_y = dataset.data[x_range][:,:2].T
         data_y_baseline_removed = data_y - y_baseline[x_range]
-        fit_centre, _ = fit_peak_2theta(data_x, data_y_baseline_removed, plot=True)
+        fit_centre, _ = fit_peak_2theta(data_x, data_y_baseline_removed)
         dataset.add_param('peak_fit', fit_centre)
 
 
@@ -366,9 +366,9 @@ def fit_peaks_for_a_dataset_pair(range_low, range_high, dataset_pair, normalise_
         y_baseline = sn.filters.median_filter(dataset.y(), size=filter_length, mode='nearest')
         # get just the data in the range defined by the range_low, range_high parameters
         data_y_baseline_removed = data_y - y_baseline[x_range]
-        fit_centre, fit_parameters = fit_peak_2theta(data_x, data_y_baseline_removed, plot=True)
+        fit_centre, fit_parameters = fit_peak_2theta(data_x, data_y_baseline_removed)
     else:
-        fit_centre, fit_parameters = fit_peak_2theta(data_x, data_y, plot=True)
+        fit_centre, fit_parameters = fit_peak_2theta(data_x, data_y)
     
     # If the fit was successful, fit the second dataset.
     # First dataset was fit successfully, fit the other dataset with the peak fitting result.
@@ -380,7 +380,7 @@ def fit_peaks_for_a_dataset_pair(range_low, range_high, dataset_pair, normalise_
         key = 'Integrated Ion Chamber Count(counts)'
         data_y *= dataset.metadata[key] / dataset2.metadata[key]
 
-    fit2_centre, fit2_successful = fit_modeled_peak_to_data(data_x, data_y, fit_parameters, plot=True)
+    fit2_centre, fit2_successful = fit_modeled_peak_to_data(data_x, data_y, fit_parameters)
     # Store the fit results if both data series were successfully fitted.
     if fit2_successful:
         dataset.add_param('peak_fit', fit_centre)
