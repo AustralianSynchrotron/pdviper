@@ -58,6 +58,7 @@ class PeakFitWindow(HasTraits):
 
     def __init__(self, *args, **kwargs):
         self.pairs = [ DatasetPair(first=d1, second=d2) for d1, d2 in kwargs['dataset_pairs'] ]
+        self.pairs.sort(key=lambda pair: pair.first.name)
         self.range = kwargs.pop('range')
         super(PeakFitWindow, self).__init__(*args, **kwargs)
         self.table_editor.on_select = self._selection_changed
