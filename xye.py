@@ -1,5 +1,6 @@
 from os.path import basename
 from numpy import loadtxt, savetxt, asfarray
+import numpy as np
 from csv import reader
 
 from parab import load_params
@@ -17,11 +18,21 @@ class XYEDataset(object):
     @staticmethod
     def _load_xye_data_fast(filename):
         row_reader = reader(open(filename), delimiter=' ', skipinitialspace=True)
-        return asfarray([ row[:3] for row in row_reader ])
+        a = asfarray([ row[:3] for row in row_reader ])
+        if a.shape[1] == 2:
+            # only 2-columns of data in input, so identify this as xy data
+            # and append a column of zeros.
+            a = np.hstack((a, np.zeros((a.shape[0],1))))
+        return a
 
     @staticmethod
     def _load_xye_data_slow(filename):
-        return loadtxt(filename)
+        a = loadtxt(filename)
+        if a.shape[1] == 2:
+            # only 2-columns of data in input, so identify this as xy data
+            # and append a column of zeros.
+            a = np.hstack((a, np.zeros((a.shape[0],1))))
+        return a
 
     @classmethod
     def from_file(cls, filename, positions=2):
