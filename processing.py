@@ -62,18 +62,21 @@ A GUI checkbox option enables the .parab file contents to be prepended to the .x
 
 class DatasetProcessor(object):
     def __init__(self, normalise=True, correction=0.0, align_positions=True,
-                 merge_method='splice', regrid=False):
+                 merge_by_splice=True, merge_by_merge=True, regrid=False):
         self.normalise = normalise
         self.correction = correction
         self.align_positions = align_positions
-        self.merge_method = merge_method
+        self.merge_by_splice = merge_by_splice
+        self.merge_by_merge = merge_by_merge
         self.regrid = regrid
+
 
     def process_dataset(self, dataset):
         # trim data from gap edges prior to merging
         dataset = dataset.copy()
         dataset.data = clean_gaps(dataset.data)
         return dataset
+
 
     def process_dataset_pair(self, dataset_pair):
         dataset_pair = map(lambda d: d.copy(), dataset_pair)
@@ -99,11 +102,14 @@ class DatasetProcessor(object):
                             dataset2.metadata['peak_fit']
                 dataset2.data[:,0] += x_offset
 
-        # merge or splice
-        if self.merge_method == 'none':
+        # merge and/or splice
+        if not(self.merge_by_splice or self.merge_by_merge):
             merged_datasets = [ dataset1, dataset2 ]
         else:
-            merged_datasets = self._merge_datasets(dataset1, dataset2)
+            if self.merge_by_splice:
+                merged_datasets = self._merge_datasets(dataset1, dataset2, 'splice')
+            if self.merge_by_merge:
+                merged_datasets = self._merge_datasets(dataset1, dataset2, 'merge')
 
         # regrid
         if self.regrid:
@@ -111,10 +117,11 @@ class DatasetProcessor(object):
                 dataset.data = regrid_data(dataset.data)
         return merged_datasets
 
-    def _merge_datasets(self, dataset1, dataset2):
-        if self.merge_method == 'merge':
+
+    def _merge_datasets(self, dataset1, dataset2, merge_method):
+        if merge_method == 'merge':
             merged_data = combine_by_merge(dataset1.data, dataset2.data)
-        elif self.merge_method == 'splice':
+        elif merge_method == 'splice':
             merged_data = combine_by_splice(dataset1.data, dataset2.data)
         else:
             raise ValueError('Merge method not understood')
