@@ -2,8 +2,9 @@ import os
 import re
 
 from enable.api import ComponentEditor
-from traits.api import List, Str, Float, HasTraits, Instance, Button, Enum, Bool
-from traitsui.api import Item, UItem, HGroup, VGroup, View, spring, Label, CheckListEditor, Tabbed, DefaultOverride
+from traits.api import List, Str, Float, HasTraits, Instance, Button, Enum, Bool, DelegatesTo
+from traitsui.api import Item, UItem, HGroup, VGroup, VFlow, View, spring, Label, \
+                        CheckListEditor, Tabbed, DefaultOverride, EnumEditor
 from pyface.api import FileDialog, OK
 from chaco.api import OverlayPlotContainer
 
@@ -32,6 +33,20 @@ def create_datasetui(dataset):
     dataset.metadata['ui'] = ui
     return ui
 
+class Global(HasTraits):
+    """
+    This is just a container class for the file list so that the normalisation reference
+    selector can use a drop-down list selector nnormally reserved by traitsui for Enum
+    traits, but where we want to use a list instead and have the dropdown updated upon
+    updates to the list. See discussion here describing this:
+    http://enthought-dev.117412.n3.nabble.com/How-to-force-an-update-to-an-enum-list-to-propagate-td3489135.html
+    """
+    file_list = List([])
+
+    def populate_list(self, filepaths):
+        self.file_list = [os.path.basename(f) for f in filepaths]
+
+g = Global()
 
 class MainApp(HasTraits):
     container = Instance(OverlayPlotContainer)
@@ -56,6 +71,13 @@ class MainApp(HasTraits):
     merge_p1234 = Bool(False)
     merge_regrid = Bool(False)
     normalise = Bool(True)
+    # See comment in class Global() for an exaplanation of the following traits
+    g = Instance(Global, ())
+    file_list = DelegatesTo('g')
+    normalisation_source_filenames = Enum(values='file_list')
+    def _g_default(self):
+        return g
+
     correction = Float(0.0)
     align_positions = Bool(False)
     bt_start_peak_select = Button
@@ -85,25 +107,33 @@ class MainApp(HasTraits):
     )
 
     process_group = VGroup(
-        Label('Merge methods:'),
-        HGroup(Item('splice'), Item('merge'), enabled_when='object._has_data()'),
-        Label('Positions to merge:'),
-        HGroup(
-            VGroup(
-                HGroup(
-                    Item('merge_p12', label='p1 + p2'),
-                    Item('merge_p34', label='p3 + p4'),
+        VGroup(
+            Label('Positions to merge:'),
+            HGroup(
+                VGroup(
+                    HGroup(
+                        Item('merge_p12', label='p1 + p2'),
+                        Item('merge_p34', label='p3 + p4'),
+                    ),
+                    Item('merge_p1234', label='p1 + p2 + p3 + p4'),
                 ),
-                Item('merge_p1234', label='p1 + p2 + p3 + p4'),
+                enabled_when='object._has_data()'
             ),
-            enabled_when='object._has_data()'
+            Label('Merge methods:'),
+            HGroup(Item('splice'), Item('merge'), enabled_when='object._has_data()'),
+            show_border = True,
         ),
-        Label('Options:'),
         VGroup(
             HGroup(
-                Item('merge_regrid', label='Grid', enabled_when='object._has_data()'),
                 Item('normalise', label='Normalise', enabled_when='object._has_data()'),
+                Item('merge_regrid', label='Grid', enabled_when='object._has_data()'),
             ),
+            VGroup(
+                Label('Normalise to:'),
+                UItem('normalisation_source_filenames', style='simple',
+                     enabled_when='object.normalise and object._has_data()'),
+            ),
+            show_border = True,
         ),
         HGroup(Item('align_positions')),
         HGroup(
@@ -221,7 +251,7 @@ class MainApp(HasTraits):
         processed_datasets = []
         processor = DatasetProcessor(self.normalise, self.correction,
                                      self.align_positions,
-                                     self.merge_method, self.merge_regrid)
+                                     self.splice, self.merge, self.merge_regrid)
         for dataset_pair in self._get_dataset_pairs():
             datasets = processor.process_dataset_pair(dataset_pair)
             for dataset in datasets:
@@ -316,6 +346,7 @@ class MainApp(HasTraits):
             self.dataset_pairs.add((other_filebase, filebase))
         else:
             self.dataset_pairs.add((filebase, other_filebase))
+        g.populate_list(self.file_paths)
 
     def _file_paths_changed(self, new):
         """
@@ -333,6 +364,7 @@ class MainApp(HasTraits):
             self._add_xye_dataset(filename)
         self._plot_datasets()
         self.datasets.sort(key=lambda d: d.name)
+        g.populate_list(self.file_paths)
 
     def _load_positions_changed(self):
         for filename in self.file_paths[:]:
