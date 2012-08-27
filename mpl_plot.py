@@ -1,3 +1,4 @@
+import logger
 from numpy import array
 
 from traits.api import Instance, Range, Bool
@@ -123,6 +124,7 @@ class MplPlot(BasePlot, HasTraitsGroup):
 
     def save_as(self, filename):
         self.figure.canvas.print_figure(filename)
+        logger.logger.info('Saved plot {}'.format(filename))
 
     def _reset_view(self):
         self.azimuth = -89

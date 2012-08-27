@@ -1,3 +1,4 @@
+import logger
 import os
 import re
 
@@ -18,6 +19,7 @@ import processing
 from processing import DatasetProcessor
 from plot_generator import PlotGenerator
 from peak_fit_window import PeakFitWindow
+
 
 # Linux/Ubuntu themes cause the background of windows to be ugly and dark
 # grey. This fixes that.
@@ -416,8 +418,8 @@ class HelpBox(HasTraits):
         super(HelpBox, self).__init__(*args, **kws)
         self.help_text = \
 """
-Left drag = Pan the plot
-Right drag = Zoom a selection of the plot
+Left drag = Zoom a selection of the plot
+Right drag = Pan the plot
 Right click = Undo zoom
 Esc = Reset zoom/pan
 Mousewheel = Zoom in/out
