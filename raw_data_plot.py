@@ -108,8 +108,7 @@ class RawDataPlot(HasTraits):
         # reenable zoom tool and change selection cursor back to crossed lines
         self.zoom_tool.drag_button = 'left'
         self.crosslines[1].visible = True
-        range_low, range_high = self.range_selection_tool._get_selection()
-        return range_low, range_high
+        return self.range_selection_tool.selection
 
     def _setup_plot(self):
         self.plot_data = ArrayPlotData()

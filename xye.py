@@ -1,11 +1,11 @@
-from os.path import basename
+import logger
+from os.path import basename, split
 from numpy import loadtxt, savetxt, asfarray
 import numpy as np
 from csv import reader
 
 from parab import load_params
 from copy import deepcopy
-
 
 class XYEDataset(object):
     @classmethod
@@ -71,6 +71,7 @@ class XYEDataset(object):
 
     def save(self, filename):
         savetxt(filename, self.data, fmt='%1.6f')
+        logger.logger.info('Saved {}'.format(filename))
 
     def copy(self):
         return deepcopy(self)

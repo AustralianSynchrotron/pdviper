@@ -1,3 +1,4 @@
+import logger
 import os
 from pyface.api import error
 
@@ -88,6 +89,7 @@ class PlotOutput(object):
         gc = PlotGraphicsContext((width, height), dpi=dpi)
         gc.render_component(plot)
         gc.save(filename)
+        logger.logger.info('Saved plot {}'.format(filename))
 
     @staticmethod
     def save_with_matplotlib(plot, width, height, dpi, filename):
@@ -110,6 +112,7 @@ class PlotOutput(object):
         else:
             # Call the function
             func(filename)
+            logger.logger.info('Saved plot {}'.format(filename))
 
     @staticmethod
     def copy_to_clipboard(plot):

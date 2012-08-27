@@ -1,9 +1,11 @@
+import logger
 import os
 import re
 
 from enable.api import ComponentEditor
-from traits.api import List, Str, Float, HasTraits, Instance, Button, Enum, Bool
-from traitsui.api import Item, UItem, HGroup, VGroup, View, spring, Label, CheckListEditor, Tabbed, DefaultOverride
+from traits.api import List, Str, Float, HasTraits, Instance, Button, Enum, Bool, DelegatesTo
+from traitsui.api import Item, UItem, HGroup, VGroup, VFlow, View, spring, Label, \
+                        CheckListEditor, Tabbed, DefaultOverride, EnumEditor
 from pyface.api import FileDialog, OK
 from chaco.api import OverlayPlotContainer
 
@@ -16,6 +18,8 @@ from ui_helpers import get_save_as_filename, open_file_dir_with_default_handler,
 import processing
 from processing import DatasetProcessor
 from plot_generator import PlotGenerator
+from peak_fit_window import PeakFitWindow
+
 
 # Linux/Ubuntu themes cause the background of windows to be ugly and dark
 # grey. This fixes that.
@@ -31,6 +35,20 @@ def create_datasetui(dataset):
     dataset.metadata['ui'] = ui
     return ui
 
+class Global(HasTraits):
+    """
+    This is just a container class for the file list so that the normalisation reference
+    selector can use a drop-down list selector nnormally reserved by traitsui for Enum
+    traits, but where we want to use a list instead and have the dropdown updated upon
+    updates to the list. See discussion here describing this:
+    http://enthought-dev.117412.n3.nabble.com/How-to-force-an-update-to-an-enum-list-to-propagate-td3489135.html
+    """
+    file_list = List([])
+
+    def populate_list(self, filepaths):
+        self.file_list = [os.path.basename(f) for f in filepaths]
+
+g = Global()
 
 class MainApp(HasTraits):
     container = Instance(OverlayPlotContainer)
@@ -48,9 +66,20 @@ class MainApp(HasTraits):
     save_as_image = Button("Save as image...")
 
     load_positions = Button
-    merge_method = Enum('none', 'merge', 'splice')('splice')
+    splice = Bool(True)
+    merge = Bool(False)
+    merge_p12 = Bool(True)
+    merge_p34 = Bool(False)
+    merge_p1234 = Bool(False)
     merge_regrid = Bool(False)
     normalise = Bool(True)
+    # See comment in class Global() for an exaplanation of the following traits
+    g = Instance(Global, ())
+    file_list = DelegatesTo('g')
+    normalisation_source_filenames = Enum(values='file_list')
+    def _g_default(self):
+        return g
+
     correction = Float(0.0)
     align_positions = Bool(False)
     bt_start_peak_select = Button
@@ -80,20 +109,34 @@ class MainApp(HasTraits):
     )
 
     process_group = VGroup(
-        UItem('load_positions'),
-        spring,
-        Label('Merge method:'),
-        UItem('merge_method', enabled_when='object._has_data()'),
-        HGroup(
-            VGroup(
-                Item('merge_regrid', label='Grid', enabled_when='object._has_data()'),
-                Item('normalise', label='Normalise', enabled_when='object._has_data()'),
-                show_left=True,
-                springy=False,
+        VGroup(
+            Label('Positions to merge:'),
+            HGroup(
+                VGroup(
+                    HGroup(
+                        Item('merge_p12', label='p1 + p2'),
+                        Item('merge_p34', label='p3 + p4'),
+                    ),
+                    Item('merge_p1234', label='p1 + p2 + p3 + p4'),
+                ),
+                enabled_when='object._has_data()'
             ),
-            springy=False,
+            Label('Merge methods:'),
+            HGroup(Item('splice'), Item('merge'), enabled_when='object._has_data()'),
+            show_border = True,
         ),
-        spring,
+        VGroup(
+            HGroup(
+                Item('normalise', label='Normalise', enabled_when='object._has_data()'),
+                Item('merge_regrid', label='Grid', enabled_when='object._has_data()'),
+            ),
+            VGroup(
+                Label('Normalise to:'),
+                UItem('normalisation_source_filenames', style='simple',
+                     enabled_when='object.normalise and object._has_data()'),
+            ),
+            show_border = True,
+        ),
         HGroup(Item('align_positions')),
         HGroup(
             UItem('bt_start_peak_select', label='Select peak',
@@ -101,11 +144,10 @@ class MainApp(HasTraits):
             UItem('bt_end_peak_select', label='Done',
                   enabled_when='object.peak_selecting'),
         ),
-        spring,
         Label('Zero correction:'),
         UItem('correction', enabled_when='object._has_data()'),
         spring,
-        UItem('what_to_plot', editor=DefaultOverride(cols=1), style='custom'),
+        UItem('what_to_plot', editor=DefaultOverride(cols=2), style='custom'),
         spring,
         UItem('bt_process', enabled_when='len(object.dataset_pairs) != 0'),
         UItem('bt_undo_processing', enabled_when='object.undo_state is not None'),
@@ -118,6 +160,7 @@ class MainApp(HasTraits):
         HGroup(
             VGroup(
                 UItem('open_files'),
+                UItem('load_positions'),
                 UItem('edit_datasets', enabled_when='object._has_data()'),
                 UItem('generate_plot', enabled_when='object._has_data()'),
                 UItem('help_button'),
@@ -183,12 +226,19 @@ class MainApp(HasTraits):
         self.peak_selecting = True
 
     def _bt_end_peak_select_changed(self):
-        range_low, range_high = self.raw_data_plot.end_range_select()
+        self.peak_selecting = False
+        selection_range = self.raw_data_plot.end_range_select()
+        if not selection_range:
+            return
+
+        range_low, range_high = selection_range
         # fit the peak in all loaded dataseries
         for datapair in self._get_dataset_pairs():
             processing.fit_peaks_for_a_dataset_pair(
                 range_low, range_high, datapair, self.normalise)
-        self.peak_selecting = False
+        editor = PeakFitWindow(dataset_pairs=self._get_dataset_pairs(),
+                               range=selection_range)
+        editor.edit_traits()
 
     def _get_dataset_pairs(self):
         datasets_dict = dict([ (d.name, d) for d in self.datasets ])
@@ -203,7 +253,7 @@ class MainApp(HasTraits):
         processed_datasets = []
         processor = DatasetProcessor(self.normalise, self.correction,
                                      self.align_positions,
-                                     self.merge_method, self.merge_regrid)
+                                     self.splice, self.merge, self.merge_regrid)
         for dataset_pair in self._get_dataset_pairs():
             datasets = processor.process_dataset_pair(dataset_pair)
             for dataset in datasets:
@@ -298,6 +348,7 @@ class MainApp(HasTraits):
             self.dataset_pairs.add((other_filebase, filebase))
         else:
             self.dataset_pairs.add((filebase, other_filebase))
+        g.populate_list(self.file_paths)
 
     def _file_paths_changed(self, new):
         """
@@ -315,6 +366,7 @@ class MainApp(HasTraits):
             self._add_xye_dataset(filename)
         self._plot_datasets()
         self.datasets.sort(key=lambda d: d.name)
+        g.populate_list(self.file_paths)
 
     def _load_positions_changed(self):
         for filename in self.file_paths[:]:
@@ -366,8 +418,8 @@ class HelpBox(HasTraits):
         super(HelpBox, self).__init__(*args, **kws)
         self.help_text = \
 """
-Left drag = Pan the plot
-Right drag = Zoom a selection of the plot
+Left drag = Zoom a selection of the plot
+Right drag = Pan the plot
 Right click = Undo zoom
 Esc = Reset zoom/pan
 Mousewheel = Zoom in/out
