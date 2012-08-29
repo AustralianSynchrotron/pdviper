@@ -100,6 +100,9 @@ class RawDataPlot(HasTraits):
         self.plot0renderer.overlays.append(self.range_selection_overlay)
         # disable zoom tool and change selection cursor to a vertical line
         self.zoom_tool.drag_button = None
+        self.crosslines_x_state = self.crosslines[0].visible
+        self.crosslines_y_state = self.crosslines[1].visible
+        self.crosslines[0].visible = True
         self.crosslines[1].visible = False
 
     def end_range_select(self):
@@ -107,7 +110,8 @@ class RawDataPlot(HasTraits):
         self.plot0renderer.overlays.remove(self.range_selection_overlay)
         # reenable zoom tool and change selection cursor back to crossed lines
         self.zoom_tool.drag_button = 'left'
-        self.crosslines[1].visible = True
+        self.crosslines[0].visible = self.crosslines_x_state
+        self.crosslines[1].visible = self.crosslines_y_state
         return self.range_selection_tool.selection
 
     def _setup_plot(self):
