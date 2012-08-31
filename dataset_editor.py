@@ -14,6 +14,7 @@ class DatasetUI(HasTraits):
     active = Bool(True)
     highlighted = Bool(False)
     marker_size = Float(1.0)
+    line_width = Float(1.0)
     dataset = Instance(object)
 
     traits_view = View(
@@ -22,6 +23,7 @@ class DatasetUI(HasTraits):
         Item('active'),
         Item('highlighted'),
         Item('marker_size'),
+        Item('line_width'),
     )
 
 
@@ -44,6 +46,7 @@ class DatasetEditor(HasTraits):
     active = Bool(True)
     highlighted = Bool(False)
     marker_size = Float(1.0)
+    line_width = Float(1.0)
 
     table_click = Event
 
@@ -63,6 +66,7 @@ class DatasetEditor(HasTraits):
             CheckboxColumn(name='active'),
             CheckboxColumn(name='highlighted'),
             DatasetColumn(name='marker_size'),
+            DatasetColumn(name='line_width'),
         ]
     )
 
@@ -76,6 +80,7 @@ class DatasetEditor(HasTraits):
                     Item('active'),
                     Item('highlighted'),
                     Item('marker_size'),
+                    Item('line_width'),
                     springy=True
                 ),
             ),
@@ -111,9 +116,10 @@ class DatasetEditor(HasTraits):
         self.active = self.selected[0].active
         self.highlighted = self.selected[0].highlighted
         self.marker_size = self.selected[0].marker_size
+        self.line_width = self.selected[0].line_width
         self.selecting = False
 
-    @on_trait_change('active, color, highlighted')
+    @on_trait_change('active, color, highlighted, marker_size, line_width')
     def _trait_changed(self, trait, value):
         if not self.selecting:
             for obj in self.selected:

@@ -38,7 +38,8 @@ class RawDataPlot(HasTraits):
             if color is None:
                 color = 'auto'
             plot = self.plot.plot((name + '_x', name + '_y'),
-                                  name=name, type='line', color=color)
+                                  name=name, type='line', color=color,
+                                  line_width=ui.line_width)
             if color == 'auto':
                 ui.color = tuple(
                     (np.array(plot[0].color_) * 255).astype('uint8').tolist())
@@ -53,7 +54,8 @@ class RawDataPlot(HasTraits):
             plot = self.plot.plot((name + '_x', name + '_y'),
                                   name=name + '_selection', type='scatter',
                                   color=ui.color, outline_color=ui.color,
-                                  marker_size=ui.marker_size)
+                                  marker_size=ui.marker_size,
+                                  line_width=ui.line_width)
             self.plots[name] = plot
 
         if len(datasets) > 0:
