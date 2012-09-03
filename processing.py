@@ -268,6 +268,21 @@ def combine_by_splice(d1, d2, gap_threshold=0.1):
     return d1
 
 
+def splice_overlapping_data(d1, d2, shave_number=5):
+    """
+    d1 and d2 are Nx3 arrays of xye data.
+    d1 is assumed to cover an angular range starting below that of d2 so we trim
+    shave_number samples off the RHS of d1 before concatenating d2 to it starting at the
+    next highest value of 2theta.
+    """
+    # Trim shave_number samples off the RHS of d1
+    left = d1[:-shave_number]
+    # Identify cut index in d2
+    # Concatenate d1 and d2
+    right = d2[d2[:,0]>left[-1,0]]
+    return np.vstack((left, right))
+
+
 def regrid_data(data, start=None, end=None, interval=0.00375):
     """
     data is an Nx3 array of xye data.
