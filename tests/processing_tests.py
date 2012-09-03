@@ -26,18 +26,20 @@ class MergeTest(unittest.TestCase):
         pass
 
     def merge_constructed_data_test(self):
-        x1data = np.r_[0:4, 3:6]
-        x2data = np.r_[0:3, 2:6] + 0.5
-        data1 = np.c_[x1data,x1data,x1data]
-        data2 = np.c_[x2data,x2data,x2data]
+        x1data = np.r_[0:4, 3:6]                # [0, 1, 2, 3, 3, 4, 5]
+        x2data = np.r_[0:3, 2:6] + 0.5          # [0.5, 1.5, 2.5, 2.5, 3.5, 4.5, 5.5]
+        # We don't care what the y's or e's are, so make them the same as the x's
+        data1 = np.c_[x1data,x1data,x1data]     # xye dataset 1
+        data2 = np.c_[x2data,x2data,x2data]     # xye dataset 2
         merged = processing.combine_by_merge(data1, data2)
         self.assertTrue(merged.shape==(12,3))
 
     def splice_constructed_data_test(self):
-        x1data = np.r_[0:2, 4:6, 7:9]
-        x2data = np.arange(6) + 0.5
-        data1 = np.c_[x1data,x1data,x1data]
-        data2 = np.c_[x2data,x2data,x2data]
+        x1data = np.r_[0:2, 4:6, 7:9]           # [0, 1, 4, 5, 7, 8]
+        x2data = np.arange(6) + 0.5             # [0.5, 1.5, 2.5, 3.5, 4.5, 5.5]
+        # We don't care what the y's or e's are, so make them the same as the x's
+        data1 = np.c_[x1data,x1data,x1data]     # xye dataset 1
+        data2 = np.c_[x2data,x2data,x2data]     # xye dataset 2
         merged = processing.combine_by_splice(data1, data2, gap_threshold=1.5)
         self.assertTrue(np.allclose(merged[:,0],
                              np.r_[0., 1., 1.5, 2.5, 3.5, 4., 5., 5.5, 7., 8.]))
@@ -45,6 +47,28 @@ class MergeTest(unittest.TestCase):
                              np.r_[0., 1., 1.5, 2.5, 3.5, 4., 5., 5.5, 7., 8.]))
         self.assertTrue(np.allclose(merged[:,2],
                              np.r_[0., 1., 1.5, 2.5, 3.5, 4., 5., 5.5, 7., 8.]))
+
+    def merge_overlapping_ranges_test(self):
+        x1data = np.r_[0:3]                     # [0, 1, 2]
+        x2data = np.r_[1:4] + 0.5               # [1.5, 2.5, 3.5]
+        # We don't care what the y's or e's are, so make them the same as the x's
+        data1 = np.c_[x1data,x1data,x1data]     # xye dataset 1
+        data2 = np.c_[x2data,x2data,x2data]     # xye dataset 2
+        merged = processing.combine_by_merge(data1, data2)
+        self.assertTrue(merged.shape==(6,3))
+        self.assertTrue(np.allclose(merged[:,0],
+                             np.r_[0., 1., 1.5, 2., 2.5, 3.5]))
+
+    def splice_overlapping_ranges_test(self):
+        x1data = np.r_[0:5]                     # [0, 1, 2, 3, 4]
+        x2data = np.r_[1:4] + 0.5               # [1.5, 2.5, 3.5]
+        # We don't care what the y's or e's are, so make them the same as the x's
+        data1 = np.c_[x1data,x1data,x1data]     # xye dataset 1
+        data2 = np.c_[x2data,x2data,x2data]     # xye dataset 2
+        merged = processing.splice_overlapping_data(data1, data2, shave_number=2)
+        self.assertTrue(merged.shape==(5,3))
+        self.assertTrue(np.allclose(merged[:,0],
+                             np.r_[0., 1., 2., 2.5, 3.5]))
 
     def clean_gaps_test(self):
         data = np.arange(13)
