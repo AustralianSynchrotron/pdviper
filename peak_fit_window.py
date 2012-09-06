@@ -98,5 +98,9 @@ class PeakFitWindow(HasTraits):
                               visible=False)
         range = plot[0].index_mapper.range
         range.low, range.high = self.range
-        plot[0].value_range.refresh()
+        pvr = plot[0].value_range
+        y_in_range = y[(x>range.low) & (x<range.high)]
+        pvr.low_setting, pvr.high_setting = (y_in_range.min(), y_in_range.max())
+        pvr.refresh()
+#        plot[0].value_range.refresh()
 
