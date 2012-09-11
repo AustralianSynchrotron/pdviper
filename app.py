@@ -287,8 +287,10 @@ class MainApp(HasTraits):
     def _bt_end_peak_select_changed(self):
         self.peak_selecting = False
         selection_range = self.raw_data_plot.end_range_select()
-        if not selection_range:
-            return
+#        GR20120911 What are the next two lines for? I commented them out because they
+#        cause more trouble than they're worth"
+#        if not selection_range:
+#            return
 
         range_low, range_high = selection_range
         # fit the peak in all loaded dataseries
