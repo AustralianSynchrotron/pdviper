@@ -1,40 +1,86 @@
 import logger
+
+import numpy as np
 from numpy import array
 
-from traits.api import Instance, Range, Bool
-from traitsui.api import Item, UItem, VGroup, DefaultOverride
+from traits.api import Instance, Range, Bool, Float, Str, Dict, Enum, on_trait_change
+from traitsui.api import Item, UItem, VGroup, HGroup, DefaultOverride
+from traits_extensions import HasTraitsGroup
 
+import matplotlib.pyplot as plt
 from mpl_figure_editor import MPLFigureEditor
 from matplotlib.figure import Figure
-from traits_extensions import HasTraitsGroup
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.collections import LineCollection
 
 from processing import stack_datasets
 from base_plot import BasePlot
 from labels import get_value_scale_label
 
 
+MAX_QUALITY = 5
+
 class MplPlot(BasePlot, HasTraitsGroup):
     figure = Instance(Figure, ())
     _draw_pending = Bool(False)
 
-    azimuth = Range(-90, 90, -89)
-    elevation = Range(0, 90, 14)
-    quality = Range(0.0, 1.0, 0.1)
+    scale = Enum('linear', 'log', 'sqrt')('linear')
+    scale_values = ['linear', 'log', 'sqrt']    # There's probably a way to exract this from the Enum trait but I don't know how
+    azimuth = Range(-90, 90, -70)
+    elevation = Range(0, 90, 30)
+    quality = Range(1, MAX_QUALITY, 1)
+    flip_order = Bool(False)
+    x_lower = Float(0.0)
+    x_upper = Float
+    x_label = Str('Angle (2$\Theta$)')
+    y_label = Str('Dataset')
+    z_lower = Float(0.0)
+    z_upper = Float
+    z_label = Str
+    z_labels = {}   # A dictionary to hold edited labels for each scaling type
+
     group = VGroup(
-        Item('azimuth',
-             editor=DefaultOverride(mode='slider', auto_set=False, enter_set=True)),
-        Item('elevation',
-             editor=DefaultOverride(mode='slider', auto_set=False, enter_set=True)),
-        Item('quality'),
+        HGroup(
+            VGroup(
+                Item('azimuth',
+                     editor=DefaultOverride(mode='slider', auto_set=False, enter_set=True)),
+                Item('elevation',
+                     editor=DefaultOverride(mode='slider', auto_set=False, enter_set=True)),
+                Item('quality'),
+                Item('flip_order'),
+            ),
+            VGroup(
+                HGroup(
+                    Item('x_label',
+                         editor=DefaultOverride(auto_set=False, enter_set=True)),
+                    Item('x_lower',
+                         editor=DefaultOverride(auto_set=False, enter_set=True)),
+                    Item('x_upper',
+                         editor=DefaultOverride(auto_set=False, enter_set=True)),
+                ),
+                HGroup(
+                    Item('y_label'),
+                ),
+                HGroup(
+                    Item('z_label',
+                         editor=DefaultOverride(auto_set=False, enter_set=True)),
+                    Item('z_lower',
+                         editor=DefaultOverride(auto_set=False, enter_set=True)),
+                    Item('z_upper',
+                         editor=DefaultOverride(auto_set=False, enter_set=True)),
+                ),
+            ),
+        ),
         UItem('figure', editor=MPLFigureEditor()),
     )
 
     def __init__(self, callback_obj=None, *args, **kws):
         super(MplPlot, self).__init__(*args, **kws)
-        import matplotlib.pyplot as plt
         self.figure = plt.figure()
         self.figure.subplots_adjust(bottom=0.05, left=0, top=1, right=0.95)
         self.ax = None
+        for s in self.scale_values:
+            self.z_labels[s] = 'Intensity - ' + get_value_scale_label(s, mpl=True)
         # This must be a weak reference, otherwise the entire app will
         # hang on exit.
         from weakref import proxy
@@ -45,19 +91,12 @@ class MplPlot(BasePlot, HasTraitsGroup):
 
     def close(self):
         del self._callback_object
-        import matplotlib.pyplot as plt
         plt.close()
 
     def __del__(self):
-        import matplotlib.pyplot as plt
         plt.close()
 
-    def _azimuth_changed(self):
-        self._perspective_changed()
-
-    def _elevation_changed(self):
-        self._perspective_changed()
-
+    @on_trait_change('azimuth, elevation')
     def _perspective_changed(self):
         if self.ax:
             self.ax.view_init(azim=self.azimuth, elev=self.elevation)
@@ -65,6 +104,15 @@ class MplPlot(BasePlot, HasTraitsGroup):
 
     def _quality_changed(self):
         self.redraw(replot=True)
+
+    @on_trait_change('x_label, y_label, x_lower, x_upper, z_lower, z_upper, flip_order')
+    def _trigger_redraw(self):
+        self.quality = 1
+        self.redraw(replot=True)
+
+    def _z_label_changed(self):
+        self.z_labels[self.scale] = self.z_label
+        self._trigger_redraw()
 
     def redraw(self, replot=False, now=False):
         if not now and self._draw_pending:
@@ -94,28 +142,74 @@ class MplPlot(BasePlot, HasTraitsGroup):
         x = stack[:,:,0]
         z = stack[:,:,1]
         y = array([ [i]*z.shape[1] for i in range(1, len(datasets) + 1) ])
+
+        self.x_upper = x[0,-1]
+        self.z_upper = z.max()
         return x, y, z
+
+    def _shorten_data(self, a, samples):
+        """
+        Reduces the data along the "long" axis to a length equal to twice the closest
+        multiple of the number of samples. The reduced data contains alternating values
+        representing the minimum and maximum value in each interval over which the 
+        data was measured.
+        <a> is a 2D array with each row containing a data series.
+        <samples> is the desired final number of each of the min and max values in each
+        row of the returned 2D array.
+        i.e. each row will contain 2x samples values.
+        Also returns <truncate_at> which is where the array must be truncated so it
+        divides into the desired number of intervals, also allowing for an even number of
+        intervals.
+        """
+        truncate_at = a.shape[1]-a.shape[1]%samples
+        if (truncate_at/samples)&1==1:
+            # will result in an odd number of intervals, make it even because we want to
+            # space out the x samples equally.
+            truncate_at = a.shape[1]-a.shape[1]%(2*samples)
+        a = a.copy()[:,:truncate_at]                       # truncate columns if necessary
+        a.shape = (a.shape[0], -1, truncate_at/samples)
+        mins = a.min(axis=2)
+        maxs = a.max(axis=2)
+        return np.dstack((mins,maxs)).reshape(a.shape[0],-1), truncate_at
 
     def _plot(self, x, y, z, scale='linear'):
         self.x, self.y, self.z = x, y, z
+        x, y, z = x.copy(), y.copy(), z.copy()
+        if self.flip_order:
+            z = z[::-1]
         self.scale = scale
-        y_rows = z.shape[0]
-        from mpl_toolkits.mplot3d import Axes3D
-        from matplotlib.cm import jet
         self.figure.clear()
         self.figure.set_facecolor('white')
-        ax = self.figure.add_subplot(111, projection='3d')
-        ax.set_xlabel('Angle (2$\Theta$)')
-        ax.set_ylabel('Dataset')
-        ax.set_zlabel('Intensity - %s' % get_value_scale_label(scale))
-        ax.set_yticks(range(1, y_rows + 1), ((y_rows + 1) / 10) * 10)
+        ax = self.ax = self.figure.add_subplot(111, projection='3d')
+        ax.set_xlabel(self.x_label)
+        ax.set_ylabel(self.y_label)
+        self.z_label = self.z_labels[self.scale]
+        ax.set_zlabel(self.z_label)
+
+        y_rows = z.shape[0]
+        ax.locator_params(axis='y', nbins=10, integer=True)
         ax.view_init(azim=self.azimuth, elev=self.elevation)
-        cstride = int((1.0 - self.quality) * y_rows + 1)
-        ax.plot_surface(x, y, z,
-                        rstride=200, cstride=cstride, linewidth=0,
-                        cmap=jet, shade=False, antialiased=False)
-        #self.figure.colorbar(surf, ax=ax, shrink=0.6, aspect=15)
-        self.ax = ax
+
+        if self.quality != MAX_QUALITY:
+            # map quality from 1->5 to 0.05->0.5 to approx. no. of samples
+            samples = int(z.shape[1] * ((self.quality-1)*(0.5-0.05)/(5-1)+0.05))
+            z, truncate_at = self._shorten_data(z, samples)
+            x = x[:,:truncate_at:truncate_at/samples/2]
+            y = y[:,:truncate_at:truncate_at/samples/2]
+
+        # Set values to inf to avoid rendering by matplotlib
+        x[(x<self.x_lower) | (x>self.x_upper)] = np.inf
+        z[(z<self.z_lower) | (z>self.z_upper)] = np.inf
+        # separate series with open lines
+        ys = y[:,0]
+        points = []
+        for x_row, z_row in zip(x, z):
+            points.append(zip(x_row, z_row))
+        lines = LineCollection(points)
+        ax.add_collection3d(lines, zs=ys, zdir='y')
+        ax.set_xlim3d(self.x_lower, self.x_upper)
+        ax.set_ylim3d(1, y_rows)
+        ax.set_zlim3d(self.z_lower, self.z_upper)
         self.figure.canvas.draw()
         return None
 
@@ -127,7 +221,5 @@ class MplPlot(BasePlot, HasTraitsGroup):
         logger.logger.info('Saved plot {}'.format(filename))
 
     def _reset_view(self):
-        self.azimuth = -89
-        self.elevation = 14
-        #self.quality = 0.1
-
+        self.azimuth = -70
+        self.elevation = 30
