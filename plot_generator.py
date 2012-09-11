@@ -1,4 +1,4 @@
-from traits.api import Str, HasTraits, Button, Enum
+from traits.api import Str, HasTraits, Button, Enum, Bool
 from traitsui.api import UItem, HGroup, VGroup, Group, View, spring
 
 from processing import rescale
@@ -20,6 +20,7 @@ class PlotGenerator(HasTraits):
     save_button = Button("Save plot...")
     copy_button = Button("Copy to clipboard")
     scale = Enum('linear', 'log', 'sqrt')
+    replot = Bool(False)
 
     status = Str
 
@@ -82,7 +83,8 @@ class PlotGenerator(HasTraits):
         self.edit_traits(view=view)
 
     def _scale_changed(self):
-        self._plot_type_changed(replot=True)
+        self.replot = True
+        self._plot_type_changed()
 
     def _reset_button_changed(self):
         self.plots[self.plot_type].reset_view()
@@ -106,18 +108,18 @@ class PlotGenerator(HasTraits):
     def _copy_button_changed(self):
         self.plots[self.plot_type].copy_to_clipboard()
 
-    def _plot_type_changed(self, replot=False):
+    def _plot_type_changed(self):
         self._update_status('Generating plot...')
-        self._generate_plot(replot=replot)
+        self.replot = True
+        self._generate_plot()
         self._update_status('Done')
 
-    def _generate_plot(self, replot=False):
-        if self.plot_type not in self.cached_data or replot:
+    def _generate_plot(self):
+        if self.plot_type not in self.cached_data or self.replot:
             x, y, z = self.plots[self.plot_type].prepare_data(self.datasets)
             z = rescale(z, method=self.scale)
             self.cached_data[self.plot_type] = x, y, z
+            self.replot = False
 
         x, y, z = self.cached_data[self.plot_type]
         return self.plots[self.plot_type].plot(x, y, z, scale=self.scale)
-
-

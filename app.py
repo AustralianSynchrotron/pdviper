@@ -3,8 +3,9 @@ import os
 import re
 
 from enable.api import ComponentEditor
-from traits.api import List, Str, Float, HasTraits, Instance, Button, Enum, Bool, DelegatesTo
-from traitsui.api import Item, UItem, HGroup, VGroup, VFlow, View, spring, Label, \
+from traits.api import List, Str, Float, HasTraits, Instance, Button, Enum, Bool, \
+                        DelegatesTo, Range
+from traitsui.api import Item, UItem, HGroup, VGroup, View, spring, Label, \
                         CheckListEditor, Tabbed, DefaultOverride, EnumEditor
 from pyface.api import FileDialog, OK
 from chaco.api import OverlayPlotContainer
@@ -14,6 +15,7 @@ from chaco_output import PlotOutput
 from raw_data_plot import RawDataPlot
 from fixes import fix_background_color
 from dataset_editor import DatasetEditor, DatasetUI
+from wavelength_editor import WavelengthEditor, WavelengthUI
 from ui_helpers import get_save_as_filename, open_file_dir_with_default_handler, get_file_list_from_dialog
 import processing
 from processing import DatasetProcessor
@@ -33,6 +35,9 @@ title = "Sculpd"
 def create_datasetui(dataset):
     ui = DatasetUI(name=dataset.name, dataset=dataset, color=None)
     dataset.metadata['ui'] = ui
+    ui_w = WavelengthUI(name=dataset.name, dataset=dataset)
+    dataset.metadata['ui_w'] = ui_w
+    return (ui, ui_w)
     return ui
 
 class Global(HasTraits):
@@ -54,26 +59,27 @@ class MainApp(HasTraits):
     container = Instance(OverlayPlotContainer)
 
     file_paths = List(Str)
+    # Button group above tabbed area
     open_files = Button("Open files...")
     edit_datasets = Button("Edit datasets...")
     generate_plot = Button("Generate plot...")
     help_button = Button("Help...")
 
+    # View tab
     scale = Enum('linear', 'log', 'sqrt')
     options = List
     reset_button = Button("Reset view")
     copy_to_clipboard = Button("Copy to clipboard")
     save_as_image = Button("Save as image...")
 
+    # Process tab
+    merge_positions = Enum('none', 'p1+p2', 'p3+p4', 'p12+p34')('p1+p2')
     load_positions = Button
     splice = Bool(True)
     merge = Bool(False)
-    merge_p12 = Bool(True)
-    merge_p34 = Bool(False)
-    merge_p1234 = Bool(False)
     merge_regrid = Bool(False)
     normalise = Bool(True)
-    # See comment in class Global() for an exaplanation of the following traits
+    # See comment in class Global() for an explanation of the following traits
     g = Instance(Global, ())
     file_list = DelegatesTo('g')
     normalisation_source_filenames = Enum(values='file_list')
@@ -92,8 +98,20 @@ class MainApp(HasTraits):
     bt_undo_processing = Button("Undo")
     bt_save = Button("Save...")
 
+    # Background removal tab
+    bt_manually_define_background = Button("Define")
+    polynomial_order = Range(1, 20)(7)
+    bt_poly_fit = Button("Poly fit")
+    bt_load_background = Button("Load...")
+
+    # theta/d/Q tab
+    filename_field = Str("d")
+    bt_convertscale_abscissa = Button("Convert/scale abscissa...")
+
     raw_data_plot = Instance(RawDataPlot)
 
+    #-------------------------------------------------------------------------------------
+    # MVC View
     view_group = VGroup(
         Label('Scale:'),
         UItem('scale', enabled_when='object._has_data()'),
@@ -111,16 +129,17 @@ class MainApp(HasTraits):
     process_group = VGroup(
         VGroup(
             Label('Positions to merge:'),
-            HGroup(
-                VGroup(
-                    HGroup(
-                        Item('merge_p12', label='p1 + p2'),
-                        Item('merge_p34', label='p3 + p4'),
-                    ),
-                    Item('merge_p1234', label='p1 + p2 + p3 + p4'),
-                ),
-                enabled_when='object._has_data()'
+            UItem(name='merge_positions',
+                 style='custom',
+                 editor=EnumEditor(values={
+                     'p1+p2'   : '1: p1+p2',
+                     'p3+p4'   : '2: p3+p4',
+                     'p12+p34' : '3: p12+p34',
+                     'none'    : '4: none',
+                 }, cols=2),
+                 enabled_when='object._has_data()'
             ),
+            UItem('load_positions', enabled_when='object._has_data()'),
             Label('Merge methods:'),
             HGroup(Item('splice'), Item('merge'), enabled_when='object._has_data()'),
             show_border = True,
@@ -137,7 +156,7 @@ class MainApp(HasTraits):
             ),
             show_border = True,
         ),
-        HGroup(Item('align_positions')),
+        HGroup(Item('align_positions'), enabled_when='object._has_data()'),
         HGroup(
             UItem('bt_start_peak_select', label='Select peak',
                   enabled_when='object.align_positions and not object.peak_selecting'),
@@ -147,7 +166,8 @@ class MainApp(HasTraits):
         Label('Zero correction:'),
         UItem('correction', enabled_when='object._has_data()'),
         spring,
-        UItem('what_to_plot', editor=DefaultOverride(cols=2), style='custom'),
+        UItem('what_to_plot', editor=DefaultOverride(cols=2), style='custom',
+              enabled_when='object._has_data()'),
         spring,
         UItem('bt_process', enabled_when='len(object.dataset_pairs) != 0'),
         UItem('bt_undo_processing', enabled_when='object.undo_state is not None'),
@@ -156,11 +176,45 @@ class MainApp(HasTraits):
         springy=False,
     )
 
+    background_removal_group =  VGroup(
+        VGroup(
+            Label('Manually define:'),
+            UItem('bt_manually_define_background', enabled_when='object._has_data()'),
+            show_border = True,
+        ),
+        VGroup(
+            Label('Fit polynomial:'),
+            HGroup(
+                   Item('polynomial_order', label='order', enabled_when='object._has_data()'),
+            ),
+            UItem('bt_poly_fit', enabled_when='object._has_data()'),
+            show_border = True,
+        ),
+        VGroup(
+            Label('Load from file:'),
+            UItem('bt_load_background', enabled_when='object._has_data()'),
+            show_border = True,
+        ),
+        label='Backgrnd',
+        springy=False,
+    )
+
+    convert_xscale_group = VGroup(
+        Label('Filename label (prefix_<label>_nnnn.xye):'),
+        UItem('filename_field',
+             enabled_when='object._has_data()'),
+        UItem('bt_convertscale_abscissa',
+              label='Convert/scale abscissa...',
+              enabled_when='object._has_data()',
+        ),
+    label=ur'\u0398 d Q',
+    springy=True,
+    )
+
     traits_view = View(
         HGroup(
             VGroup(
                 UItem('open_files'),
-                UItem('load_positions'),
                 UItem('edit_datasets', enabled_when='object._has_data()'),
                 UItem('generate_plot', enabled_when='object._has_data()'),
                 UItem('help_button'),
@@ -169,6 +223,8 @@ class MainApp(HasTraits):
                 Tabbed(
                     view_group,
                     process_group,
+                    background_removal_group,
+                    convert_xscale_group,
                     springy=False,
                 ),
                 show_border=False,
@@ -178,6 +234,9 @@ class MainApp(HasTraits):
         ),
         resizable=True, title=title, width=size[0], height=size[1]
     )
+
+    #-------------------------------------------------------------------------------------
+    # MVC Control
 
     def _has_data(self):
         return len(self.datasets) != 0
@@ -404,6 +463,11 @@ class MainApp(HasTraits):
             return
         self.datasets.append(dataset)
         create_datasetui(dataset)
+
+    def _bt_convertscale_abscissa_changed(self):
+        editor = WavelengthEditor(datasets=self.datasets)
+        editor.edit_traits()
+        self._plot_datasets(reset_view=False)
 
 
 class HelpBox(HasTraits):
