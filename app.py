@@ -467,7 +467,7 @@ class MainApp(HasTraits):
         create_datasetui(dataset)
 
     def _bt_convertscale_abscissa_changed(self):
-        editor = WavelengthEditor(datasets=self.datasets)
+        editor = WavelengthEditor(datasets=self.datasets, filename_field=self.filename_field)
         editor.edit_traits()
         self._plot_datasets(reset_view=False)
 
