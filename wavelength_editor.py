@@ -1,10 +1,25 @@
-from traits.api import Str, List, Enum, Float, HasTraits, on_trait_change, Instance, \
+from traits.api import Str, List, Enum, Bool, Float, HasTraits, on_trait_change, Instance, \
                         Event, Button
-from traitsui.api import View, Item, UItem, TableEditor, EnumEditor, Group, VGroup, HGroup, Label
+from traitsui.api import View, Item, UItem, TableEditor, EnumEditor, Group, VGroup, HGroup, \
+                        Label, Handler
 from traitsui.table_column import ObjectColumn
 from fixes import fix_background_color
+from processing_rescale import rescale_xye_datasets, write_xye_datasets
 
 fix_background_color()
+
+
+# Note - to get window to autoclose, apparently do this:
+# https://mail.enthought.com/pipermail/enthought-dev/2011-February/028509.html
+#class ClosingHandler(Handler):
+#    def object_bt_rescale_changed(self, info):
+#        new_wui = WavelengthEditor(datasets=info.object.datasets, filename_field=info.object.filename_field)
+#        new_wui.edit_traits()
+#        # rescale all x's between theta/d/Q
+#        rescale_xye_datasets(self.datasets, self.target_value, self.convert_from, self.convert_to)
+#        write_xye_datasets(self.datasets, self.filename_field)
+#        # disable rescale button
+#        info.ui.dispose()
 
 
 class WavelengthUI(HasTraits):
@@ -23,7 +38,9 @@ class WavelengthColumn(ObjectColumn):
 
 class WavelengthEditor(HasTraits):
     datasets = List(WavelengthUI)
+    filename_field = Str
     selected = List(WavelengthUI)
+    can_rescale = Bool(True)
 
     x = Float(1.0)
     target_value = Float(1.0)
@@ -78,11 +95,13 @@ class WavelengthEditor(HasTraits):
                             label='To'),
                     ),
                 ),
-                UItem('bt_rescale'),
+                UItem('bt_rescale', enabled_when='can_rescale'),
+                enabled_when='can_rescale',
             ),
         ),
         resizable=True, width=0.5, height=0.5, kind='livemodal',
-        title='Convert/scale abscissa'
+        title='Convert/scale abscissa',
+#        handler = ClosingHandler(),
     )
 
     def __init__(self, *args, **kwargs):
@@ -106,8 +125,11 @@ class WavelengthEditor(HasTraits):
         self.selecting = False
 
     def _bt_rescale_changed(self):
-        # rescale all x's between theta/d/Q 
-        self.peak_selecting = True
+        # rescale all x's between theta/d/Q
+        rescale_xye_datasets(self.datasets, self.target_value, self.convert_from, self.convert_to)
+        write_xye_datasets(self.datasets, self.filename_field)
+        # disable rescale button
+        self.can_rescale = False
 
     @on_trait_change('x')
     def _trait_changed(self, trait, value):
