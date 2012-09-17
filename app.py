@@ -43,7 +43,7 @@ def create_datasetui(dataset):
 class Global(HasTraits):
     """
     This is just a container class for the file list so that the normalisation reference
-    selector can use a drop-down list selector nnormally reserved by traitsui for Enum
+    selector can use a drop-down list selector normally reserved by traitsui for Enum
     traits, but where we want to use a list instead and have the dropdown updated upon
     updates to the list. See discussion here describing this:
     http://enthought-dev.117412.n3.nabble.com/How-to-force-an-update-to-an-enum-list-to-propagate-td3489135.html
@@ -73,8 +73,8 @@ class MainApp(HasTraits):
     save_as_image = Button("Save as image...")
 
     # Process tab
-    merge_positions = Enum('none', 'p1+p2', 'p3+p4', 'p12+p34')('p1+p2')
-    load_positions = Button
+    merge_positions = Enum('all', 'p1+p2', 'p3+p4', 'p12+p34')('p1+p2')
+    load_partners = Button
     splice = Bool(True)
     merge = Bool(False)
     merge_regrid = Bool(False)
@@ -128,23 +128,33 @@ class MainApp(HasTraits):
 
     process_group = VGroup(
         VGroup(
-            Label('Positions to merge:'),
+            Label('Positions to process:'),
             UItem(name='merge_positions',
                  style='custom',
                  editor=EnumEditor(values={
                      'p1+p2'   : '1: p1+p2',
                      'p3+p4'   : '2: p3+p4',
                      'p12+p34' : '3: p12+p34',
-                     'none'    : '4: none',
+                     'all'    : '4: all',
                  }, cols=2),
                  enabled_when='object._has_data()'
             ),
-            UItem('load_positions', enabled_when='object._has_data()'),
-            Label('Merge methods:'),
-            HGroup(Item('splice'), Item('merge'), enabled_when='object._has_data()'),
+            UItem('load_partners', enabled_when='object._has_data() and object.merge_positions is not "all"'),
             show_border = True,
         ),
         VGroup(
+            HGroup(Item('align_positions'), enabled_when='object._has_data() and object.merge_positions is not "all"'),
+            HGroup(
+                UItem('bt_start_peak_select', label='Select peak',
+                      enabled_when='object.align_positions and not object.peak_selecting and object.merge_positions is not "all"'),
+                UItem('bt_end_peak_select', label='Align',
+                      enabled_when='object.peak_selecting and object.merge_positions is not "all"'),
+            ),
+            Item('correction', label='Zero correction:', enabled_when='object._has_data()'),
+            show_border = True,
+        ),
+        VGroup(
+            HGroup(Item('splice'), Item('merge'), enabled_when='object._has_data()'),
             HGroup(
                 Item('normalise', label='Normalise', enabled_when='object._has_data()'),
                 Item('merge_regrid', label='Grid', enabled_when='object._has_data()'),
@@ -156,15 +166,6 @@ class MainApp(HasTraits):
             ),
             show_border = True,
         ),
-        HGroup(Item('align_positions'), enabled_when='object._has_data()'),
-        HGroup(
-            UItem('bt_start_peak_select', label='Select peak',
-                  enabled_when='object.align_positions and not object.peak_selecting'),
-            UItem('bt_end_peak_select', label='Done',
-                  enabled_when='object.peak_selecting'),
-        ),
-        Label('Zero correction:'),
-        UItem('correction', enabled_when='object._has_data()'),
         spring,
         UItem('what_to_plot', editor=DefaultOverride(cols=2), style='custom',
               enabled_when='object._has_data()'),
@@ -378,22 +379,32 @@ class MainApp(HasTraits):
         self.datasets dictionary and the dataset_pairs set.
         """
         def get_position(filename):
-            m = re.search('_p([0-9])_', filename)
+            m = re.search('_p([0-9]*)_', filename)
             try:
                 return int(m.group(1))
             except (AttributeError, ValueError):
                 return None
+        
+        def get_partner(position_index):
+            # return index of partner; i.e., 2=>1, 1=>2, 3=>4, 4=>3, 12=>34, 34=>12
+            if position_index in [1,2,3,4]:
+                partner = ((position_index-1)^1)+1
+            elif position_index==12:
+                partner = 34
+            elif position_index==34:
+                partner = 12
+            else:
+                raise 'unparsable position'
+            return partner
 
         current_directory, filebase = os.path.split(filename)
         position_index = get_position(filename)
         if position_index is None:
             return
 
-        # get the index of the associated position, e.g. 2=>1, 1=>2, 5=>6, 6=>5 etc.
-        other_position_index = ((position_index-1)^1)+1
         # base filename for the associated position.
-        other_filebase = re.sub('_p[0-9]_',
-                                '_p{}_'.format(str(other_position_index)),
+        other_filebase = re.sub('_p[0-9]*_',
+                                '_p{}_'.format(get_partner(position_index)),
                                 filebase)
         other_filename = os.path.join(current_directory, other_filebase)
         if not os.path.exists(other_filename):
@@ -409,27 +420,25 @@ class MainApp(HasTraits):
             self.dataset_pairs.add((other_filebase, filebase))
         else:
             self.dataset_pairs.add((filebase, other_filebase))
+        self._refresh_normalise_to_list()
+
+    def _refresh_normalise_to_list(self):
         g.populate_list(self.file_paths)
 
     def _file_paths_changed(self, new):
         """
         When the file dialog box is closed with a selection of filenames,
-        Generate a list of all the filenames and pair them off with the associated* positions,
-        Generate a sorted list of all the pairs,
-        Add all the associated datasets to the datasets structure.
-        * - Positions are always paired e.g. 1 and 2, or 3 and 4, so a selection with
-        either 1 or 2 should generate the pair 1 and 2.
+        just generate a list of all the filenames
         """
         self.datasets = []
-        self.dataset_pairs = set()
         # self.file_paths is modified by _add_dataset_pair() so iterate over a copy of it.
         for filename in self.file_paths[:]:
             self._add_xye_dataset(filename)
         self._plot_datasets()
         self.datasets.sort(key=lambda d: d.name)
-        g.populate_list(self.file_paths)
+        self._refresh_normalise_to_list()
 
-    def _load_positions_changed(self):
+    def _load_partners_changed(self):
         for filename in self.file_paths[:]:
             self._add_dataset_pair(filename)
         self._plot_datasets()
