@@ -51,7 +51,10 @@ class Global(HasTraits):
     file_list = List([])
 
     def populate_list(self, filepaths):
-        self.file_list = [os.path.basename(f) for f in filepaths]
+        positions = set()
+        for f in filepaths:
+            positions.add(re.search('_(p[1-4])_', os.path.basename(f)).group(1))
+        self.file_list = sorted(positions) + [os.path.basename(f) for f in filepaths]
 
 g = Global()
 
@@ -170,7 +173,8 @@ class MainApp(HasTraits):
         UItem('what_to_plot', editor=DefaultOverride(cols=2), style='custom',
               enabled_when='object._has_data()'),
         spring,
-        UItem('bt_process', enabled_when='len(object.dataset_pairs) != 0'),
+#        UItem('bt_process', enabled_when='len(object.dataset_pairs) != 0'),
+        UItem('bt_process', enabled_when='object._has_data()'),
         UItem('bt_undo_processing', enabled_when='object.undo_state is not None'),
         UItem('bt_save', enabled_when='object._has_data()'),
         label='Process',
@@ -288,13 +292,12 @@ class MainApp(HasTraits):
     def _bt_end_peak_select_changed(self):
         self.peak_selecting = False
         selection_range = self.raw_data_plot.end_range_select()
-#        GR20120911 What are the next two lines for? I commented them out because they
-#        cause more trouble than they're worth"
-#        if not selection_range:
-#            return
+        if not selection_range:
+            return
 
         range_low, range_high = selection_range
         # fit the peak in all loaded dataseries
+        self._get_partners()
         for datapair in self._get_dataset_pairs():
             processing.fit_peaks_for_a_dataset_pair(
                 range_low, range_high, datapair, self.normalise)
@@ -315,20 +318,46 @@ class MainApp(HasTraits):
         processed_datasets = []
         processor = DatasetProcessor(self.normalise, self.correction,
                                      self.align_positions,
-                                     self.splice, self.merge, self.merge_regrid)
-        for dataset_pair in self._get_dataset_pairs():
-            datasets = processor.process_dataset_pair(dataset_pair)
-            for dataset in datasets:
+                                     self.splice, self.merge, self.merge_regrid,
+                                     self.normalisation_source_filenames,
+                                     self.datasets)
+        # Processing at this point depends on the "Positions to process:" radiobutton
+        # selection:
+        # If Splice==True, get all pairs and splice them
+        # If Merge==True, get all pairs and merge them
+        # If Normalise==True, always normalise
+        # If Grid===True, output gridded and ungridded
+        # The following processing code sould really be placed into a processor.process()
+        # method, but I only worked out how to pass required stuff late in the day, so
+        # I do this stuff here.
+        if self.merge_positions == 'all':
+            # Handle "all" selection for regrid and normalise
+            for d in self.datasets:
+                dataset = processor.normalise_me(d)
+                if dataset is not None:
+                    processed_datasets.extend(dataset)
+                    dataset.metadata['ui'].name = dataset.name + ' (processed)'
+                    dataset.metadata['ui'].color = None
+
+                dataset = processor.regrid_me(d)
+                processed_datasets.extend(dataset)
                 dataset.metadata['ui'].name = dataset.name + ' (processed)'
                 dataset.metadata['ui'].color = None
-            processed_datasets.extend(datasets)
+        else:
+            self._get_partners()        # pair up datasets corresponding to the radiobutton selection
+            for dataset_pair in self._get_dataset_pairs():
+                datasets = processor.process_dataset_pair(dataset_pair)
+                for dataset in datasets:
+                    dataset.metadata['ui'].name = dataset.name + ' (processed)'
+                    dataset.metadata['ui'].color = None
+                processed_datasets.extend(datasets)
 
         self.processed_datasets = processed_datasets
         self._plot_processed_datasets()
 
     def _plot_processed_datasets(self):
         self._save_state()
-        self.dataset_pairs = set()
+        self.dataset_pairs = set()          # TODO: Check whether this line should be removed
         if 'old' not in self.what_to_plot:
             self.datasets = []
         if 'new' in self.what_to_plot:
@@ -373,38 +402,34 @@ class MainApp(HasTraits):
     def _scale_changed(self):
         self._plot_datasets()
 
-    def _add_dataset_pair(self, filename):
-        """
-        Adds two datasets (one referred to by filename and its partnered position) to the
-        self.datasets dictionary and the dataset_pairs set.
-        """
-        def get_position(filename):
-            m = re.search('_p([0-9]*)_', filename)
-            try:
-                return int(m.group(1))
-            except (AttributeError, ValueError):
-                return None
-        
-        def get_partner(position_index):
-            # return index of partner; i.e., 2=>1, 1=>2, 3=>4, 4=>3, 12=>34, 34=>12
-            if position_index in [1,2,3,4]:
-                partner = ((position_index-1)^1)+1
-            elif position_index==12:
-                partner = 34
-            elif position_index==34:
-                partner = 12
-            else:
-                raise 'unparsable position'
-            return partner
+    def _get_partner(self, position_index):
+        # return index of partner; i.e., 2=>1, 1=>2, 3=>4, 4=>3, 12=>34, 34=>12
+        if position_index in [1,2,3,4]:
+            partner = ((position_index-1)^1)+1
+        elif position_index==12:
+            partner = 34
+        elif position_index==34:
+            partner = 12
+        else:
+            raise 'unparsable position'
+        return partner
 
+    def _get_position(self, filename):
+        m = re.search('_p([0-9]*)_', filename)
+        try:
+            return int(m.group(1))
+        except (AttributeError, ValueError):
+            return None
+
+    def _add_dataset_pair(self, filename):
         current_directory, filebase = os.path.split(filename)
-        position_index = get_position(filename)
+        position_index = self._get_position(filename)
         if position_index is None:
             return
 
         # base filename for the associated position.
-        other_filebase = re.sub('_p[0-9]*_',
-                                '_p{}_'.format(get_partner(position_index)),
+        other_filebase = re.sub('_p{}_'.format(position_index),
+                                '_p{}_'.format(self._get_partner(position_index)),
                                 filebase)
         other_filename = os.path.join(current_directory, other_filebase)
         if not os.path.exists(other_filename):
@@ -416,11 +441,35 @@ class MainApp(HasTraits):
             # We also need to append the new path to the file_paths List trait which is
             # already populated by the files selected using the file selection dialog
             self.file_paths.append(other_filename)
-        if (position_index&1) == 0:
-            self.dataset_pairs.add((other_filebase, filebase))
-        else:
-            self.dataset_pairs.add((filebase, other_filebase))
         self._refresh_normalise_to_list()
+
+    def _get_partners(self):
+        """
+        Populates the self.dataset_pairs list with all dataset partners in
+        self.file_paths corresponding to the merge_positions radiobutton selection.
+        """
+        matching_re = {'all':    ''            ,
+                       'p1+p2':  '_p[12]_'     ,
+                       'p3+p4':  '_p[34]_'     ,
+                       'p12+p34':'_p(?:12|34)_',
+                      }
+        basenames = [os.path.basename(f) for f in self.file_paths]
+        filtered_paths = [f for f in basenames if re.search(matching_re[self.merge_positions], f) is not None]
+        self.dataset_pairs = set()
+        for filebase in filtered_paths:
+            # base filename for the first position.
+            position_index = self._get_position(filebase)
+            if position_index is None:
+                return
+            other_filebase = re.sub('_p{}_'.format(position_index),
+                                    '_p{}_'.format(self._get_partner(position_index)),
+                                    filebase)
+            if filebase in basenames and other_filebase in basenames:
+                if position_index == 34 or (position_index&1)==0:
+                    self.dataset_pairs.add((other_filebase, filebase))
+                else:
+                    self.dataset_pairs.add((filebase, other_filebase))
+        return self.dataset_pairs
 
     def _refresh_normalise_to_list(self):
         g.populate_list(self.file_paths)
