@@ -6,7 +6,7 @@ from enable.api import ComponentEditor
 from traits.api import List, Str, Float, HasTraits, Instance, Button, Enum, Bool, \
                         DelegatesTo, Range
 from traitsui.api import Item, UItem, HGroup, VGroup, View, spring, Label, \
-                        CheckListEditor, Tabbed, DefaultOverride, EnumEditor
+                        CheckListEditor, Tabbed, DefaultOverride, EnumEditor, HTMLEditor
 from pyface.api import FileDialog, OK
 from chaco.api import OverlayPlotContainer
 
@@ -29,7 +29,7 @@ fix_background_color()
 
 
 size = (1200, 700)
-title = "Sculpd"
+title = "PDViPeR"
 
 
 def create_datasetui(dataset):
@@ -53,7 +53,10 @@ class Global(HasTraits):
     def populate_list(self, filepaths):
         positions = set()
         for f in filepaths:
-            positions.add(re.search('_(p[1-4])_', os.path.basename(f)).group(1))
+            try:
+                positions.add(re.search('_(p[1-4])_', os.path.basename(f)).group(1))
+            except:
+                pass
         self.file_list = sorted(positions) + [os.path.basename(f) for f in filepaths]
 
 g = Global()
@@ -138,28 +141,32 @@ class MainApp(HasTraits):
                      'p1+p2'   : '1: p1+p2',
                      'p3+p4'   : '2: p3+p4',
                      'p12+p34' : '3: p12+p34',
-                     'all'    : '4: all',
+                     'all'     : '4: all',
                  }, cols=2),
                  enabled_when='object._has_data()'
             ),
-            UItem('load_partners', enabled_when='object._has_data() and object.merge_positions is not "all"'),
+            UItem('load_partners', enabled_when='object._has_data() and (object.merge_positions != "all")'),
             show_border = True,
         ),
         VGroup(
-            HGroup(Item('align_positions'), enabled_when='object._has_data() and object.merge_positions is not "all"'),
+            HGroup(Item('align_positions'), enabled_when='object._has_data() and (object.merge_positions != "all")'),
             HGroup(
                 UItem('bt_start_peak_select', label='Select peak',
-                      enabled_when='object.align_positions and not object.peak_selecting and object.merge_positions is not "all"'),
+                      enabled_when='object.align_positions and not object.peak_selecting and (object.merge_positions != "all")'),
                 UItem('bt_end_peak_select', label='Align',
-                      enabled_when='object.peak_selecting and object.merge_positions is not "all"'),
+                      enabled_when='object.peak_selecting and (object.merge_positions != "all")'),
             ),
             Item('correction', label='Zero correction:', enabled_when='object._has_data()'),
             show_border = True,
         ),
         VGroup(
-            HGroup(Item('splice'), Item('merge'), enabled_when='object._has_data()'),
             HGroup(
-                Item('normalise', label='Normalise', enabled_when='object._has_data()'),
+                Item('splice'),
+                Item('merge', enabled_when='object.merge_positions != "p12+p34"'),
+                enabled_when='object._has_data() and (object.merge_positions != "all")'
+            ),
+            HGroup(
+                Item('normalise', label='Normalise', enabled_when='object._has_data() and (object.merge_positions != "p12+p34")'),
                 Item('merge_regrid', label='Grid', enabled_when='object._has_data()'),
             ),
             VGroup(
@@ -173,7 +180,6 @@ class MainApp(HasTraits):
         UItem('what_to_plot', editor=DefaultOverride(cols=2), style='custom',
               enabled_when='object._has_data()'),
         spring,
-#        UItem('bt_process', enabled_when='len(object.dataset_pairs) != 0'),
         UItem('bt_process', enabled_when='object._has_data()'),
         UItem('bt_undo_processing', enabled_when='object.undo_state is not None'),
         UItem('bt_save', enabled_when='object._has_data()'),
@@ -330,19 +336,29 @@ class MainApp(HasTraits):
         # The following processing code sould really be placed into a processor.process()
         # method, but I only worked out how to pass required stuff late in the day, so
         # I do this stuff here.
-        if self.merge_positions == 'all':
+        if self.merge_positions == 'p12+p34':
+            self._get_partners()        # pair up datasets corresponding to the radiobutton selection
+            for dataset_pair in self._get_dataset_pairs():
+                datasets = processor.splice_overlapping_datasets(dataset_pair)
+                for dataset in datasets:
+                    dataset.metadata['ui'].name = dataset.name + ' (processed)'
+                    dataset.metadata['ui'].color = None
+                processed_datasets.extend(datasets)
+        elif self.merge_positions == 'all':
             # Handle "all" selection for regrid and normalise
             for d in self.datasets:
                 dataset = processor.normalise_me(d)
                 if dataset is not None:
-                    processed_datasets.extend(dataset)
+                    processed_datasets.extend([dataset])
                     dataset.metadata['ui'].name = dataset.name + ' (processed)'
                     dataset.metadata['ui'].color = None
+                    d = dataset
 
                 dataset = processor.regrid_me(d)
-                processed_datasets.extend(dataset)
-                dataset.metadata['ui'].name = dataset.name + ' (processed)'
-                dataset.metadata['ui'].color = None
+                if dataset is not None:
+                    processed_datasets.extend([dataset])
+                    dataset.metadata['ui'].name = dataset.name + ' (processed)'
+                    dataset.metadata['ui'].color = None
         else:
             self._get_partners()        # pair up datasets corresponding to the radiobutton selection
             for dataset_pair in self._get_dataset_pairs():
@@ -378,12 +394,12 @@ class MainApp(HasTraits):
 
     def _bt_save_changed(self):
         wildcard = 'All files (*.*)|*.*'
-        default_filename = 'prefix'
+        default_filename = 'prefix_'
         dlg = FileDialog(title='Save results', action='save as',
                          default_filename=default_filename, wildcard=wildcard)
         if dlg.open() == OK:
             for dataset in self.processed_datasets:
-                filename = os.path.join(dlg.directory, dlg.filename + '_'  + dataset.name)
+                filename = os.path.join(dlg.directory, dlg.filename + dataset.name)
                 dataset.save(filename)
             open_file_dir_with_default_handler(dlg.path)
 
@@ -465,7 +481,7 @@ class MainApp(HasTraits):
                                     '_p{}_'.format(self._get_partner(position_index)),
                                     filebase)
             if filebase in basenames and other_filebase in basenames:
-                if position_index == 34 or (position_index&1)==0:
+                if position_index!=12 and (position_index&1)==0:
                     self.dataset_pairs.add((other_filebase, filebase))
                 else:
                     self.dataset_pairs.add((filebase, other_filebase))
@@ -542,11 +558,34 @@ class HelpBox(HasTraits):
         super(HelpBox, self).__init__(*args, **kws)
         self.help_text = \
 """
+Plot region usage:
 Left drag = Zoom a selection of the plot
 Right drag = Pan the plot
 Right click = Undo zoom
 Esc = Reset zoom/pan
 Mousewheel = Zoom in/out
+
+Please send bug reports and suggestions to
+pd@synchrotron.org.au
+
+Software authors:
+Gary Ruben, Victorian eResearch Strategic Initiative (VeRSI), gruben@versi.edu.au
+Kieran Spear, VeRSI, kieran.spear@versi.edu.au
+http://www.versi.edu.au
+
+Software home:
+http://www.synchrotron.org.au/pdviper
+Software source:
+http://github.com/AustralianSynchrotron/pdviper
+
+Recognition of NeCTAR funding:
+The Australian Synchrotron is proud to be in partnership with the National eResearch Collaboration Tools and
+Resources (NeCTAR) project to develop eResearch Tools for the synchrotron research community. This will enable our
+scientific users to have instant access to the results of data during the course of their experiment which will
+facilitate better decision making and also provide the opportunity for ongoing data analysis via remote access.
+
+Copyright (c) 2012, Australian Synchrotron Company Ltd
+All rights reserved.
 """
 
 

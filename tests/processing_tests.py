@@ -60,12 +60,12 @@ class MergeTest(unittest.TestCase):
                              np.r_[0., 1., 1.5, 2., 2.5, 3.5]))
 
     def splice_overlapping_ranges_test(self):
-        x1data = np.r_[0:5]                     # [0, 1, 2, 3, 4]
+        x1data = np.r_[0:3]                     # [0, 1, 2]
         x2data = np.r_[1:4] + 0.5               # [1.5, 2.5, 3.5]
         # We don't care what the y's or e's are, so make them the same as the x's
         data1 = np.c_[x1data,x1data,x1data]     # xye dataset 1
         data2 = np.c_[x2data,x2data,x2data]     # xye dataset 2
-        merged = processing.splice_overlapping_data(data1, data2, shave_number=2)
+        merged = processing.splice_overlapping_data(data1, data2)
         self.assertTrue(merged.shape==(5,3))
         self.assertTrue(np.allclose(merged[:,0],
                              np.r_[0., 1., 2., 2.5, 3.5]))
@@ -104,10 +104,12 @@ class NormalisationTest(unittest.TestCase):
         COUNT_KEY = 'Integrated Ion Chamber Count(counts)'
         data1 = np.c_[[0.,1,2,3], [0,10,20,30], [0,1,2,3]]
         data2 = np.c_[[1.,2,3,4], [0,5,10,20], [0,1,2,3]]
-        dataset1 = xye.XYEDataset(data1, metadata={COUNT_KEY:1.0})
-        dataset2 = xye.XYEDataset(data2, metadata={COUNT_KEY:1.0/DETECTOR_COUNTS})
+        dataset1 = xye.XYEDataset(data1, metadata={COUNT_KEY:1.0}, name='d1')
+        dataset2 = xye.XYEDataset(data2, metadata={COUNT_KEY:1.0/DETECTOR_COUNTS}, name='d2')
         dataset_pair = (dataset1, dataset2)
         result = processing.normalise_dataset(dataset_pair)
+        print result
+        print data2
         self.assertTrue(np.allclose(result[:,0], data2[:,0]))                # check x's
         self.assertTrue(np.allclose(result[:,1], data2[:,1]*DETECTOR_COUNTS)) # check y's
         self.assertTrue(np.allclose(result[:,2], data2[:,2]*np.sqrt(DETECTOR_COUNTS))) # check e's
