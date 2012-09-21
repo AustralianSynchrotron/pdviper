@@ -234,7 +234,7 @@ class MainApp(HasTraits):
                 Tabbed(
                     view_group,
                     process_group,
-                    background_removal_group,
+                    # background_removal_group,
                     convert_xscale_group,
                     springy=False,
                 ),
