@@ -6,7 +6,7 @@ from enable.api import ComponentEditor
 from traits.api import List, Str, Float, HasTraits, Instance, Button, Enum, Bool, \
                         DelegatesTo, Range
 from traitsui.api import Item, UItem, HGroup, VGroup, View, spring, Label, \
-                        CheckListEditor, Tabbed, DefaultOverride, EnumEditor
+                        CheckListEditor, Tabbed, DefaultOverride, EnumEditor, HTMLEditor
 from pyface.api import FileDialog, OK
 from chaco.api import OverlayPlotContainer
 
@@ -29,7 +29,7 @@ fix_background_color()
 
 
 size = (1200, 700)
-title = "Sculpd"
+title = "PDViPeR"
 
 
 def create_datasetui(dataset):
@@ -43,7 +43,7 @@ def create_datasetui(dataset):
 class Global(HasTraits):
     """
     This is just a container class for the file list so that the normalisation reference
-    selector can use a drop-down list selector nnormally reserved by traitsui for Enum
+    selector can use a drop-down list selector normally reserved by traitsui for Enum
     traits, but where we want to use a list instead and have the dropdown updated upon
     updates to the list. See discussion here describing this:
     http://enthought-dev.117412.n3.nabble.com/How-to-force-an-update-to-an-enum-list-to-propagate-td3489135.html
@@ -51,7 +51,13 @@ class Global(HasTraits):
     file_list = List([])
 
     def populate_list(self, filepaths):
-        self.file_list = [os.path.basename(f) for f in filepaths]
+        positions = set()
+        for f in filepaths:
+            try:
+                positions.add(re.search('_(p[1-4])_', os.path.basename(f)).group(1))
+            except:
+                pass
+        self.file_list = sorted(positions) + [os.path.basename(f) for f in filepaths]
 
 g = Global()
 
@@ -73,8 +79,8 @@ class MainApp(HasTraits):
     save_as_image = Button("Save as image...")
 
     # Process tab
-    merge_positions = Enum('none', 'p1+p2', 'p3+p4', 'p12+p34')('p1+p2')
-    load_positions = Button
+    merge_positions = Enum('all', 'p1+p2', 'p3+p4', 'p12+p34')('p1+p2')
+    load_partners = Button
     splice = Bool(True)
     merge = Bool(False)
     merge_regrid = Bool(False)
@@ -128,25 +134,39 @@ class MainApp(HasTraits):
 
     process_group = VGroup(
         VGroup(
-            Label('Positions to merge:'),
+            Label('Positions to process:'),
             UItem(name='merge_positions',
                  style='custom',
                  editor=EnumEditor(values={
                      'p1+p2'   : '1: p1+p2',
                      'p3+p4'   : '2: p3+p4',
                      'p12+p34' : '3: p12+p34',
-                     'none'    : '4: none',
+                     'all'     : '4: all',
                  }, cols=2),
                  enabled_when='object._has_data()'
             ),
-            UItem('load_positions', enabled_when='object._has_data()'),
-            Label('Merge methods:'),
-            HGroup(Item('splice'), Item('merge'), enabled_when='object._has_data()'),
+            UItem('load_partners', enabled_when='object._has_data() and (object.merge_positions != "all")'),
+            show_border = True,
+        ),
+        VGroup(
+            HGroup(Item('align_positions'), enabled_when='object._has_data() and (object.merge_positions != "all")'),
+            HGroup(
+                UItem('bt_start_peak_select', label='Select peak',
+                      enabled_when='object.align_positions and not object.peak_selecting and (object.merge_positions != "all")'),
+                UItem('bt_end_peak_select', label='Align',
+                      enabled_when='object.peak_selecting and (object.merge_positions != "all")'),
+            ),
+            Item('correction', label='Zero correction:', enabled_when='object._has_data()'),
             show_border = True,
         ),
         VGroup(
             HGroup(
-                Item('normalise', label='Normalise', enabled_when='object._has_data()'),
+                Item('splice'),
+                Item('merge', enabled_when='object.merge_positions != "p12+p34"'),
+                enabled_when='object._has_data() and (object.merge_positions != "all")'
+            ),
+            HGroup(
+                Item('normalise', label='Normalise', enabled_when='object._has_data() and (object.merge_positions != "p12+p34")'),
                 Item('merge_regrid', label='Grid', enabled_when='object._has_data()'),
             ),
             VGroup(
@@ -156,20 +176,11 @@ class MainApp(HasTraits):
             ),
             show_border = True,
         ),
-        HGroup(Item('align_positions'), enabled_when='object._has_data()'),
-        HGroup(
-            UItem('bt_start_peak_select', label='Select peak',
-                  enabled_when='object.align_positions and not object.peak_selecting'),
-            UItem('bt_end_peak_select', label='Done',
-                  enabled_when='object.peak_selecting'),
-        ),
-        Label('Zero correction:'),
-        UItem('correction', enabled_when='object._has_data()'),
         spring,
         UItem('what_to_plot', editor=DefaultOverride(cols=2), style='custom',
               enabled_when='object._has_data()'),
         spring,
-        UItem('bt_process', enabled_when='len(object.dataset_pairs) != 0'),
+        UItem('bt_process', enabled_when='object._has_data()'),
         UItem('bt_undo_processing', enabled_when='object.undo_state is not None'),
         UItem('bt_save', enabled_when='object._has_data()'),
         label='Process',
@@ -287,13 +298,12 @@ class MainApp(HasTraits):
     def _bt_end_peak_select_changed(self):
         self.peak_selecting = False
         selection_range = self.raw_data_plot.end_range_select()
-#        GR20120911 What are the next two lines for? I commented them out because they
-#        cause more trouble than they're worth"
-#        if not selection_range:
-#            return
+        if not selection_range:
+            return
 
         range_low, range_high = selection_range
         # fit the peak in all loaded dataseries
+        self._get_partners()
         for datapair in self._get_dataset_pairs():
             processing.fit_peaks_for_a_dataset_pair(
                 range_low, range_high, datapair, self.normalise)
@@ -314,20 +324,56 @@ class MainApp(HasTraits):
         processed_datasets = []
         processor = DatasetProcessor(self.normalise, self.correction,
                                      self.align_positions,
-                                     self.splice, self.merge, self.merge_regrid)
-        for dataset_pair in self._get_dataset_pairs():
-            datasets = processor.process_dataset_pair(dataset_pair)
-            for dataset in datasets:
-                dataset.metadata['ui'].name = dataset.name + ' (processed)'
-                dataset.metadata['ui'].color = None
-            processed_datasets.extend(datasets)
+                                     self.splice, self.merge, self.merge_regrid,
+                                     self.normalisation_source_filenames,
+                                     self.datasets)
+        # Processing at this point depends on the "Positions to process:" radiobutton
+        # selection:
+        # If Splice==True, get all pairs and splice them
+        # If Merge==True, get all pairs and merge them
+        # If Normalise==True, always normalise
+        # If Grid===True, output gridded and ungridded
+        # The following processing code sould really be placed into a processor.process()
+        # method, but I only worked out how to pass required stuff late in the day, so
+        # I do this stuff here.
+        if self.merge_positions == 'p12+p34':
+            self._get_partners()        # pair up datasets corresponding to the radiobutton selection
+            for dataset_pair in self._get_dataset_pairs():
+                datasets = processor.splice_overlapping_datasets(dataset_pair)
+                for dataset in datasets:
+                    dataset.metadata['ui'].name = dataset.name + ' (processed)'
+                    dataset.metadata['ui'].color = None
+                processed_datasets.extend(datasets)
+        elif self.merge_positions == 'all':
+            # Handle "all" selection for regrid and normalise
+            for d in self.datasets:
+                dataset = processor.normalise_me(d)
+                if dataset is not None:
+                    processed_datasets.extend([dataset])
+                    dataset.metadata['ui'].name = dataset.name + ' (processed)'
+                    dataset.metadata['ui'].color = None
+                    d = dataset
+
+                dataset = processor.regrid_me(d)
+                if dataset is not None:
+                    processed_datasets.extend([dataset])
+                    dataset.metadata['ui'].name = dataset.name + ' (processed)'
+                    dataset.metadata['ui'].color = None
+        else:
+            self._get_partners()        # pair up datasets corresponding to the radiobutton selection
+            for dataset_pair in self._get_dataset_pairs():
+                datasets = processor.process_dataset_pair(dataset_pair)
+                for dataset in datasets:
+                    dataset.metadata['ui'].name = dataset.name + ' (processed)'
+                    dataset.metadata['ui'].color = None
+                processed_datasets.extend(datasets)
 
         self.processed_datasets = processed_datasets
         self._plot_processed_datasets()
 
     def _plot_processed_datasets(self):
         self._save_state()
-        self.dataset_pairs = set()
+        self.dataset_pairs = set()          # TODO: Check whether this line should be removed
         if 'old' not in self.what_to_plot:
             self.datasets = []
         if 'new' in self.what_to_plot:
@@ -348,12 +394,12 @@ class MainApp(HasTraits):
 
     def _bt_save_changed(self):
         wildcard = 'All files (*.*)|*.*'
-        default_filename = 'prefix'
+        default_filename = 'prefix_'
         dlg = FileDialog(title='Save results', action='save as',
                          default_filename=default_filename, wildcard=wildcard)
         if dlg.open() == OK:
             for dataset in self.processed_datasets:
-                filename = os.path.join(dlg.directory, dlg.filename + '_'  + dataset.name)
+                filename = os.path.join(dlg.directory, dlg.filename + dataset.name)
                 dataset.save(filename)
             open_file_dir_with_default_handler(dlg.path)
 
@@ -372,28 +418,34 @@ class MainApp(HasTraits):
     def _scale_changed(self):
         self._plot_datasets()
 
-    def _add_dataset_pair(self, filename):
-        """
-        Adds two datasets (one referred to by filename and its partnered position) to the
-        self.datasets dictionary and the dataset_pairs set.
-        """
-        def get_position(filename):
-            m = re.search('_p([0-9])_', filename)
-            try:
-                return int(m.group(1))
-            except (AttributeError, ValueError):
-                return None
+    def _get_partner(self, position_index):
+        # return index of partner; i.e., 2=>1, 1=>2, 3=>4, 4=>3, 12=>34, 34=>12
+        if position_index in [1,2,3,4]:
+            partner = ((position_index-1)^1)+1
+        elif position_index==12:
+            partner = 34
+        elif position_index==34:
+            partner = 12
+        else:
+            raise 'unparsable position'
+        return partner
 
+    def _get_position(self, filename):
+        m = re.search('_p([0-9]*)_', filename)
+        try:
+            return int(m.group(1))
+        except (AttributeError, ValueError):
+            return None
+
+    def _add_dataset_pair(self, filename):
         current_directory, filebase = os.path.split(filename)
-        position_index = get_position(filename)
+        position_index = self._get_position(filename)
         if position_index is None:
             return
 
-        # get the index of the associated position, e.g. 2=>1, 1=>2, 5=>6, 6=>5 etc.
-        other_position_index = ((position_index-1)^1)+1
         # base filename for the associated position.
-        other_filebase = re.sub('_p[0-9]_',
-                                '_p{}_'.format(str(other_position_index)),
+        other_filebase = re.sub('_p{}_'.format(position_index),
+                                '_p{}_'.format(self._get_partner(position_index)),
                                 filebase)
         other_filename = os.path.join(current_directory, other_filebase)
         if not os.path.exists(other_filename):
@@ -405,31 +457,53 @@ class MainApp(HasTraits):
             # We also need to append the new path to the file_paths List trait which is
             # already populated by the files selected using the file selection dialog
             self.file_paths.append(other_filename)
-        if (position_index&1) == 0:
-            self.dataset_pairs.add((other_filebase, filebase))
-        else:
-            self.dataset_pairs.add((filebase, other_filebase))
+        self._refresh_normalise_to_list()
+
+    def _get_partners(self):
+        """
+        Populates the self.dataset_pairs list with all dataset partners in
+        self.file_paths corresponding to the merge_positions radiobutton selection.
+        """
+        matching_re = {'all':    ''            ,
+                       'p1+p2':  '_p[12]_'     ,
+                       'p3+p4':  '_p[34]_'     ,
+                       'p12+p34':'_p(?:12|34)_',
+                      }
+        basenames = [os.path.basename(f) for f in self.file_paths]
+        filtered_paths = [f for f in basenames if re.search(matching_re[self.merge_positions], f) is not None]
+        self.dataset_pairs = set()
+        for filebase in filtered_paths:
+            # base filename for the first position.
+            position_index = self._get_position(filebase)
+            if position_index is None:
+                return
+            other_filebase = re.sub('_p{}_'.format(position_index),
+                                    '_p{}_'.format(self._get_partner(position_index)),
+                                    filebase)
+            if filebase in basenames and other_filebase in basenames:
+                if position_index!=12 and (position_index&1)==0:
+                    self.dataset_pairs.add((other_filebase, filebase))
+                else:
+                    self.dataset_pairs.add((filebase, other_filebase))
+        return self.dataset_pairs
+
+    def _refresh_normalise_to_list(self):
         g.populate_list(self.file_paths)
 
     def _file_paths_changed(self, new):
         """
         When the file dialog box is closed with a selection of filenames,
-        Generate a list of all the filenames and pair them off with the associated* positions,
-        Generate a sorted list of all the pairs,
-        Add all the associated datasets to the datasets structure.
-        * - Positions are always paired e.g. 1 and 2, or 3 and 4, so a selection with
-        either 1 or 2 should generate the pair 1 and 2.
+        just generate a list of all the filenames
         """
         self.datasets = []
-        self.dataset_pairs = set()
         # self.file_paths is modified by _add_dataset_pair() so iterate over a copy of it.
         for filename in self.file_paths[:]:
             self._add_xye_dataset(filename)
         self._plot_datasets()
         self.datasets.sort(key=lambda d: d.name)
-        g.populate_list(self.file_paths)
+        self._refresh_normalise_to_list()
 
-    def _load_positions_changed(self):
+    def _load_partners_changed(self):
         for filename in self.file_paths[:]:
             self._add_dataset_pair(filename)
         self._plot_datasets()
@@ -484,11 +558,34 @@ class HelpBox(HasTraits):
         super(HelpBox, self).__init__(*args, **kws)
         self.help_text = \
 """
+Plot region usage:
 Left drag = Zoom a selection of the plot
 Right drag = Pan the plot
 Right click = Undo zoom
 Esc = Reset zoom/pan
 Mousewheel = Zoom in/out
+
+Please send bug reports and suggestions to
+pd@synchrotron.org.au
+
+Software authors:
+Gary Ruben, Victorian eResearch Strategic Initiative (VeRSI), gruben@versi.edu.au
+Kieran Spear, VeRSI, kieran.spear@versi.edu.au
+http://www.versi.edu.au
+
+Software home:
+http://www.synchrotron.org.au/pdviper
+Software source:
+http://github.com/AustralianSynchrotron/pdviper
+
+Recognition of NeCTAR funding:
+The Australian Synchrotron is proud to be in partnership with the National eResearch Collaboration Tools and
+Resources (NeCTAR) project to develop eResearch Tools for the synchrotron research community. This will enable our
+scientific users to have instant access to the results of data during the course of their experiment which will
+facilitate better decision making and also provide the opportunity for ongoing data analysis via remote access.
+
+Copyright (c) 2012, Australian Synchrotron Company Ltd
+All rights reserved.
 """
 
 

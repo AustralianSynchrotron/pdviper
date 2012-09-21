@@ -62,13 +62,16 @@ A GUI checkbox option enables the .parab file contents to be prepended to the .x
 
 class DatasetProcessor(object):
     def __init__(self, normalise=True, correction=0.0, align_positions=True,
-                 merge_by_splice=True, merge_by_merge=True, regrid=False):
+                 merge_by_splice=True, merge_by_merge=True, regrid=False,
+                 normalisation_reference=True, datasets=True):
         self.normalise = normalise
         self.correction = correction
         self.align_positions = align_positions
         self.merge_by_splice = merge_by_splice
         self.merge_by_merge = merge_by_merge
         self.regrid = regrid
+        self.normalisation_reference = normalisation_reference
+        self.datasets = datasets
 
 
     def process_dataset(self, dataset):
@@ -84,7 +87,8 @@ class DatasetProcessor(object):
 
         # normalise
         if self.normalise:
-            dataset2.data = normalise_dataset(dataset_pair)
+            dataset1 = self.normalise_me(dataset1)
+            dataset2 = self.normalise_me(dataset2)
 
         # trim data from gap edges prior to merging
         dataset1.data = clean_gaps(dataset1.data)
@@ -103,32 +107,96 @@ class DatasetProcessor(object):
                 dataset2.data[:,0] += x_offset
 
         # merge and/or splice
-        if not(self.merge_by_splice or self.merge_by_merge):
-            merged_datasets = [ dataset1, dataset2 ]
+        if self.merge_by_splice and self.merge_by_merge:
+            spliced_datasets = self._merge_datasets(dataset1, dataset2, 'splice')
+            merged_datasets = self._merge_datasets(dataset1, dataset2, 'merge')
+            merged_datasets = merged_datasets + spliced_datasets
+        elif self.merge_by_splice:
+            merged_datasets = self._merge_datasets(dataset1, dataset2, 'splice')
+        elif self.merge_by_merge:
+            merged_datasets = self._merge_datasets(dataset1, dataset2, 'merge')
         else:
-            if self.merge_by_splice:
-                merged_datasets = self._merge_datasets(dataset1, dataset2, 'splice')
-            if self.merge_by_merge:
-                merged_datasets = self._merge_datasets(dataset1, dataset2, 'merge')
+            merged_datasets = []
 
         # regrid
         if self.regrid:
+            regridded_datasets = []
             for dataset in merged_datasets:
-                dataset.data = regrid_data(dataset.data)
+                regridded_datasets.append(self.regrid_me(dataset))
+            merged_datasets.extend(regridded_datasets)
         return merged_datasets
+
+
+    def normalise_me(self, dataset):
+        if self.normalise:
+            dataset1 = dataset.copy()
+            try:
+                datasets_dict = dict([(d.name, d) for d in self.datasets])
+                if self.normalisation_reference in ['p1', 'p2', 'p3', 'p4']:
+                    # Normalise to selected position
+                    selected_filebase = re.sub('_p[1-4]*_',
+                                               '_{}_'.format(self.normalisation_reference),
+                                               dataset1.name)
+                    nr_dataset = datasets_dict[selected_filebase]
+                else:
+                    # Normalise to selected file
+                    nr_dataset = datasets_dict[self.normalisation_reference]
+                dataset1.data = normalise_dataset([nr_dataset, dataset1])
+                dataset1.name = re.sub('(_p[1-4]*)_',
+                                       r'\1_n_',
+                                       dataset1.name)
+                return dataset1
+            except:
+                pass
+        return None
+
+
+    def regrid_me(self, dataset):
+        if self.regrid:
+            dataset1 = dataset.copy()
+            dataset1.data = regrid_data(dataset1.data)
+            dataset1.name = re.sub('(_p[1-4]*)(_(?:n?s?m?)|_)_?',
+                                   r'\1\2g_',
+                                   dataset1.name)
+            return dataset1
+        return None
 
 
     def _merge_datasets(self, dataset1, dataset2, merge_method):
         if merge_method == 'merge':
             merged_data = combine_by_merge(dataset1.data, dataset2.data)
+            merge_label = 'm'
         elif merge_method == 'splice':
             merged_data = combine_by_splice(dataset1.data, dataset2.data)
+            merge_label = 's'
         else:
             raise ValueError('Merge method not understood')
 
         # Create a new dataset to store the merged data in.
-        current_directory, filebase = path.split(dataset1.source)
-        merged_data_filebase = re.sub('_p[0-3]_', '_', filebase)
+        current_directory = path.abspath(dataset1.source)
+        merged_data_filebase = dataset1.name.replace('_p12_', '_p1234_')\
+                                       .replace('_p1_', '_p12_')\
+                                       .replace('_p3_', '_p34_')
+        merged_data_filebase = re.sub('(_p[1-4]*)(_(?:n?)|_)_?',
+                                      r'\1\2{}_'.format(merge_label),
+                                      merged_data_filebase)
+        merged_data_filename = path.join(current_directory, merged_data_filebase)
+        merged_dataset = XYEDataset(merged_data, merged_data_filebase,
+                                          merged_data_filename,
+                                          deepcopy(dataset1.metadata))
+        return [merged_dataset]
+
+
+    def splice_overlapping_datasets(self, datasets):
+        dataset1, dataset2 = datasets
+        merged_data = splice_overlapping_data(dataset1.data, dataset2.data)
+        merge_label = 's'
+    
+        # Create a new dataset to store the merged data in.
+        current_directory = path.abspath(dataset1.source)
+        merged_data_filebase = re.sub('(_p[1-4]*_)',
+                                      r'_p1234_'.format(merge_label),
+                                      dataset1.name)
         merged_data_filename = path.join(current_directory, merged_data_filebase)
         merged_dataset = XYEDataset(merged_data, merged_data_filebase,
                                           merged_data_filename,
@@ -268,19 +336,17 @@ def combine_by_splice(d1, d2, gap_threshold=0.1):
     return d1
 
 
-def splice_overlapping_data(d1, d2, shave_number=5):
+def splice_overlapping_data(d1, d2):
     """
     d1 and d2 are Nx3 arrays of xye data.
     d1 is assumed to cover an angular range starting below that of d2 so we trim
     shave_number samples off the RHS of d1 before concatenating d2 to it starting at the
     next highest value of 2theta.
     """
-    # Trim shave_number samples off the RHS of d1
-    left = d1[:-shave_number]
     # Identify cut index in d2
     # Concatenate d1 and d2
-    right = d2[d2[:,0]>left[-1,0]]
-    return np.vstack((left, right))
+    right = d2[d2[:,0]>d1[-1,0]]
+    return np.vstack((d1, right))
 
 
 def regrid_data(data, start=None, end=None, interval=0.00375):
@@ -332,8 +398,9 @@ def normalise_dataset(dataset_pair):
     dataset1, dataset2 = dataset_pair
     key = 'Integrated Ion Chamber Count(counts)'
     data = dataset2.data.copy()
-    data[:,1] *= dataset1.metadata[key] / dataset2.metadata[key]            # renormalise y-value
-    data[:,2] *= np.sqrt(dataset1.metadata[key] / dataset2.metadata[key])   # renormalise uncertainty
+    if dataset1.name != dataset2.name:
+        data[:,1] *= dataset1.metadata[key] / dataset2.metadata[key]            # renormalise y-value
+        data[:,2] *= np.sqrt(dataset1.metadata[key] / dataset2.metadata[key])   # renormalise uncertainty
     return data
 
 
