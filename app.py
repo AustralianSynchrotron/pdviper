@@ -570,7 +570,7 @@ pd@synchrotron.org.au
 
 Software authors:
 Gary Ruben, Victorian eResearch Strategic Initiative (VeRSI), gruben@versi.edu.au
-Kieran Spier, VeRSI, kieran.spier@versi.edu.au
+Kieran Spear, VeRSI, kieran.spier@versi.edu.au
 http://www.versi.edu.au
 
 Software home:
