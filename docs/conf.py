@@ -44,7 +44,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'PDViPeR'
-copyright = u'2012, Australian Synchrotron'
+copyright = u'2012, Australian Synchrotron Company Ltd. All rights reserved.'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
