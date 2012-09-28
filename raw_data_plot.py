@@ -26,7 +26,7 @@ class RawDataPlot(HasTraits):
             self.plot.delplot(*self.plot.plots.keys())
             self.plots = {}
         active = filter(lambda d: d.metadata['ui'].active, datasets)
-        hilite = filter(lambda d: d.metadata['ui'].highlighted, active)
+        hilite = filter(lambda d: d.metadata['ui'].markers, active)
         for dataset in active:
             ui = dataset.metadata['ui']
             data = dataset.data

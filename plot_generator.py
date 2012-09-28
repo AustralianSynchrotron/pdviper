@@ -12,7 +12,7 @@ class PlotGenerator(HasTraits):
     plot_types = [
         "Stacked",
         "2D surface",
-        "3D surface (slow)",
+        "3D plot (slow)",
     ]
 
     plot_type = Enum(plot_types)
