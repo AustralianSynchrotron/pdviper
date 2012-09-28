@@ -16,11 +16,14 @@ from raw_data_plot import RawDataPlot
 from fixes import fix_background_color
 from dataset_editor import DatasetEditor, DatasetUI
 from wavelength_editor import WavelengthEditor, WavelengthUI
-from ui_helpers import get_save_as_filename, open_file_dir_with_default_handler, get_file_list_from_dialog
+from ui_helpers import get_save_as_filename, open_file_dir_with_default_handler, \
+                        get_file_list_from_dialog, get_file_from_dialog
 import processing
 from processing import DatasetProcessor
 from plot_generator import PlotGenerator
 from peak_fit_window import PeakFitWindow
+from processing_background_removal import subtract_background_from_all_datasets, \
+                        CurveFitter
 
 
 # Linux/Ubuntu themes cause the background of windows to be ugly and dark
@@ -106,9 +109,15 @@ class MainApp(HasTraits):
 
     # Background removal tab
     bt_manually_define_background = Button("Define")
-    polynomial_order = Range(1, 20)(7)
-    bt_poly_fit = Button("Poly fit")
+    curve_order = Range(1, 20)(7)
+#    curve_type = Enum('Spline', 'Polynomial')('Spline')
+    bt_fit = Button("Curve fit")
     bt_load_background = Button("Load...")
+    bt_subtract_background = Button("Subtract background")
+    bt_save_background = Button("Save...")
+#    backgrounded_files = List
+    background_file = None
+    background_fit = None
 
     # theta/d/Q tab
     filename_field = Str("d")
@@ -188,24 +197,27 @@ class MainApp(HasTraits):
     )
 
     background_removal_group =  VGroup(
-        VGroup(
-            Label('Manually define:'),
-            UItem('bt_manually_define_background', enabled_when='object._has_data()'),
-            show_border = True,
-        ),
-        VGroup(
-            Label('Fit polynomial:'),
-            HGroup(
-                   Item('polynomial_order', label='order', enabled_when='object._has_data()'),
-            ),
-            UItem('bt_poly_fit', enabled_when='object._has_data()'),
-            show_border = True,
-        ),
+#        VGroup(
+#            Label('Manually define:'),
+#            UItem('bt_manually_define_background', enabled_when='object._has_data()'),
+#            show_border = True,
+#        ),
         VGroup(
             Label('Load from file:'),
             UItem('bt_load_background', enabled_when='object._has_data()'),
             show_border = True,
         ),
+#        VGroup(
+#            Label('Fit curve:'),
+#            UItem('curve_type', style='custom', enabled_when='object._has_data()'),
+#            HGroup(
+#                   Item('curve_order', label='order', enabled_when='object._has_data()'),
+#            ),
+#            UItem('bt_fit', enabled_when='object._has_data()'),
+#            show_border = True,
+#        ),
+        UItem('bt_subtract_background', enabled_when='object._has_data() and object.background_file!=None'),
+        UItem('bt_save_background', enabled_when='object._has_data() and object.background_file!=None and object.processed_datasets!=[]'),
         label='Backgrnd',
         springy=False,
     )
@@ -234,7 +246,7 @@ class MainApp(HasTraits):
                 Tabbed(
                     view_group,
                     process_group,
-                    # background_removal_group,
+                    background_removal_group,
                     convert_xscale_group,
                     springy=False,
                 ),
@@ -251,6 +263,15 @@ class MainApp(HasTraits):
 
     def _has_data(self):
         return len(self.datasets) != 0
+
+    def _reset_all(self):
+        self.datasets = []
+        self.dataset_pairs = set()
+        self.undo_state = None
+        self.file_paths = []
+#        self.backgrounded_files = []
+        self.processed_datasets = []
+        self.background_file = None
 
     def __init__(self, *args, **kws):
         """
@@ -274,10 +295,13 @@ class MainApp(HasTraits):
         # The list of currently set options, updated by the UI.
         self.options = self._options
         self.file_paths = []
+#        self.backgrounded_files = []
+        self.processed_datasets = []
 
     def _open_files_changed(self):
         file_list = get_file_list_from_dialog()
         if file_list:
+            self._reset_all()
             self.file_paths = file_list
 
     def _options_changed(self, opts):
@@ -349,14 +373,14 @@ class MainApp(HasTraits):
             for d in self.datasets:
                 dataset = processor.normalise_me(d)
                 if dataset is not None:
-                    processed_datasets.extend([dataset])
+                    processed_datasets.append(dataset)
                     dataset.metadata['ui'].name = dataset.name + ' (processed)'
                     dataset.metadata['ui'].color = None
                     d = dataset
 
                 dataset = processor.regrid_me(d)
                 if dataset is not None:
-                    processed_datasets.extend([dataset])
+                    processed_datasets.append(dataset)
                     dataset.metadata['ui'].name = dataset.name + ' (processed)'
                     dataset.metadata['ui'].color = None
         else:
@@ -458,6 +482,43 @@ class MainApp(HasTraits):
             # already populated by the files selected using the file selection dialog
             self.file_paths.append(other_filename)
         self._refresh_normalise_to_list()
+
+    def _bt_load_background_changed(self):
+        filename = get_file_from_dialog()
+        if filename is not None:
+            if self.background_file in self.datasets:
+                self.datasets.remove(self.background_file)
+            self.background_fit = None
+            self._add_xye_dataset(filename)
+            self.file_paths.append(filename)
+            self.background_file = self.datasets[-1]    # reference to most recently added
+            self.background_file.metadata['ui'].name = self.background_file.name + ' (background)'
+            self._plot_processed_datasets()
+
+    def _bt_fit_changed(self):
+#        fitter = CurveFitter(curve_type=self.curve_type, deg=self.curve_order)
+        fitter = CurveFitter(curve_type='Spline', deg=self.curve_order)
+        fitter.fit_curve(self.background_file)
+        self.background_fit = self.background_file.copy()
+        self.background_fit.data[:,1] = fitter.eval_curve(self.background_file.data[:,0])
+        self.background_fit.metadata['ui'].name = 'fit (background)'
+        self.datasets.append(self.background_fit)
+        self._plot_processed_datasets()
+
+    def _bt_subtract_background_changed(self):
+        self.processed_datasets = subtract_background_from_all_datasets(self.datasets, self.background_file, self.background_fit)
+        self._plot_processed_datasets()
+
+    def _bt_save_background_changed(self):
+        wildcard = 'All files (*.*)|*.*'
+        default_filename = 'prefix_'
+        dlg = FileDialog(title='Save results', action='save as',
+                         default_filename=default_filename, wildcard=wildcard)
+        if dlg.open() == OK:
+            for dataset in self.processed_datasets:
+                filename = os.path.join(dlg.directory, dlg.filename + dataset.name)
+                dataset.save(filename)
+            open_file_dir_with_default_handler(dlg.path)
 
     def _get_partners(self):
         """
