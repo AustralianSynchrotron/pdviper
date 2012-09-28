@@ -12,7 +12,7 @@ class DatasetUI(HasTraits):
     name = Str('')
     color = Color(allow_none=True)
     active = Bool(True)
-    highlighted = Bool(False)
+    markers = Bool(False)
     marker_size = Float(1.0)
     line_width = Float(1.0)
     dataset = Instance(object)
@@ -21,7 +21,7 @@ class DatasetUI(HasTraits):
         Item('name'),
         Item('color'),
         Item('active'),
-        Item('highlighted'),
+        Item('markers'),
         Item('marker_size'),
         Item('line_width'),
     )
@@ -44,7 +44,7 @@ class DatasetEditor(HasTraits):
 
     color = Color
     active = Bool(True)
-    highlighted = Bool(False)
+    markers = Bool(False)
     marker_size = Float(1.0)
     line_width = Float(1.0)
 
@@ -64,7 +64,7 @@ class DatasetEditor(HasTraits):
             DatasetColumn(name='name', cell_color='white', editable=False, width=0.9),
             ColorColumn(name='color'),
             CheckboxColumn(name='active'),
-            CheckboxColumn(name='highlighted'),
+            CheckboxColumn(name='markers'),
             DatasetColumn(name='marker_size'),
             DatasetColumn(name='line_width'),
         ]
@@ -78,7 +78,7 @@ class DatasetEditor(HasTraits):
                 VGroup(
                     Item('color', editor=ColorEditor()),
                     Item('active'),
-                    Item('highlighted'),
+                    Item('markers'),
                     Item('marker_size'),
                     Item('line_width'),
                     springy=True
@@ -114,12 +114,12 @@ class DatasetEditor(HasTraits):
             # This makes sure 'custom' is displayed
             self.color = (1,2,3,4)
         self.active = self.selected[0].active
-        self.highlighted = self.selected[0].highlighted
+        self.markers = self.selected[0].markers
         self.marker_size = self.selected[0].marker_size
         self.line_width = self.selected[0].line_width
         self.selecting = False
 
-    @on_trait_change('active, color, highlighted, marker_size, line_width')
+    @on_trait_change('active, color, markers, marker_size, line_width')
     def _trait_changed(self, trait, value):
         if not self.selecting:
             for obj in self.selected:

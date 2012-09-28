@@ -19,7 +19,7 @@ class OutputTest(unittest.TestCase):
             color = None
             name = ''
             active = True
-            highlighted = False
+            markers = False
         self.data.metadata['ui'] = UI()
         self.datasets = [ self.data ]
         self.plot = RawDataPlot(self.datasets)
