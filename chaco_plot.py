@@ -16,6 +16,7 @@ from base_plot import BasePlot
 from labels import get_value_scale_label
 import settings
 from traits_extensions import HasTraitsGroup
+from raw_data_plot import MyPlotAxis
 
 
 class ClickableLinePlot(LinePlot):
@@ -81,20 +82,20 @@ class StackedPlot(ChacoPlot):
         self.chaco_plot = None
         self.value_mapper = None
         self.index_mapper = None
-        self.x_axis = PlotAxis(component=self.container,
+        self.x_axis = MyPlotAxis(component=self.container,
                           orientation='bottom',
                           title=u'Angle (2\u0398)',
                           title_font=settings.axis_title_font,
                           tick_label_font=settings.tick_font)
         y_axis_title = 'Normalized intensity (%s)' % get_value_scale_label('linear')
-        self.y_axis = PlotAxis(component=self.container,
+        self.y_axis = MyPlotAxis(component=self.container,
                           orientation='left',
                           title=y_axis_title,
                           title_font=settings.axis_title_font,
                           tick_label_font=settings.tick_font)
         self.container.overlays.extend([self.x_axis, self.y_axis])
         self.container.tools.append(
-            TraitsTool(self.container, classes=[LinePlot,PlotAxis]))
+            TraitsTool(self.container, classes=[LinePlot,MyPlotAxis]))
         self.colors = []
         self.last_flip_order = self.flip_order
 
@@ -196,6 +197,8 @@ class Surface2DPlot(ChacoPlot):
                       origin=origin,
                       )
         plot.default_origin = origin
+        plot.x_axis = MyPlotAxis(component=plot, orientation='bottom')
+        plot.y_axis = MyPlotAxis(component=plot, orientation='left')
         plot.x_axis.title = u'Angle (2\u0398)'
 
         tick_font = settings.tick_font
@@ -230,6 +233,7 @@ class Surface2DPlot(ChacoPlot):
 
         colorbar._axis.title_font = settings.axis_title_font
         colorbar._axis.tick_label_font = settings.tick_font
+
         # Add pan and zoom tools to the colorbar
         self.colorbar_zoom_tool = ClickUndoZoomTool(colorbar,
                                                     axis="index",
