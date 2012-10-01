@@ -5,7 +5,7 @@ import re
 from enable.api import ComponentEditor
 from traits.api import List, Str, Float, HasTraits, Instance, Button, Enum, Bool, \
                         DelegatesTo, Range
-from traitsui.api import Item, UItem, HGroup, VGroup, View, spring, Label, \
+from traitsui.api import Item, UItem, HGroup, VGroup, View, spring, Label, HSplit, Group, \
                         CheckListEditor, Tabbed, DefaultOverride, EnumEditor, HTMLEditor
 from pyface.api import FileDialog, OK
 from chaco.api import OverlayPlotContainer
@@ -63,6 +63,9 @@ class Global(HasTraits):
         self.file_list = sorted(positions) + [os.path.basename(f) for f in filepaths]
 
 g = Global()
+
+#class ButtonRegion(HasTraits):
+#    
 
 class MainApp(HasTraits):
     container = Instance(OverlayPlotContainer)
@@ -234,29 +237,32 @@ class MainApp(HasTraits):
     springy=True,
     )
 
-    traits_view = View(
-        HGroup(
-            VGroup(
-                UItem('open_files'),
-                UItem('edit_datasets', enabled_when='object._has_data()'),
-                UItem('generate_plot', enabled_when='object._has_data()'),
-                UItem('help_button'),
-                spring,
-                spring,
-                Tabbed(
-                    view_group,
-                    process_group,
-                    background_removal_group,
-                    convert_xscale_group,
-                    springy=False,
+    traits_view = View(HSplit(
+            Group(
+                VGroup(
+                    UItem('open_files'),
+                    UItem('edit_datasets', enabled_when='object._has_data()'),
+                    UItem('generate_plot', enabled_when='object._has_data()'),
+                    UItem('help_button'),
+                    spring,
+                    spring,
+                    Tabbed(
+                        view_group,
+                        process_group,
+                        background_removal_group,
+                        convert_xscale_group,
+                        springy=False,
+                    ),
+                    show_border=False,
                 ),
-                show_border=False,
             ),
-            UItem('container', editor=ComponentEditor(bgcolor='white')),
-            show_border=False,
-        ),
-        resizable=True, title=title, width=size[0], height=size[1]
-    )
+            Group(
+                UItem('container', editor=ComponentEditor(bgcolor='white')),
+                show_border=False,
+                ),
+            ),
+            resizable=True, title=title, width=size[0], height=size[1]
+        )
 
     #-------------------------------------------------------------------------------------
     # MVC Control
