@@ -7,7 +7,7 @@ from traits.api import List, Str, Float, HasTraits, Instance, Button, Enum, Bool
                         DelegatesTo, Range
 from traitsui.api import Item, UItem, HGroup, VGroup, View, spring, Label, HSplit, Group, \
                         CheckListEditor, Tabbed, DefaultOverride, EnumEditor, HTMLEditor
-from pyface.api import FileDialog, OK
+from pyface.api import FileDialog, DirectoryDialog, OK
 from chaco.api import OverlayPlotContainer
 
 from xye import XYEDataset
@@ -17,6 +17,7 @@ from fixes import fix_background_color
 from dataset_editor import DatasetEditor, DatasetUI
 from wavelength_editor import WavelengthEditor, WavelengthUI
 from ui_helpers import get_save_as_filename, open_file_dir_with_default_handler, \
+                        open_file_with_default_handler, \
                         get_file_list_from_dialog, get_file_from_dialog
 import processing
 from processing import DatasetProcessor
@@ -83,6 +84,7 @@ class MainApp(HasTraits):
     reset_button = Button("Reset view")
     copy_to_clipboard = Button("Copy to clipboard")
     save_as_image = Button("Save as image...")
+    save_path = Str
 
     # Process tab
     merge_positions = Enum('all', 'p1+p2', 'p3+p4', 'p12+p34')('p1+p2')
@@ -109,6 +111,7 @@ class MainApp(HasTraits):
     bt_process = Button("Apply")
     bt_undo_processing = Button("Undo")
     bt_save = Button("Save...")
+    most_recent_path = Str('')
 
     # Background removal tab
     bt_manually_define_background = Button("Define")
@@ -308,6 +311,7 @@ class MainApp(HasTraits):
         file_list = get_file_list_from_dialog()
         if file_list:
             self._reset_all()
+            self.most_recent_path = os.path.dirname(file_list[0])
             self.file_paths = file_list
 
     def _options_changed(self, opts):
@@ -423,15 +427,13 @@ class MainApp(HasTraits):
         self._plot_datasets()
 
     def _bt_save_changed(self):
-        wildcard = 'All files (*.*)|*.*'
-        default_filename = 'prefix_'
-        dlg = FileDialog(title='Save results', action='save as',
-                         default_filename=default_filename, wildcard=wildcard)
+        dlg = DirectoryDialog(title='Save results', default_path=self.most_recent_path)
         if dlg.open() == OK:
+            self.most_recent_path = dlg.path
             for dataset in self.processed_datasets:
-                filename = os.path.join(dlg.directory, dlg.filename + dataset.name)
+                filename = os.path.join(dlg.path, dataset.name)
                 dataset.save(filename)
-            open_file_dir_with_default_handler(dlg.path)
+            open_file_with_default_handler(dlg.path)
 
     def _save_as_image_changed(self):
         if len(self.datasets) == 0:
@@ -517,14 +519,13 @@ class MainApp(HasTraits):
 
     def _bt_save_background_changed(self):
         wildcard = 'All files (*.*)|*.*'
-        default_filename = 'prefix_'
-        dlg = FileDialog(title='Save results', action='save as',
-                         default_filename=default_filename, wildcard=wildcard)
+        dlg = DirectoryDialog(title='Save results', default_path=self.most_recent_path)
         if dlg.open() == OK:
+            self.most_recent_path = dlg.path
             for dataset in self.processed_datasets:
-                filename = os.path.join(dlg.directory, dlg.filename + dataset.name)
+                filename = os.path.join(dlg.path, dataset.name)
                 dataset.save(filename)
-            open_file_dir_with_default_handler(dlg.path)
+            open_file_with_default_handler(dlg.path)
 
     def _get_partners(self):
         """
