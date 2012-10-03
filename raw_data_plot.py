@@ -4,7 +4,7 @@ import numpy as np
 from enable.api import Component
 from traits.api import HasTraits, Instance
 
-from chaco.api import Plot, ArrayPlotData, Legend
+from chaco.api import Plot, ArrayPlotData, Legend, PlotAxis
 from chaco.tools.api import TraitsTool, SimpleInspectorTool, RangeSelection, RangeSelectionOverlay
 from chaco.overlays.api import SimpleInspectorOverlay
 
@@ -13,6 +13,50 @@ from processing import rescale
 from labels import get_value_scale_label
 import settings
 
+# This is a custom view for the axis editor that enables the tick_label_font item to
+# support font setting for the tick labels
+from traitsui.api import View, HGroup, Group, VGroup, Item, TextEditor
+from chaco.axis_view import float_or_auto
+# Traits UI for our PlotAxis. This is copied and edited from chaco/axis_view.py
+AxisView = View(VGroup(
+                Group(
+                    Item("object.mapper.range.low", label="Low Range"),
+                    Item("object.mapper.range.high", label="High Range"),
+                    ),
+                Group(
+                    Item("title", label="Title", editor=TextEditor()),
+                    Item("title_font", label="Font", style="simple"),
+                    Item("title_color", label="Color", style="custom"),
+                    Item("tick_interval", label="Interval", editor=TextEditor(evaluate=float_or_auto)),
+                    label="Main"),
+                Group(
+                    Item("tick_color", label="Color", style="custom"),
+                         #editor=EnableRGBAColorEditor()),
+                    Item("tick_weight", label="Thickness"),
+                    Item("tick_label_font", label="Font"),
+                    Item("tick_label_color", label="Label color", style="custom"),
+                         #editor=EnableRGBAColorEditor()),
+                    HGroup(
+                        Item("tick_in", label="Tick in"),
+                        Item("tick_out", label="Tick out"),
+                        ),
+                    Item("tick_visible", label="Visible"),
+                    label="Ticks"),
+                Group(
+                    Item("axis_line_color", label="Color", style="custom"),
+                         #editor=EnableRGBAColorEditor()),
+                    Item("axis_line_weight", label="Thickness"),
+                    Item("axis_line_visible", label="Visible"),
+                    label="Line"),
+                ),
+                buttons = ["OK", "Cancel"]
+            )
+
+class MyPlotAxis(PlotAxis):
+    def traits_view(self):
+        """override PlotAxis traits_view() to enable our Font-selection editors
+        """
+        return AxisView
 
 class RawDataPlot(HasTraits):
     plot = Instance(Component)
@@ -131,6 +175,10 @@ class RawDataPlot(HasTraits):
                                   visible=False,
                                   plots=self.plots)
 
+        self.plot.x_axis = MyPlotAxis(component=self.plot,
+                                      orientation='bottom')
+        self.plot.y_axis = MyPlotAxis(component=self.plot,
+                                      orientation='left')
         self.plot.x_axis.title = ur'Angle (2\u0398)'
         tick_font = settings.tick_font
         self.plot.x_axis.title_font = settings.axis_title_font

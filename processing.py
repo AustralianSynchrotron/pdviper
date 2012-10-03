@@ -234,9 +234,13 @@ def bin_data(data, num_bins):
 
 
 def stack_datasets(datasets):
-    shapes = [ len(dataset.data) for dataset in datasets ]
+    """ This is called by the plotting routines so we only collect those data series that
+    are set to active in the dataset editor
+    """
+    shapes = [ len(dataset.data) for dataset in datasets if dataset.metadata['ui'].active]
     min_x_len = np.min(shapes)
-    data = [ dataset.data[:min_x_len] for dataset in datasets ]
+    data = [ dataset.data[:min_x_len] for dataset in datasets if dataset.metadata['ui'].active ]
+
     stack = np.vstack([data])
     return stack
 

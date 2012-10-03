@@ -11,6 +11,7 @@ fix_background_color()
 from xye import XYEDataset
 from tools import ClickUndoZoomTool
 import settings
+import numpy as np
 
 class DatasetPair(HasTraits):
     first_name = Str
@@ -71,10 +72,12 @@ class PeakFitWindow(HasTraits):
                         undo_button=settings.undo_button,
                         zoom_to_mouse=True)
         self.plot.overlays.append(self.zoom_tool)
+        self.plot_ymin = np.inf
+        self.plot_ymax = -np.inf
         for pair in self.pairs:
             self._plot_dataset(pair.first)
             self._plot_dataset(pair.second, offset=pair.peak_diff)
-        self.plot.request_redraw()
+#        self.plot.request_redraw()
 
     def _selection_changed(self, selected_objs):
         if self.selected:
@@ -100,7 +103,7 @@ class PeakFitWindow(HasTraits):
         range.low, range.high = self.range
         pvr = plot[0].value_range
         y_in_range = y[(x>range.low) & (x<range.high)]
-        pvr.low_setting, pvr.high_setting = (y_in_range.min(), y_in_range.max())
+        self.plot_ymin = min(self.plot_ymin, y_in_range.min())
+        self.plot_ymax = max(self.plot_ymax, y_in_range.max())
+        pvr.low_setting, pvr.high_setting = self.plot_ymin, self.plot_ymax
         pvr.refresh()
-#        plot[0].value_range.refresh()
-

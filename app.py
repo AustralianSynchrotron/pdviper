@@ -1,13 +1,12 @@
-import logger
 import os
 import re
 
 from enable.api import ComponentEditor
 from traits.api import List, Str, Float, HasTraits, Instance, Button, Enum, Bool, \
                         DelegatesTo, Range
-from traitsui.api import Item, UItem, HGroup, VGroup, View, spring, Label, \
+from traitsui.api import Item, UItem, HGroup, VGroup, View, spring, Label, HSplit, Group, \
                         CheckListEditor, Tabbed, DefaultOverride, EnumEditor, HTMLEditor
-from pyface.api import FileDialog, OK
+from pyface.api import DirectoryDialog, OK
 from chaco.api import OverlayPlotContainer
 
 from xye import XYEDataset
@@ -17,6 +16,7 @@ from fixes import fix_background_color
 from dataset_editor import DatasetEditor, DatasetUI
 from wavelength_editor import WavelengthEditor, WavelengthUI
 from ui_helpers import get_save_as_filename, open_file_dir_with_default_handler, \
+                        open_file_with_default_handler, \
                         get_file_list_from_dialog, get_file_from_dialog
 import processing
 from processing import DatasetProcessor
@@ -41,7 +41,6 @@ def create_datasetui(dataset):
     ui_w = WavelengthUI(name=dataset.name, dataset=dataset)
     dataset.metadata['ui_w'] = ui_w
     return (ui, ui_w)
-    return ui
 
 class Global(HasTraits):
     """
@@ -64,6 +63,7 @@ class Global(HasTraits):
 
 g = Global()
 
+
 class MainApp(HasTraits):
     container = Instance(OverlayPlotContainer)
 
@@ -80,6 +80,7 @@ class MainApp(HasTraits):
     reset_button = Button("Reset view")
     copy_to_clipboard = Button("Copy to clipboard")
     save_as_image = Button("Save as image...")
+    save_path = Str
 
     # Process tab
     merge_positions = Enum('all', 'p1+p2', 'p3+p4', 'p12+p34')('p1+p2')
@@ -106,6 +107,7 @@ class MainApp(HasTraits):
     bt_process = Button("Apply")
     bt_undo_processing = Button("Undo")
     bt_save = Button("Save...")
+    most_recent_path = Str('')
 
     # Background removal tab
     bt_manually_define_background = Button("Define")
@@ -234,29 +236,32 @@ class MainApp(HasTraits):
     springy=True,
     )
 
-    traits_view = View(
-        HGroup(
-            VGroup(
-                UItem('open_files'),
-                UItem('edit_datasets', enabled_when='object._has_data()'),
-                UItem('generate_plot', enabled_when='object._has_data()'),
-                UItem('help_button'),
-                spring,
-                spring,
-                Tabbed(
-                    view_group,
-                    process_group,
-                    background_removal_group,
-                    convert_xscale_group,
-                    springy=False,
+    traits_view = View(HSplit(
+            Group(
+                VGroup(
+                    UItem('open_files'),
+                    UItem('edit_datasets', enabled_when='object._has_data()'),
+                    UItem('generate_plot', enabled_when='object._has_data()'),
+                    UItem('help_button'),
+                    spring,
+                    spring,
+                    Tabbed(
+                        view_group,
+                        process_group,
+                        background_removal_group,
+                        convert_xscale_group,
+                        springy=False,
+                    ),
+                    show_border=False,
                 ),
-                show_border=False,
             ),
-            UItem('container', editor=ComponentEditor(bgcolor='white')),
-            show_border=False,
-        ),
-        resizable=True, title=title, width=size[0], height=size[1]
-    )
+            Group(
+                UItem('container', editor=ComponentEditor(bgcolor='white')),
+                show_border=False,
+                ),
+            ),
+            resizable=True, title=title, width=size[0], height=size[1]
+        )
 
     #-------------------------------------------------------------------------------------
     # MVC Control
@@ -302,6 +307,7 @@ class MainApp(HasTraits):
         file_list = get_file_list_from_dialog()
         if file_list:
             self._reset_all()
+            self.most_recent_path = os.path.dirname(file_list[0])
             self.file_paths = file_list
 
     def _options_changed(self, opts):
@@ -397,12 +403,11 @@ class MainApp(HasTraits):
 
     def _plot_processed_datasets(self):
         self._save_state()
-        self.dataset_pairs = set()          # TODO: Check whether this line should be removed
-        if 'old' not in self.what_to_plot:
-            self.datasets = []
-        if 'new' in self.what_to_plot:
-            self.datasets.extend(self.processed_datasets)
-        self._plot_datasets()
+        if 'old' in self.what_to_plot:
+            datasets_to_plot = self.datasets + self.processed_datasets
+        else:
+            datasets_to_plot = self.processed_datasets
+        self._plot_datasets(datasets_to_plot)
 
     def _save_state(self):
         self.undo_state = (self.datasets[:], self.dataset_pairs.copy())
@@ -414,18 +419,16 @@ class MainApp(HasTraits):
 
     def _bt_undo_processing_changed(self):
         self._restore_state()
-        self._plot_datasets()
+        self._plot_datasets(self.datasets)
 
     def _bt_save_changed(self):
-        wildcard = 'All files (*.*)|*.*'
-        default_filename = 'prefix_'
-        dlg = FileDialog(title='Save results', action='save as',
-                         default_filename=default_filename, wildcard=wildcard)
+        dlg = DirectoryDialog(title='Save results', default_path=self.most_recent_path)
         if dlg.open() == OK:
+            self.most_recent_path = dlg.path
             for dataset in self.processed_datasets:
-                filename = os.path.join(dlg.directory, dlg.filename + dataset.name)
+                filename = os.path.join(dlg.path, dataset.name)
                 dataset.save(filename)
-            open_file_dir_with_default_handler(dlg.path)
+            open_file_with_default_handler(dlg.path)
 
     def _save_as_image_changed(self):
         if len(self.datasets) == 0:
@@ -440,7 +443,7 @@ class MainApp(HasTraits):
             PlotOutput.copy_to_clipboard(self.container)
 
     def _scale_changed(self):
-        self._plot_datasets()
+        self._plot_datasets(self.datasets)
 
     def _get_partner(self, position_index):
         # return index of partner; i.e., 2=>1, 1=>2, 3=>4, 4=>3, 12=>34, 34=>12
@@ -486,14 +489,10 @@ class MainApp(HasTraits):
     def _bt_load_background_changed(self):
         filename = get_file_from_dialog()
         if filename is not None:
-            if self.background_file in self.datasets:
-                self.datasets.remove(self.background_file)
             self.background_fit = None
-            self._add_xye_dataset(filename)
-            self.file_paths.append(filename)
-            self.background_file = self.datasets[-1]    # reference to most recently added
+            self.background_file = self._add_xye_dataset(filename, container=False)
             self.background_file.metadata['ui'].name = self.background_file.name + ' (background)'
-            self._plot_processed_datasets()
+            self._plot_datasets(self.datasets)
 
     def _bt_fit_changed(self):
 #        fitter = CurveFitter(curve_type=self.curve_type, deg=self.curve_order)
@@ -511,14 +510,13 @@ class MainApp(HasTraits):
 
     def _bt_save_background_changed(self):
         wildcard = 'All files (*.*)|*.*'
-        default_filename = 'prefix_'
-        dlg = FileDialog(title='Save results', action='save as',
-                         default_filename=default_filename, wildcard=wildcard)
+        dlg = DirectoryDialog(title='Save results', default_path=self.most_recent_path)
         if dlg.open() == OK:
+            self.most_recent_path = dlg.path
             for dataset in self.processed_datasets:
-                filename = os.path.join(dlg.directory, dlg.filename + dataset.name)
+                filename = os.path.join(dlg.path, dataset.name)
                 dataset.save(filename)
-            open_file_dir_with_default_handler(dlg.path)
+            open_file_with_default_handler(dlg.path)
 
     def _get_partners(self):
         """
@@ -560,18 +558,21 @@ class MainApp(HasTraits):
         # self.file_paths is modified by _add_dataset_pair() so iterate over a copy of it.
         for filename in self.file_paths[:]:
             self._add_xye_dataset(filename)
-        self._plot_datasets()
+        self._plot_datasets(self.datasets)
         self.datasets.sort(key=lambda d: d.name)
         self._refresh_normalise_to_list()
 
     def _load_partners_changed(self):
         for filename in self.file_paths[:]:
             self._add_dataset_pair(filename)
-        self._plot_datasets()
+        self._plot_datasets(self.datasets)
         self.datasets.sort(key=lambda d: d.name)
 
-    def _plot_datasets(self, reset_view=True):
-        self.raw_data_plot.plot_datasets(self.datasets, scale=self.scale,
+    def _plot_datasets(self, datasets, reset_view=True):
+        datasets_to_plot = datasets[:]
+        if self.background_file is not None:
+            datasets_to_plot.append(self.background_file)
+        self.raw_data_plot.plot_datasets(datasets_to_plot, scale=self.scale,
                                          reset_view=reset_view)
         self._options_changed(self.options)
         self.container.request_redraw()
@@ -579,7 +580,7 @@ class MainApp(HasTraits):
     def _edit_datasets_changed(self):
         editor = DatasetEditor(datasets=self.datasets)
         editor.edit_traits()
-        self._plot_datasets(reset_view=False)
+        self._plot_datasets(self.datasets, reset_view=False)
 
     def _generate_plot_changed(self):
         if self.datasets:
@@ -593,18 +594,20 @@ class MainApp(HasTraits):
     def _reset_button_changed(self):
         self.raw_data_plot.reset_view()
 
-    def _add_xye_dataset(self, file_path):
+    def _add_xye_dataset(self, file_path, container=True):
         try:
             dataset = XYEDataset.from_file(file_path)
         except IOError:
             return
-        self.datasets.append(dataset)
+        if container:
+            self.datasets.append(dataset)
         create_datasetui(dataset)
+        return dataset
 
     def _bt_convertscale_abscissa_changed(self):
         editor = WavelengthEditor(datasets=self.datasets, filename_field=self.filename_field)
         editor.edit_traits()
-        self._plot_datasets(reset_view=False)
+        self._plot_datasets(self.datasets, reset_view=False)
 
 
 class HelpBox(HasTraits):
@@ -613,6 +616,7 @@ class HelpBox(HasTraits):
     traits_view = View(
         UItem('help_text', style='readonly', padding=15),
         title='Help',
+        kind='modal',
     )
 
     def __init__(self, *args, **kws):
