@@ -42,7 +42,7 @@ def create_datasetui(dataset):
     ui_w = WavelengthUI(name=dataset.name, dataset=dataset)
     dataset.metadata['ui_w'] = ui_w
     return (ui, ui_w)
-    return ui
+#    return ui
 
 class Global(HasTraits):
     """
@@ -496,6 +496,7 @@ class MainApp(HasTraits):
         if filename is not None:
             if self.background_file in self.datasets:
                 self.datasets.remove(self.background_file)
+                del self.background_file
             self.background_fit = None
             self._add_xye_dataset(filename)
             self.file_paths.append(filename)
