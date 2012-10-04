@@ -178,8 +178,10 @@ class StackedPlot(ChacoPlot):
 class Surface2DPlot(ChacoPlot):
     def _prepare_data(self, datasets):
         stack = stack_datasets(datasets)
-        x, y, z = bin_data(stack, 600)
-        xi, yi, zi = cubic_interpolate(x, y, z, 600, 600)
+        BINS = 2000
+        YBINS = 500
+        x, y, z = bin_data(stack, BINS)
+        xi, yi, zi = cubic_interpolate(x, y, z, BINS, YBINS)
         zi = np.clip(zi, 1, zi.max())
         return xi, yi, zi
 
