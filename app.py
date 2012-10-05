@@ -631,7 +631,7 @@ Esc = Reset zoom/pan
 Mousewheel = Zoom in/out
 
 Please send bug reports and suggestions to
-pd@synchrotron.org.au
+pdviper@synchrotron.org.au
 
 Software authors:
 Gary Ruben, Victorian eResearch Strategic Initiative (VeRSI), gruben@versi.edu.au

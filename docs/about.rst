@@ -5,7 +5,7 @@ About PDViPeR
 ***************
 
 Please send bug reports and suggestions to
-pd@synchrotron.org.au
+`pdviper _at_ synchrotron.org.au`
 
 | Software authors:
 | Gary Ruben `gruben _at_ versi.edu.au`, Victorian eResearch Strategic Initiative (`VeRSI <http://www.versi.edu.au>`_)
