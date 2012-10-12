@@ -114,5 +114,37 @@ class NormalisationTest(unittest.TestCase):
         self.assertTrue(np.allclose(result[:,1], data2[:,1]*DETECTOR_COUNTS)) # check y's
         self.assertTrue(np.allclose(result[:,2], data2[:,2]*np.sqrt(DETECTOR_COUNTS))) # check e's
 
+
+class FilenameDescriptorTest(unittest.TestCase):
+    # order = ['n','s','m','g','b']
+    strings = {
+        'foo_bar_p1_0000.xye'    : ['n',  'foo_bar_p1_n_0000.xye'],
+        'foo_0000.xye'           : ['ns', 'foo_ns_0000.xye'],
+        'foo_0000.xye'           : ['sn', 'foo_ns_0000.xye'],
+        'foo_0000.xye'           : ['nsm','foo_nsm_0000.xye'],
+        'foo_0000.xye'           : ['ng', 'foo_ng_0000.xye'],
+        'foo_0000.xye'           : ['b',  'foo_b_0000.xye'],
+        'foo_0000.xye'           : ['gb', 'foo_gb_0000.xye'],
+        'foo_0000.xye'           : ['nb', 'foo_nb_0000.xye'],
+        'foo_n_0000.xye'         : ['s',  'foo_ns_0000.xye'],
+        'foo_s_0000.xye'         : ['n',  'foo_ns_0000.xye'],
+        'foo_ns_0000.xye'        : ['m',  'foo_nsm_0000.xye'],
+        'foo_sn_0000.xye'        : ['g',  'foo_sn_g_0000.xye'],
+        'foo_s_0000.xye'         : ['b',  'foo_sb_0000.xye'],
+        'foo_g_0000.xye'         : ['n',  'foo_ng_0000.xye'],
+        'foo_0000.xye'           : ['s',  'foo_s_0000.xye'],
+        'foo_1234.xye'           : ['m',  'foo_m_1234.xye'],
+        'foo_p12_5678.xye'       : ['g',  'foo_p12_g_5678.xye'],
+        'foo_p1_9999.xye'        : ['b',  'foo_p1_b_9999.xye'],
+        'foo_0000.xy'            : ['n',  'foo_n_0000.xy'],
+        'foo_n_0000.xye'         : ['n',  'foo_nn_0000.xye'],
+        'foo.xye'                : ['n',  'foo_n.xye'],
+        }
+
+    def rename_filenames_test(self):
+        for name, v in self.strings.iteritems():
+            self.assertEqual(processing.insert_descriptor(name, v[0]), v[1])
+
+
 if __name__ == '__main__':
     nose.main()
