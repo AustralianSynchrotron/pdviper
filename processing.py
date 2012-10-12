@@ -1,6 +1,7 @@
 from os import path
 from copy import deepcopy
 import re
+from functools import cmp_to_key
 
 import numpy as np
 from numpy import array, linspace, meshgrid, exp
@@ -142,9 +143,7 @@ class DatasetProcessor(object):
                     # Normalise to selected file
                     nr_dataset = datasets_dict[self.normalisation_reference]
                 dataset1.data = normalise_dataset([nr_dataset, dataset1])
-                dataset1.name = re.sub('(_p[1-4]*)_',
-                                       r'\1_n_',
-                                       dataset1.name)
+                dataset1.name = insert_descriptor(dataset1.name, 'n')
                 return dataset1
             except:
                 pass
@@ -155,9 +154,7 @@ class DatasetProcessor(object):
         if self.regrid:
             dataset1 = dataset.copy()
             dataset1.data = regrid_data(dataset1.data)
-            dataset1.name = re.sub('(_p[1-4]*)(_(?:n?s?m?)|_)_?',
-                                   r'\1\2g_',
-                                   dataset1.name)
+            dataset1.name = insert_descriptor(dataset1.name, 'g')
             return dataset1
         return None
 
@@ -177,9 +174,7 @@ class DatasetProcessor(object):
         merged_data_filebase = dataset1.name.replace('_p12_', '_p1234_')\
                                        .replace('_p1_', '_p12_')\
                                        .replace('_p3_', '_p34_')
-        merged_data_filebase = re.sub('(_p[1-4]*)(_(?:n?)|_)_?',
-                                      r'\1\2{}_'.format(merge_label),
-                                      merged_data_filebase)
+        merged_data_filebase = insert_descriptor(merged_data_filebase, merge_label)
         merged_data_filename = path.join(current_directory, merged_data_filebase)
         merged_dataset = XYEDataset(merged_data, merged_data_filebase,
                                           merged_data_filename,
@@ -190,18 +185,52 @@ class DatasetProcessor(object):
     def splice_overlapping_datasets(self, datasets):
         dataset1, dataset2 = datasets
         merged_data = splice_overlapping_data(dataset1.data, dataset2.data)
-        merge_label = 's'
     
         # Create a new dataset to store the merged data in.
         current_directory = path.abspath(dataset1.source)
         merged_data_filebase = re.sub('(_p[1-4]*_)',
-                                      r'_p1234_'.format(merge_label),
+                                      r'_p1234_',
                                       dataset1.name)
+        merged_data_filebase = insert_descriptor(merged_data_filebase, 's')
         merged_data_filename = path.join(current_directory, merged_data_filebase)
         merged_dataset = XYEDataset(merged_data, merged_data_filebase,
                                           merged_data_filename,
                                           deepcopy(dataset1.metadata))
         return [merged_dataset]
+
+
+def insert_descriptor(filename, insertion):
+    '''
+    Makes a new filename based on the existing one.
+    A filename is of the form
+    foo_[nnnn].xye, foo_[nnnn].xy, foo_[descriptor]_[nnnn].xy, or foo_[descriptor]_[nnnn].xye where
+    [nnnn] is a 4-digit sequence id, and
+    [descriptor] is a code string that describes the processing that has been performed, where the code
+    may only contain characters from the ordered list ['n','s','m','g','b'] which, if included, will be
+    in the order shown.
+    The insertion string may be a character or character combination from the list, which is inserted
+    into the descriptor.
+    For filenames without a descriptor, one is created.
+    For filenames of form foo.ext returns foo_[descriptor].ext
+    '''
+    parts = filename.split('_')
+    if len(parts) == 1:
+        # filename of form foo.ext - return foo_[descriptor].ext
+        fname, ext = parts[0].split('.')
+        return '{}_{}.{}'.format(fname, insertion, ext)
+    regex = r'^(n?s?m?g?b?)$'
+    match = re.match(regex, parts[-2])      # check if 2nd last group is a descriptor
+    if match is not None:
+        # descriptor found, so insert the new insertion at the appropriate location
+        order = ['n','s','m','g','b']       # sort order for characters in descriptor group
+        # tuple(match_string) -> match_string -> match_string+insertion_string -> sorted string based on order
+        descriptor = match.groups()[0]
+        new_descriptor = ''.join(sorted(list(descriptor + insertion),
+                                    key=cmp_to_key(lambda x,y: order.index(x)-order.index(y))))
+        return '_'.join(parts[:-2] + [new_descriptor] + parts[-1:])
+    else:
+        # no descriptor found, so insert a new one
+        return '_'.join(parts[:-1] + [insertion] + parts[-1:])
 
 
 def cubic_interpolate(x, y, z, x_size, y_size):

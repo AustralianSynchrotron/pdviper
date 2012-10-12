@@ -2,6 +2,7 @@ import numpy as np
 import scipy.ndimage as sn
 from numpy.polynomial.polynomial import polyfit, polyval
 from scipy import interpolate
+from processing import insert_descriptor
 import re
 
 
@@ -19,9 +20,7 @@ def subtract_background_from_all_datasets(datasets, background, background_fit):
             else:
                 dataset = subtract_background(d, background)
             processed_datasets.append(dataset)
-            dataset.name = re.sub('(_p[1-4]*)(_(?:n?s?m?g?)|_)_?',
-                                   r'\1\2b_',
-                                   dataset.name)
+            dataset.name = insert_descriptor(dataset.name, 'b')
             dataset.metadata['ui'].name = dataset.name + ' (processed)'
             dataset.metadata['ui'].color = None
     return processed_datasets
