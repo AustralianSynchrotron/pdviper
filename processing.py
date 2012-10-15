@@ -45,11 +45,11 @@ about 0.00375deg, except at gaps where the spacing is about 0.5 deg.
 Step 3.
 "Normalise data."
 The scaler1.S8 value in the .parab file contains the incoming beam intensity.
-The intensity values of dataset_1.._n-1 are rescaled according to the incoming beam intensity for that data series to an
-incoming beam intensity equal to that for dataset_0. i.e. all values in dataset n are multiplied by
-.parab_0_scaler1.S8/.parab_n_scaler1.S8.
+The intensity values of dataset_1.._n-1 are rescaled according to the incoming beam intensity for that data series to the
+incoming beam intensity of a selected reference dataset_r. i.e. all values in dataset n are multiplied by
+.parab_r_scaler1.S8/.parab_n_scaler1.S8.
 Problems in capturing data can result in datasets containing all zeros. This condition should be identified and an
-error message displayed to the uesr.
+error message displayed to the user.
 
 Step 4.
 "Merge data" or "Splice data".
@@ -276,21 +276,18 @@ def stack_datasets(datasets):
 
 def interpolate_datasets(datasets, points):
     """
-    1D interplotation using scipy's wrapper of fitpack http://www.netlib.org/dierckx/
-    According to the IDL reference guide, IDL's SPLINE function performs cubic spline interpolation.
-    The call signature is Result = SPLINE( X, Y, T [, Sigma] [, /DOUBLE] )
-    A typical call to the SPLINE routine in the IDL version of DataPro is
-    spline(splicedata(0,*), splicedata(1,*), step, 15, /double)
-    showing that Sigma=15
-    From the IDL docs, "Sigma is the amount of 'tension' that is applied to the curve.
-    The default value is 1.0. If sigma is close to 0, (e.g., .01), then effectively there is a
-    cubic spline fit. If sigma is large, (e.g., greater than 10), then the fit will be like a
-    polynomial interpolation."
-    Here we replace the IDL method by scipy's closest equivalent:
-    http://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.griddata.html#scipy.interpolate.griddata
+    Regrid data onto a regular grid of n=points x-values.
     """
     x = datasets[:,:,0]
     y = datasets[:,:,1]
+    flipped = False
+    if x[0,0] > x[0,-1]:
+        # x's are in descending order, spline interplotaion assumes ascending order,
+        # so flip all data along x and unflip it after interpolating
+        x = x[:,::-1]
+        y = y[:,::-1]
+        flipped = True
+
     x_min = x.min(axis=1).max()
     x_max = x.max(axis=1).min()
     x_index = np.linspace(x_min, x_max, points)
@@ -302,6 +299,9 @@ def interpolate_datasets(datasets, points):
             y_data = array([y_new])
         else:
             y_data = np.vstack([y_data , y_new])
+    if flipped:
+        x_index = x_index[::-1]
+        y_data = y_data[:,::-1]
     return (x_index, y_data)
 
 

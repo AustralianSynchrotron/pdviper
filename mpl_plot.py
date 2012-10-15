@@ -143,7 +143,12 @@ class MplPlot(BasePlot, HasTraitsGroup):
         z = stack[:,:,1]
         y = array([ [i]*z.shape[1] for i in range(1, len(datasets) + 1) ])
 
-        self.x_upper = x[0,-1]
+        if x[0,0] < x[0,-1]:
+            self.x_lower = x[0,0]
+            self.x_upper = x[0,-1]
+        else:
+            self.x_lower = x[0,-1]
+            self.x_upper = x[0,0]
         self.z_upper = z.max()
         return x, y, z
 
