@@ -13,7 +13,8 @@ from chaco.function_image_data import FunctionImageData
 
 from chaco_output import PlotOutput
 from tools import ClickUndoZoomTool, PanToolWithHistory
-from processing import stack_datasets, interpolate_datasets, bin_data, cubic_interpolate
+from processing import stack_datasets, interpolate_datasets, rebin_preserving_peaks, \
+    bin_data, cubic_interpolate
 from base_plot import BasePlot
 from labels import get_value_scale_label
 import settings
@@ -356,16 +357,27 @@ class Surface2DPlot(ChacoPlot):
         stack = self.dataset_stack
         xs = stack[:,:,0]
         stack = stack[(xs>=xlow) & (xs<=xhigh)][np.newaxis].reshape(xs.shape[0],-1,3)
-
-#        BINS = min(1000, stack.shape[1])
-#        YBINS = stack.shape[0]*10
-        BINS = min(1000, stack.shape[1]*4)
+#        scale = float(xs.shape[0] * xs.shape[1]) / (BINS * YBINS)
         YBINS = stack.shape[0]*10
-        scale = float(xs.shape[0] * xs.shape[1]) / (BINS * YBINS)
+        '''
+        BINS = min(1000, stack.shape[1])
+        regridded_stack = congrid(stack, (YBINS, BINS, 3), method='neighbour', minusone=True)
+        zi = regridded_stack[:,:,1]
+        '''
+#        '''
+        BINS = min(1000, stack.shape[1]*4)
         regridded_stack = congrid(stack, (YBINS, BINS, 3), method='spline', minusone=True)
-        zi = regridded_stack[:,:,1] * scale
-#        regridded_stack = congrid(stack, (YBINS, BINS, 3), method='neighbour', minusone=True)
-#        zi = regridded_stack[:,:,1]
+        zi = regridded_stack[:,:,1]
+#        '''
+        '''
+        BINS = min(1000, stack.shape[1]*4)
+        if BINS >= 1000:
+            zi, truncate_at, BINS = rebin_preserving_peaks(stack[:,:,1], BINS)
+        else:
+            regridded_stack = congrid(stack, (YBINS, BINS, 3), method='spline', minusone=True)
+            zi = regridded_stack[:,:,1]
+        '''
+
         zi = np.clip(zi, 1, zi.max())
         self.zi = zi
         return zi

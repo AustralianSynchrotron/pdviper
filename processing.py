@@ -616,3 +616,31 @@ def fit_modeled_peak_to_data(data_x, data_y, p0, plot=False):
         plt.show()
 
     return (p0[1]+x_offset[0] if p0[0] > p0[3] else p0[4]+x_offset[0], success==1)
+
+
+def rebin_preserving_peaks(a, samples):
+    """
+    A min- and max-preserving rebinning function, used by the plotting routines to
+    represent peaks faithfully in visualisations.
+    Reduces the data along the "long" axis to a length equal to twice the closest
+    multiple of the number of samples. The reduced data contains alternating values
+    representing the minimum and maximum value in each interval over which the 
+    data was measured.
+    <a> is a 2D array with each row containing a data series.
+    <samples> is the desired final number of each of the min and max values in each
+    row of the returned 2D array.
+    i.e. each row will contain 2x samples values.
+    Also returns <truncate_at> which is where the array must be truncated so it
+    divides into the desired number of intervals, also allowing for an even number of
+    intervals.
+    """
+    bin_length = a.shape[1]/samples
+    truncate_at = a.shape[1] - a.shape[1]%bin_length
+    bins = truncate_at/bin_length
+    a = a.copy()[:,:truncate_at]                       # truncate columns if necessary
+#    a.shape = (a.shape[0], -1, truncate_at/bins)
+    a.shape = (a.shape[0], bins, -1)
+    mins = a.min(axis=2)
+    maxs = a.max(axis=2)
+    a = np.dstack((mins,maxs)).reshape(a.shape[0],-1)
+    return a, truncate_at, bins

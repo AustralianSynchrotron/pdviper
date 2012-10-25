@@ -13,7 +13,7 @@ from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.collections import LineCollection
 
-from processing import stack_datasets
+from processing import stack_datasets, rebin_preserving_peaks
 from base_plot import BasePlot
 from labels import get_value_scale_label
 
@@ -152,30 +152,6 @@ class MplPlot(BasePlot, HasTraitsGroup):
         self.z_upper = z.max()
         return x, y, z
 
-    def _shorten_data(self, a, samples):
-        """
-        Reduces the data along the "long" axis to a length equal to twice the closest
-        multiple of the number of samples. The reduced data contains alternating values
-        representing the minimum and maximum value in each interval over which the 
-        data was measured.
-        <a> is a 2D array with each row containing a data series.
-        <samples> is the desired final number of each of the min and max values in each
-        row of the returned 2D array.
-        i.e. each row will contain 2x samples values.
-        Also returns <truncate_at> which is where the array must be truncated so it
-        divides into the desired number of intervals, also allowing for an even number of
-        intervals.
-        """
-        truncate_at = a.shape[1]-a.shape[1]%samples
-        if (truncate_at/samples)&1==1:
-            # will result in an odd number of intervals, make it even because we want to
-            # space out the x samples equally.
-            truncate_at = a.shape[1]-a.shape[1]%(2*samples)
-        a = a.copy()[:,:truncate_at]                       # truncate columns if necessary
-        a.shape = (a.shape[0], -1, truncate_at/samples)
-        mins = a.min(axis=2)
-        maxs = a.max(axis=2)
-        return np.dstack((mins,maxs)).reshape(a.shape[0],-1), truncate_at
 
     def _plot(self, x, y, z, scale='linear'):
         self.x, self.y, self.z = x, y, z
@@ -198,9 +174,9 @@ class MplPlot(BasePlot, HasTraitsGroup):
         if self.quality != MAX_QUALITY:
             # map quality from 1->5 to 0.05->0.5 to approx. no. of samples
             samples = int(z.shape[1] * ((self.quality-1)*(0.5-0.05)/(5-1)+0.05))
-            z, truncate_at = self._shorten_data(z, samples)
-            x = x[:,:truncate_at:truncate_at/samples/2]
-            y = y[:,:truncate_at:truncate_at/samples/2]
+            z, truncate_at, bins = rebin_preserving_peaks(z, samples/2)
+            x = np.linspace(x[0,0], x[0,truncate_at-1], bins*2)
+            x = np.tile(x, (y.shape[0], 1))
 
         # Set values to inf to avoid rendering by matplotlib
         x[(x<self.x_lower) | (x>self.x_upper)] = np.inf
