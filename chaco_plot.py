@@ -3,15 +3,18 @@ import numpy as np
 from numpy import array
 
 from enable.api import Component, ComponentEditor
-from traits.api import Instance, Range, Bool, on_trait_change
+from traits.api import Instance, Range, Bool, Int, on_trait_change
 from traitsui.api import Group, UItem, VGroup, Item, HGroup
-from chaco.api import Plot, ArrayPlotData, jet, ColorBar, LinearMapper, HPlotContainer, PlotAxis, PlotLabel, OverlayPlotContainer, LinePlot
+from chaco.api import Plot, ArrayPlotData, jet, ColorBar, LinearMapper, HPlotContainer, \
+    PlotLabel, OverlayPlotContainer, LinePlot
 from chaco.tools.api import TraitsTool
 from chaco.default_colormaps import fix
+from chaco.function_image_data import FunctionImageData
 
 from chaco_output import PlotOutput
 from tools import ClickUndoZoomTool, PanToolWithHistory
-from processing import stack_datasets, interpolate_datasets, bin_data, cubic_interpolate
+from processing import stack_datasets, interpolate_datasets, rebin_preserving_peaks, \
+    bin_data, cubic_interpolate
 from base_plot import BasePlot
 from labels import get_value_scale_label
 import settings
@@ -105,13 +108,15 @@ class StackedPlot(ChacoPlot):
         self.container.request_redraw()
 
     def _prepare_data(self, datasets):
-        interpolate = True
+#        interpolate = True
+        interpolate = False
         stack = stack_datasets(datasets)
         if interpolate:
             (x, z) = interpolate_datasets(stack, points=4800)
             x = array([x] * len(datasets))
         else:
-            x, z = map(np.transpose, np.transpose(stack))
+            x = stack[:,:,0]
+            z = stack[:,:,2]
         return x, None, z
 
     def _plot(self, x, y, z, scale):
@@ -175,15 +180,219 @@ class StackedPlot(ChacoPlot):
         self.zoom_tool.revert_history_all()
 
 
+import scipy.interpolate
+import scipy.ndimage
+
+def congrid(a, newdims, method='linear', centre=False, minusone=False):
+    '''Arbitrary resampling of source array to new dimension sizes.
+    Currently only supports maintaining the same number of dimensions.
+    To use 1-D arrays, first promote them to shape (x,1).
+    
+    Uses the same parameters and creates the same co-ordinate lookup points
+    as IDL''s congrid routine, which apparently originally came from a VAX/VMS
+    routine of the same name.
+
+    method:
+    neighbour - closest value from original data
+    nearest and linear - uses n x 1-D interpolations using
+                         scipy.interpolate.interp1d
+    (see Numerical Recipes for validity of use of n 1-D interpolations)
+    spline - uses ndimage.map_coordinates
+
+    centre:
+    True - interpolation points are at the centres of the bins
+    False - points are at the front edge of the bin
+
+    minusone:
+    For example- inarray.shape = (i,j) & new dimensions = (x,y)
+    False - inarray is resampled by factors of (i/x) * (j/y)
+    True - inarray is resampled by(i-1)/(x-1) * (j-1)/(y-1)
+    This prevents extrapolation one element beyond bounds of input array.
+    This routine from http://www.scipy.org/Cookbook/Rebinning
+    '''
+    if not a.dtype in [np.float64, np.float32]:
+        a = np.cast[float](a)
+
+    m1 = np.cast[int](minusone)
+    ofs = np.cast[int](centre) * 0.5
+    old = np.array( a.shape )
+    ndims = len( a.shape )
+    if len( newdims ) != ndims:
+        print "[congrid] dimensions error. " \
+              "This routine currently only support " \
+              "rebinning to the same number of dimensions."
+        return None
+    newdims = np.asarray( newdims, dtype=float )
+    dimlist = []
+
+    if method == 'neighbour':
+        for i in range( ndims ):
+            base = np.indices(newdims)[i]
+            dimlist.append( (old[i] - m1) / (newdims[i] - m1) \
+                            * (base + ofs) - ofs )
+        cd = np.array( dimlist ).round().astype(int)
+        newa = a[list( cd )]
+        return newa
+
+    elif method in ['nearest','linear']:
+        # calculate new dims
+        for i in range( ndims ):
+            base = np.arange( newdims[i] )
+            dimlist.append( (old[i] - m1) / (newdims[i] - m1) \
+                            * (base + ofs) - ofs )
+        # specify old dims
+        olddims = [np.arange(i, dtype = np.float) for i in list( a.shape )]
+
+        # first interpolation - for ndims = any
+        mint = scipy.interpolate.interp1d( olddims[-1], a, kind=method )
+        newa = mint( dimlist[-1] )
+
+        trorder = [ndims - 1] + range( ndims - 1 )
+        for i in range( ndims - 2, -1, -1 ):
+            newa = newa.transpose( trorder )
+
+            mint = scipy.interpolate.interp1d( olddims[i], newa, kind=method )
+            newa = mint( dimlist[i] )
+
+        if ndims > 1:
+            # need one more transpose to return to original dimensions
+            newa = newa.transpose( trorder )
+
+        return newa
+    elif method in ['spline']:
+        oslices = [ slice(0,j) for j in old ]
+        oldcoords = np.ogrid[oslices]
+        nslices = [ slice(0,j) for j in list(newdims) ]
+        newcoords = np.mgrid[nslices]
+
+        newcoords_dims = range(np.rank(newcoords))
+        #make first index last
+        newcoords_dims.append(newcoords_dims.pop(0))
+        newcoords_tr = newcoords.transpose(newcoords_dims)
+        # makes a view that affects newcoords
+
+        newcoords_tr += ofs
+
+        deltas = (np.asarray(old) - m1) / (newdims - m1)
+        newcoords_tr *= deltas
+
+        newcoords_tr -= ofs
+
+        newa = scipy.ndimage.map_coordinates(a, newcoords)
+        return newa
+    else:
+        print "Congrid error: Unrecognized interpolation type.\n", \
+              "Currently only \'neighbour\', \'nearest\',\'linear\',", \
+              "and \'spline\' are supported."
+        return None
+
+
 class Surface2DPlot(ChacoPlot):
+    # The chaco window is updated based on the current zoom level as described here
+    # http://www.digipedia.pl/usenet/thread/15882/127/
+    # and here:
+    # http://blog.powersoffour.org/2d-data-visualization-of-amr-with-matplotlib
+    # and here:
+    # http://svn.enzotools.org/yt/trunk/yt/extensions/image_panner/pan_and_scan_widget.py
+
+    twod_plot = Instance(Component)
+    img_plot = Instance(Component)
+    sidelength = Int(1000)
+
+    '''
+    # timeit(meshgrid(arange(10),arange(10)))
+    # 100000 loops, best of 3: 8.4 us per loop
+    # timeit(mgrid[0:10,0:10])
+    # 10000 loops, best of 3: 41.2 us per loop
     def _prepare_data(self, datasets):
+        from scipy.ndimage.interpolation import map_coordinates
         stack = stack_datasets(datasets)
-        BINS = 2000
-        YBINS = 500
-        x, y, z = bin_data(stack, BINS)
-        xi, yi, zi = cubic_interpolate(x, y, z, BINS, YBINS)
+        YBINS = 50
+        xlen = len(stack[0])
+        x, y, z = bin_data(stack, xlen)
+        grid_x, grid_y = np.meshgrid(x[0], np.linspace(1, y.max(), YBINS))
+        xr, yr = np.meshgrid(x[0], np.linspace(1, y.max(), y.max()))
+        zi = map_coordinates(z, (yr, xr))
         zi = np.clip(zi, 1, zi.max())
+        return grid_x, grid_y, zi
+    '''
+    '''
+    def _prepare_data(self, datasets):
+        from scipy.interpolate import griddata
+
+        stack = stack_datasets(datasets)
+        xs = stack[:,:,0]
+        ys = np.empty_like(xs)
+        ys[:] = np.arange(1,ys.shape[0]+1)[np.newaxis].T
+        zs = stack[:,:,1]
+        grid_y, grid_x = np.mgrid[1:ys.max():ys.shape[0]*10*1j, xs.min():xs.max():xs.shape[1]*1j]
+        zi = griddata((xs.ravel(), ys.ravel()), zs.ravel(), (grid_x, grid_y), method='cubic')
+        zi = np.clip(zi, 1, zi.max())
+        return grid_x, grid_y, zi
+    '''
+
+    def _prepare_data(self, datasets):
+        '''
+        This is called as the 2d chaco plot window is being set up. The return values
+        are not used for plotting but are used for getting the tick marker scales and
+        colorbar scale.
+        I bin it down to a small arbitrary number of bins to keep things fast.
+        '''
+        self.update_content = True
+        stack = stack_datasets(datasets)
+        self.dataset_stack = stack 
+        BINS = 4
+        xi, yi, zi = bin_data(stack, BINS)
         return xi, yi, zi
+
+    def _prepare_data_for_window(self, xlow, xhigh, ylow, yhigh):
+        '''
+        This is called every time the chaco window is rendered and it dynamically
+        computes and returns the data corresponding to the window limits. This allows
+        rendering to stay relatively fast since data is binned down to a resolution
+        roughly matching what the window can usefully display. 
+        '''
+        if not self.update_content:
+            return self.zi
+        stack = self.dataset_stack
+        xs = stack[:,:,0]
+        stack = stack[(xs>=xlow) & (xs<=xhigh)][np.newaxis].reshape(xs.shape[0],-1,3)
+#        scale = float(xs.shape[0] * xs.shape[1]) / (BINS * YBINS)
+        YBINS = stack.shape[0]*10
+        '''
+        BINS = min(1000, stack.shape[1])
+        regridded_stack = congrid(stack, (YBINS, BINS, 3), method='neighbour', minusone=True)
+        zi = regridded_stack[:,:,1]
+        '''
+#        '''
+        BINS = min(1000, stack.shape[1]*4)
+        regridded_stack = congrid(stack, (YBINS, BINS, 3), method='spline', minusone=True)
+        zi = regridded_stack[:,:,1]
+#        '''
+        '''
+        BINS = min(1000, stack.shape[1]*4)
+        if BINS >= 1000:
+            zi, truncate_at, BINS = rebin_preserving_peaks(stack[:,:,1], BINS)
+        else:
+            regridded_stack = congrid(stack, (YBINS, BINS, 3), method='spline', minusone=True)
+            zi = regridded_stack[:,:,1]
+        '''
+
+        zi = np.clip(zi, 1, zi.max())
+        self.zi = zi
+        return zi
+
+    @on_trait_change('twod_plot.range2d.updated')
+    def _update_ranges(self):
+        self.update_content = not self.update_content
+        if self.img_plot is not None:
+            low_xy = self.twod_plot.range2d.low
+            high_xy = self.twod_plot.range2d.high
+            self.img_plot.index.set_data(
+                np.linspace(low_xy[0], high_xy[0], self.sidelength),
+                np.linspace(low_xy[1], high_xy[1], self.sidelength),
+                ('ascending', 'ascending'),
+            )
 
     def _plot(self, x, y, z, scale):
         pd = ArrayPlotData()
@@ -192,12 +401,16 @@ class Surface2DPlot(ChacoPlot):
         plot.bgcolor = 'white'
         cmap = fix(jet, (0, z.max()))
         origin = 'bottom left' # origin = 'top left' # to flip y-axis
-        plot.img_plot("imagedata", name="surface2d",
+
+        fid = FunctionImageData(func=self._prepare_data_for_window, data_range=plot.range2d)
+        pd.set_data("imagedata", fid)
+
+        self.img_plot = plot.img_plot("imagedata", name="surface2d",
                       xbounds=(np.min(x), np.max(x)),
                       ybounds=(1.0, y[-1,-1]),
                       colormap=cmap, hide_grids=True, interpolation='nearest',
                       origin=origin,
-                      )
+                      )[0]
         plot.default_origin = origin
         plot.x_axis = MyPlotAxis(component=plot, orientation='bottom')
         plot.y_axis = MyPlotAxis(component=plot, orientation='left')
@@ -213,7 +426,9 @@ class Surface2DPlot(ChacoPlot):
         actual_plot = plot.plots["surface2d"][0]
 
         self.plot_zoom_tool = ClickUndoZoomTool(
-            plot, tool_mode="box", always_on=True, pointer="cross",
+            plot, always_on=True, pointer="cross",
+            tool_mode="range",
+            axis="index",
             drag_button=settings.zoom_button,
             undo_button=settings.undo_button,
             x_min_zoom_factor=-np.inf, y_min_zoom_factor=-np.inf,
@@ -263,9 +478,10 @@ class Surface2DPlot(ChacoPlot):
         container = HPlotContainer(use_backbuffer=True)
         container.add(plot)
         container.add(colorbar)
+        self.twod_plot = plot
         return container
 
     def _reset_view(self):
         self.plot_zoom_tool.revert_history_all()
         self.colorbar_zoom_tool.revert_history_all()
-
+        self.update_content = True
