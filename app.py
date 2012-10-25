@@ -6,7 +6,7 @@ from traits.api import List, Str, Float, HasTraits, Instance, Button, Enum, Bool
                         DelegatesTo, Range
 from traitsui.api import Item, UItem, HGroup, VGroup, View, spring, Label, HSplit, Group, \
                         CheckListEditor, Tabbed, DefaultOverride, EnumEditor, HTMLEditor
-from pyface.api import DirectoryDialog, OK
+from pyface.api import DirectoryDialog, OK, ImageResource
 from chaco.api import OverlayPlotContainer
 
 from xye import XYEDataset
@@ -260,7 +260,7 @@ class MainApp(HasTraits):
                 show_border=False,
                 ),
             ),
-            resizable=True, title=title, width=size[0], height=size[1]
+            resizable=True, title=title, width=size[0], height=size[1], icon=ImageResource('pdviper_icon.ico')
         )
 
     #-------------------------------------------------------------------------------------
