@@ -356,31 +356,22 @@ class Surface2DPlot(ChacoPlot):
             return self.zi
         stack = self.dataset_stack
         xs = stack[:,:,0]
-        stack = stack[(xs>=xlow) & (xs<=xhigh)][np.newaxis].reshape(xs.shape[0],-1,3)
-#        scale = float(xs.shape[0] * xs.shape[1]) / (BINS * YBINS)
-        YBINS = stack.shape[0]*10
+        zs = stack[:,:,1]
+        mask = (xs[0]>=xlow) & (xs[0]<=xhigh)
+        zs = zs[:,mask].reshape(zs.shape[0],-1)
+        YBINS = zs.shape[0]*10
+
+        BINS = min(1000, zs.shape[1])
+        zi = congrid(zs, (YBINS, BINS), method='neighbour', minusone=True)
         '''
-        BINS = min(1000, stack.shape[1])
-        regridded_stack = congrid(stack, (YBINS, BINS, 3), method='neighbour', minusone=True)
-        zi = regridded_stack[:,:,1]
-        '''
-#        '''
-        BINS = min(1000, stack.shape[1]*4)
-        regridded_stack = congrid(stack, (YBINS, BINS, 3), method='spline', minusone=True)
-        zi = regridded_stack[:,:,1]
-#        '''
-        '''
-        BINS = min(1000, stack.shape[1]*4)
-        if BINS >= 1000:
-            zi, truncate_at, BINS = rebin_preserving_peaks(stack[:,:,1], BINS)
-        else:
-            regridded_stack = congrid(stack, (YBINS, BINS, 3), method='spline', minusone=True)
-            zi = regridded_stack[:,:,1]
+        BINS = min(1000, zs.shape[1]*4)
+        zi = congrid(zs, (YBINS, BINS), method='spline', minusone=True)
         '''
 
         zi = np.clip(zi, 1, zi.max())
         self.zi = zi
         return zi
+
 
     @on_trait_change('twod_plot.range2d.updated')
     def _update_ranges(self):
