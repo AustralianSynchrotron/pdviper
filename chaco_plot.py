@@ -14,7 +14,7 @@ from chaco.function_image_data import FunctionImageData
 from chaco_output import PlotOutput
 from tools import ClickUndoZoomTool, PanToolWithHistory
 from processing import stack_datasets, interpolate_datasets, rebin_preserving_peaks, \
-    bin_data, cubic_interpolate
+    bin_data, cubic_interpolate, regrid_data
 from base_plot import BasePlot
 from labels import get_value_scale_label
 import settings
@@ -354,13 +354,71 @@ class Surface2DPlot(ChacoPlot):
         '''
         if not self.update_content:
             return self.zi
-        stack = self.dataset_stack
+        stack = self.dataset_stack.copy()
+        if ylow < 1 or ylow >= yhigh:
+            ylow = 1
+        if yhigh > stack.shape[0] or yhigh <= ylow:
+            yhigh = stack.shape[0]
+        stack = stack[int(np.round(ylow-1)):int(np.round(yhigh))]
         xs = stack[:,:,0]
         zs = stack[:,:,1]
         mask = (xs[0]>=xlow) & (xs[0]<=xhigh)
         zs = zs[:,mask].reshape(zs.shape[0],-1)
         YBINS = zs.shape[0]*10
 
+        BINS = min(1000, zs.shape[1])
+        zi = congrid(zs, (YBINS, BINS), method='neighbour', minusone=True)
+        '''
+        BINS = min(1000, zs.shape[1]*4)
+        zi = congrid(zs, (YBINS, BINS), method='spline', minusone=True)
+        '''
+
+        zi = np.clip(zi, 1, zi.max())
+        self.zi = zi
+        return zi
+
+
+    def _prepare_data_for_window_with_regridding(self, xlow, xhigh, ylow, yhigh):
+        '''
+        This is called every time the chaco window is rendered and it dynamically
+        computes and returns the data corresponding to the window limits. This allows
+        rendering to stay relatively fast since data is binned down to a resolution
+        roughly matching what the window can usefully display. 
+        '''
+        if not self.update_content:
+            return self.zi
+        stack = self.dataset_stack.copy()
+        if ylow < 1 or ylow >= yhigh:
+            ylow = 1
+        if yhigh > stack.shape[0] or yhigh <= ylow:
+            yhigh = stack.shape[0]
+        stack = stack[int(np.round(ylow-1)):int(np.round(yhigh))]
+
+        # get a typical interval
+        interval = np.median(np.diff(stack[0,:10,0]))
+
+        # get a region a couple of samples bigger on each side of the window to allow for
+        # misalignment
+        xs = stack[:,:,0]
+        xlow_expanded = xs[0,0] - interval*2
+        xhigh_expanded = xs[0,-1] + interval*2
+        column_mask = (xs[0]>=xlow_expanded) & (xs[0]<=xhigh_expanded)
+        stack = stack[:,column_mask][np.newaxis].reshape(xs.shape[0],-1,3)
+
+        # regrid all rows - use an interval half that of the original interval to minimise interpolation errors
+        first_row = regrid_data(stack[0], start=xlow_expanded, end=xhigh_expanded, interval=interval/2)
+        new_stack = np.empty((xs.shape[0], first_row.shape[0], 3))
+        new_stack[0] = first_row
+        for i, stack_row in enumerate(stack[1:]):
+            new_stack[i+1] = regrid_data(stack_row, start=xlow_expanded, end=xhigh_expanded, interval=interval/2)
+
+        # new_stack is the regridded version so window it properly
+        xs = new_stack[:,:,0]
+        zs = new_stack[:,:,1]
+        mask = (xs[0]>=xlow) & (xs[0]<=xhigh)
+        zs = zs[:,mask].reshape(zs.shape[0],-1)
+
+        YBINS = zs.shape[0]*10
         BINS = min(1000, zs.shape[1])
         zi = congrid(zs, (YBINS, BINS), method='neighbour', minusone=True)
         '''
@@ -393,7 +451,8 @@ class Surface2DPlot(ChacoPlot):
         cmap = fix(jet, (0, z.max()))
         origin = 'bottom left' # origin = 'top left' # to flip y-axis
 
-        fid = FunctionImageData(func=self._prepare_data_for_window, data_range=plot.range2d)
+#        fid = FunctionImageData(func=self._prepare_data_for_window, data_range=plot.range2d)
+        fid = FunctionImageData(func=self._prepare_data_for_window_with_regridding, data_range=plot.range2d)
         pd.set_data("imagedata", fid)
 
         self.img_plot = plot.img_plot("imagedata", name="surface2d",
