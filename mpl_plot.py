@@ -156,6 +156,7 @@ class MplPlot(BasePlot, HasTraitsGroup):
     def _plot(self, x, y, z, scale='linear'):
         self.x, self.y, self.z = x, y, z
         x, y, z = x.copy(), y.copy(), z.copy()
+
         if self.flip_order:
             z = z[::-1]
         self.scale = scale
@@ -175,12 +176,17 @@ class MplPlot(BasePlot, HasTraitsGroup):
             # map quality from 1->5 to 0.05->0.5 to approx. no. of samples
             samples = int(z.shape[1] * ((self.quality-1)*(0.5-0.05)/(5-1)+0.05))
             z, truncate_at, bins = rebin_preserving_peaks(z, samples/2)
-            x = np.linspace(x[0,0], x[0,truncate_at-1], bins*2)
-            x = np.tile(x, (y.shape[0], 1))
+            # Take the x's from the original x's to maintain visual x-spacing
+            # We need to calculate the x's for the rebinned data
+            x0_row = x[0,:truncate_at]
+            old_xs = np.linspace(x0_row.min(), x0_row.max(), bins*2)
+            new_xs = np.interp(old_xs, np.linspace(x0_row.min(), x0_row.max(), len(x0_row)), x0_row)
+            x = np.tile(new_xs, (y.shape[0], 1))
 
         # Set values to inf to avoid rendering by matplotlib
         x[(x<self.x_lower) | (x>self.x_upper)] = np.inf
         z[(z<self.z_lower) | (z>self.z_upper)] = np.inf
+
         # separate series with open lines
         ys = y[:,0]
         points = []

@@ -415,12 +415,21 @@ def regrid_data(data, start=None, end=None, interval=0.00375):
     # e_interpolator = interpolate.interp1d(data[:,0], data[:,2], kind='nearest')           # probably unacceptable?
     e_interpolator = lambda xs: np.interp(xs, data[:,0], data[:,2])                         # linear interpolation
 
+    flipped = False
+    if data[0,0] > data[-1,0]:
+        # x's are in descending order, spline interplotaion assumes ascending order,
+        # so flip all data along x and unflip it after interpolating
+        data = data[::-1]
+        flipped = True
     if start==None:
         start = data[0,0]
     if end==None:
         end = data[-1,0]
     xs = np.arange(start, end+interval/100.0, interval)
-    return np.c_[xs, y_interpolator(xs), e_interpolator(xs)]
+    new_data = np.c_[xs, y_interpolator(xs), e_interpolator(xs)]
+    if flipped:
+        new_data = new_data[::-1]
+    return new_data
 
 
 def normalise_dataset(dataset_pair):
