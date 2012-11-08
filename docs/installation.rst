@@ -78,7 +78,9 @@ Example 4. Linux installation using Enthought Python Distribution (recommended)
    At the ``$`` prompt type ``python -c "print 'hello world'"`` noting single and double quotes.
    Verify that ``hello world`` is displayed.
 #. Visit the `PDViPeR download page <http://www.synchrotron.org.au/pdviper>`_ and follow the instructions to obtain the package.
-#. The main application file is ``app.py`` in the directory into which PDViPeR was unpacked. Run PDViPeR by running ``./start_pdviper.sh`` or ``./app.py``.
+#. The main application file is ``app.py`` in the directory into which PDViPeR was unpacked.
+#. PDViPeR can be started by running ``./start_pdviper.sh`` or ``./app.py``. To do this,
+   at the ``$`` prompt type ``chmod 777 start_pdviper.sh app.py`` followed by, for example, ``./start_pdviper.sh``
 
 Example 5. Linux installation using synaptic (experienced)
 ----------------------------------------------------------
@@ -93,7 +95,9 @@ This description is for Ubuntu Linux. yum packaged names in Fedora Linux flavour
    Verify that a string displays identifying a 2.7 branch version of Python.
 #. Using synaptic or ``apt-get install <package>`` install the following packages: ``python-numpy``, ``python-scipy``, ``python-matplotlib``, ``python-traits``, ``python-traitsui``, ``python-chaco``, ``python-pyface``, ``python-wxgtk2.8``
 #. Visit the `PDViPeR download page <http://www.synchrotron.org.au/pdviper>`_ and follow the instructions to obtain the package.
-#. The main application file is ``app.py`` in the directory into which PDViPeR was unpacked. Run PDViPeR by running ``./start_pdviper.sh`` or ``./app.py``.
+#. The main application file is ``app.py`` in the directory into which PDViPeR was unpacked.
+#. PDViPeR can be started by running ``./start_pdviper.sh`` or ``./app.py``. To do this,
+   at the ``$`` prompt type ``chmod 777 start_pdviper.sh app.py`` followed by, for example, ``./start_pdviper.sh``
 
 Example 6. Mac OSX installation (recommended)
 ---------------------------------------------
