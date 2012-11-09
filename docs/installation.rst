@@ -18,10 +18,10 @@ PDViPeR depends on the following Python modules being installed in the Python en
 * `numpy <http://numpy.scipy.org/>`_
 * `scipy <http://scipy.org/>`_
 * `matplotlib <http://matplotlib.org/>`_
-* `traits <http://code.enthought.com/projects/traits/>`_
-* `traitsui <http://code.enthought.com/projects/traits_ui/>`_
-* `chaco <http://code.enthought.com/projects/chaco/>`_
-* `pyface <http://code.enthought.com/projects/traits_gui/>`_
+* `traits <http://code.enthought.com/projects/traits/>`_ [part of the Enthought Tool Suite (ETS) package]
+* `traitsui <http://code.enthought.com/projects/traits_ui/>`_ (part of ETS)
+* `chaco <http://code.enthought.com/projects/chaco/>`_ (part of ETS)
+* `pyface <http://code.enthought.com/projects/traits_gui/>`_ (part of ETS)
 * `wxPython <http://wxpython.org/>`_
 
 Those wishing to build the documentation from source will also need `Sphinx <http://sphinx.pocoo.org/>`_.
@@ -32,42 +32,31 @@ For those familiar with installing Python packages, the dependencies can be foun
 Example 1. Windows installation using Enthought Python Distribution (recommended)
 ---------------------------------------------------------------------------------
 
-Note: untested.
-
-#. Visit the `Enthought website <http://www.enthought.com/products/epd.php>`_, choose a distribution, download and install it. Note, `EPDFree <http://www.enthought.com/products/epd_free.php>`_ satisfies the dependencencies listed above.
+#. Visit the `Enthought website <http://www.enthought.com/products/epd.php>`_, choose a distribution, download and install it. Note, `EPDFree <http://www.enthought.com/products/epd_free.php>`_ satisfies the dependencies listed above.
 #. Verify that Python is running correctly.
    e.g. for Windows 7, click on ``Start Menu|All Programs|Accessories|Command Prompt``.
    At the ``>`` prompt type ``python -c "print 'hello world'"`` noting single and double quotes.
    Verify that ``hello world`` is displayed.
-#. Visit the `PDViPeR download page <http://www.synchrotron.org.au/pdviper>`_ and follow the instructions to obtain the package.
-#. The main application file is ``app.py`` in the directory into which PDViPeR was unpacked. Run PDViPeR by running the ``start_pdviper.bat`` file or ``app.py`` file.
-#. You can create a shortcut by right-clicking ``start_pdviper.bat``, choosing `Copy` in the popup menu, then right-clicking and choosing ``Paste shortcut`` in your desired location.
+#. Visit the `PDViPeR download page <http://www.synchrotron.org.au/pdviper>`_ and follow the instructions to obtain the PDViPeR setup file.
+#. Running the installer will install PDViPeR and create a start menu entry.
 
 Example 2. Windows installation using Python(x,y) (optional)
 ------------------------------------------------------------
 
-Note: untested.
-
 #. Visit the `Python(x,y) <http://code.google.com/p/pythonxy/>`_ `downloads page <http://code.google.com/p/pythonxy/wiki/Downloads>`_ and install a distribution.
 #. Verify that Python is running correctly (see :ref:`example1`).
-#. Visit the `PDViPeR download page <http://www.synchrotron.org.au/pdviper>`_ and follow the instructions to obtain the package.
-#. The main application file is ``app.py`` in the directory into which PDViPeR was unpacked. Run PDViPeR by running the ``start_pdviper.bat`` file or ``app.py`` file.
+#. Visit the `PDViPeR download page <http://www.synchrotron.org.au/pdviper>`_ and follow the instructions to obtain the PDViPeR setup file.
+#. Running the installer will install PDViPeR and create a start menu entry.
 
 Example 3. Windows installation on a system with Python already installed (experienced)
 ---------------------------------------------------------------------------------------
 
 Note: untested.
 
-The difficulty with this approach is that Enthought do not provide a simple separate packaged version of their tool suite, which contains traits, traitsui, chaco and pyface, so the idea is to build these from source code. This can be tricky in Windows. Luckily, at the time of writing, there is a separately packaged version available on the `Python(x,y) downloads page <http://code.google.com/p/pythonxy/wiki/Downloads>`_.
-
 #. Check the :ref:`package dependency list<python_package_dependencies>` above.
-#. The easiest way here is to use the packages provided by Python(x,y) and/or Christoph Gohlke. Here are some suggested links. Follow each link to install the required dependency, taking care to choose packages for Python 2.7 and to choose the 32 or 64 bit package version that matches your Python version.
-   For example, if you have Python 2.7 32 bit installed, install in turn 
-   `numpy (C.G.) <http://www.lfd.uci.edu/~gohlke/pythonlibs/#numpy>`_ (if in doubt choose the numpy-MKL-... version),
-   `scipy (C.G.) <http://www.lfd.uci.edu/~gohlke/pythonlibs/#scipy>`_,
-   `matplotlib (C.G.) <http://www.lfd.uci.edu/~gohlke/pythonlibs/#matplotlib>`_,
-   `wxPython (C.G.) <http://www.lfd.uci.edu/~gohlke/pythonlibs/#wxpython>`_,
-   `ETS (pythonxy) <http://code.google.com/p/pythonxy/wiki/Downloads>`_.
+#. The easiest way here is to use the packages provided by `Python(x,y) <http://code.google.com/p/pythonxy/wiki/StandardPlugins>`_ and/or `Christoph Gohlke <http://www.lfd.uci.edu/~gohlke/pythonlibs/>`_. Install the required dependency, taking care to choose packages for Python 2.7 and to choose the 32 or 64 bit package version that matches your Python version.
+   Install in turn ``numpy`` (if in doubt choose the numpy-MKL-... version), ``scipy``,
+   ``matplotlib``, ``wxPython``, and finally ``ETS``.
 
 Example 4. Linux installation using Enthought Python Distribution (recommended)
 -------------------------------------------------------------------------------
@@ -101,3 +90,8 @@ This description is for Ubuntu Linux. yum packaged names in Fedora Linux flavour
 
 Example 6. Mac OSX installation (recommended)
 ---------------------------------------------
+
+#. Visit the `Enthought website <http://www.enthought.com/products/epd.php>`_, choose a distribution, download and install it according to the instructions. Note, `EPDFree <http://www.enthought.com/products/epd_free.php>`_ satisfies the dependencencies listed above.
+#. Visit the `PDViPeR download page <http://www.synchrotron.org.au/pdviper>`_ and follow the instructions to obtain the package.
+#. Double click the Application .zip package to unpack it the first time.
+#. Now you can double click the package to start PDViPeR.
