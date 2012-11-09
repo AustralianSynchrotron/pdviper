@@ -93,5 +93,6 @@ Example 6. Mac OSX installation (recommended)
 
 #. Visit the `Enthought website <http://www.enthought.com/products/epd.php>`_, choose a distribution, download and install it according to the instructions. Note, `EPDFree <http://www.enthought.com/products/epd_free.php>`_ satisfies the dependencencies listed above.
 #. Visit the `PDViPeR download page <http://www.synchrotron.org.au/pdviper>`_ and follow the instructions to obtain the package.
+#. Move the .zip package to the Applications folder.
 #. Double click the Application .zip package to unpack it the first time.
 #. Now you can double click the package to start PDViPeR.
