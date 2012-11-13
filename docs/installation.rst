@@ -32,13 +32,13 @@ For those familiar with installing Python packages, the dependencies can be foun
 Example 1. Windows installation using Enthought Python Distribution (recommended)
 ---------------------------------------------------------------------------------
 
-#. Visit the `Enthought website <http://www.enthought.com/products/epd.php>`_, choose a distribution, download and install it. Note, `EPDFree <http://www.enthought.com/products/epd_free.php>`_ satisfies the dependencies listed above.
+#. Visit the `PDViPeR download page <http://www.synchrotron.org.au/pdviper>`_ and follow the instructions to obtain the EPD Free Python installer and the PDViPeR installer files for Windows. You may wish to visit the `Enthought website <http://www.enthought.com/products/epd.php>`_, directly, and choose one of Enthought's other Python distributions. Note, `EPD Free <http://www.enthought.com/products/epd_free.php>`_ satisfies the dependencies listed above.
+#. Run the epd_free-\*.msi installer to install EPD Free.
 #. Verify that Python is running correctly.
    e.g. for Windows 7, click on ``Start Menu|All Programs|Accessories|Command Prompt``.
    At the ``>`` prompt type ``python -c "print 'hello world'"`` noting single and double quotes.
    Verify that ``hello world`` is displayed.
-#. Visit the `PDViPeR download page <http://www.synchrotron.org.au/pdviper>`_ and follow the instructions to obtain the PDViPeR setup file.
-#. Running the installer will install PDViPeR and create a start menu entry.
+#. Running the PDViPeR installer will install PDViPeR and create a start menu entry.
 
 Example 2. Windows installation using Python(x,y) (optional)
 ------------------------------------------------------------
@@ -61,13 +61,13 @@ Note: untested.
 Example 4. Linux installation using Enthought Python Distribution (recommended)
 -------------------------------------------------------------------------------
 
-#. Visit the `Enthought website <http://www.enthought.com/products/epd.php>`_, choose a distribution, download and install it according to the instructions. Note, `EPDFree <http://www.enthought.com/products/epd_free.php>`_ satisfies the dependencencies listed above.
+#. Visit the `PDViPeR download page <http://www.synchrotron.org.au/pdviper>`_ and follow the instructions to obtain the EPD Free Python installer and the PDViPeR .zip package for Linux. You may wish to visit the `Enthought website <http://www.enthought.com/products/epd.php>`_, directly, and choose one of Enthought's other Python distributions. Note, `EPD Free <http://www.enthought.com/products/epd_free.php>`_ satisfies the dependencies listed above.
+#. Run the epd_free-\*.sh shell script to install EPD Free.
 #. Verify that Python is running correctly.
    e.g. for Ubuntu, open a terminal.
    At the ``$`` prompt type ``python -c "print 'hello world'"`` noting single and double quotes.
    Verify that ``hello world`` is displayed.
-#. Visit the `PDViPeR download page <http://www.synchrotron.org.au/pdviper>`_ and follow the instructions to obtain the package.
-#. The main application file is ``app.py`` in the directory into which PDViPeR was unpacked.
+#. The main PDViPeR application file is ``app.py`` in the directory into which PDViPeR was unpacked.
 #. PDViPeR can be started by running ``./start_pdviper.sh`` or ``./app.py``. To do this,
    at the ``$`` prompt type ``chmod 777 start_pdviper.sh app.py`` followed by, for example, ``./start_pdviper.sh``
 
@@ -91,8 +91,8 @@ This description is for Ubuntu Linux. yum packaged names in Fedora Linux flavour
 Example 6. Mac OSX installation (recommended)
 ---------------------------------------------
 
-#. Visit the `Enthought website <http://www.enthought.com/products/epd.php>`_, choose a distribution, download and install it according to the instructions. Note, `EPDFree <http://www.enthought.com/products/epd_free.php>`_ satisfies the dependencencies listed above.
-#. Visit the `PDViPeR download page <http://www.synchrotron.org.au/pdviper>`_ and follow the instructions to obtain the package.
+#. Visit the `PDViPeR download page <http://www.synchrotron.org.au/pdviper>`_ and follow the instructions to obtain the EPD Free Python installer and the PDViPeR .zip package for Mac OSX. You may wish to visit the `Enthought website <http://www.enthought.com/products/epd.php>`_, directly, and choose one of Enthought's other Python distributions. Note, `EPD Free <http://www.enthought.com/products/epd_free.php>`_ satisfies the dependencies listed above.
+#. Run the epd_free-\*.dmg installer to install EPD Free.
 #. Move the .zip package to the Applications folder.
 #. Double click the Application .zip package to unpack it the first time.
 #. Now you can double click the package to start PDViPeR.
