@@ -4,21 +4,22 @@ import re
 
 from enable.api import ComponentEditor
 from traits.api import List, Str, Float, HasTraits, Instance, Button, Enum, Bool, \
-                        DelegatesTo, Range
+                        DelegatesTo, Range, HTML
 from traitsui.api import Item, UItem, HGroup, VGroup, View, spring, Label, HSplit, Group, \
                         CheckListEditor, Tabbed, DefaultOverride, EnumEditor, HTMLEditor
 from pyface.api import DirectoryDialog, OK, ImageResource
 from chaco.api import OverlayPlotContainer
 
+import csv
 from xye import XYEDataset
 from chaco_output import PlotOutput
 from raw_data_plot import RawDataPlot
 from fixes import fix_background_color
 from dataset_editor import DatasetEditor, DatasetUI
 from wavelength_editor import WavelengthEditor, WavelengthUI
-from ui_helpers import get_save_as_filename, open_file_dir_with_default_handler, \
-                        open_file_with_default_handler, \
-                        get_file_list_from_dialog, get_file_from_dialog
+from ui_helpers import get_save_as_filename, get_save_as_csv_filename, \
+    open_file_dir_with_default_handler, open_file_with_default_handler, \
+    get_file_list_from_dialog, get_file_from_dialog
 import processing
 from processing import DatasetProcessor
 from plot_generator import PlotGenerator
@@ -81,6 +82,7 @@ class MainApp(HasTraits):
     reset_button = Button("Reset view")
     copy_to_clipboard = Button("Copy to clipboard")
     save_as_image = Button("Save as image...")
+    save_parabs_as_csv = Button("Save parabs as csv...")
     save_path = Str
 
     # Process tab
@@ -140,6 +142,7 @@ class MainApp(HasTraits):
         spring,
         UItem('copy_to_clipboard', enabled_when='object._has_data()'),
         UItem('save_as_image', enabled_when='object._has_data()'),
+        UItem('save_parabs_as_csv', enabled_when='object._has_data()'),
         label='View',
         springy=False,
     )
@@ -439,6 +442,24 @@ class MainApp(HasTraits):
             PlotOutput.save_as_image(self.container, filename)
             open_file_dir_with_default_handler(filename)
 
+    def _save_parabs_as_csv_changed(self):
+        if len(self.datasets) == 0:
+            return
+        filename = get_save_as_csv_filename()
+        if filename:
+            with open(filename, 'wb') as csvfile:
+                writer = csv.writer(csvfile, dialect='excel')
+                # base the header columns on the first dataset
+                columns = [c for c in self.datasets[0].metadata.keys()
+                           if c not in ['ui','ui_w']]
+                header_columns = sorted(columns, key=str.lower)
+                writer.writerow(['filename'] + header_columns)
+                # header written, now write the rows
+                for d in self.datasets:
+                    # Just pull out the data from the columns defined above, skipping missing data
+                    row = [d.source] + [d.metadata.get(i,'') for i in header_columns]
+                    writer.writerow(row)
+
     def _copy_to_clipboard_changed(self):
         if self.datasets:
             PlotOutput.copy_to_clipboard(self.container)
@@ -612,45 +633,51 @@ class MainApp(HasTraits):
 
 
 class HelpBox(HasTraits):
-    help_text = Str
+    help_text = HTML
 
     traits_view = View(
-        UItem('help_text', style='readonly', padding=15),
+        UItem('help_text', editor=HTMLEditor(format_text=True)),
         title='Help',
         kind='modal',
+        resizable=True,
+        height = 600, width=800,
+        buttons = ['OK'],
     )
 
     def __init__(self, *args, **kws):
         super(HelpBox, self).__init__(*args, **kws)
         self.help_text = \
 """
-Plot region usage:
-Left drag = Zoom a selection of the plot
-Right drag = Pan the plot
-Right click = Undo zoom
-Esc = Reset zoom/pan
-Mousewheel = Zoom in/out
+<h5>Plot region usage</h5>
+Left drag = Zoom a selection of the plot <br>
+Right drag = Pan the plot <br>
+Right click = Undo zoom <br>
+Esc = Reset zoom/pan <br>
+Mousewheel = Zoom in/out <br>
 
-Please send bug reports and suggestions to
-pdviper@synchrotron.org.au
+<h5>About the software</h5>
+Please send bug reports and suggestions to <br>
+<a href="mailto:pdviper@synchrotron.org.au">pdviper@synchrotron.org.au</a> <br>
 
-Software authors:
-Gary Ruben, Victorian eResearch Strategic Initiative (VeRSI), gruben@versi.edu.au
-Kieran Spear, VeRSI, kieran.spier@versi.edu.au
-http://www.versi.edu.au
+Software authors: <br>
+Gary Ruben, Victorian eResearch Strategic Initiative (VeRSI), <a href="mailto:gruben@versi.edu.au">gruben@versi.edu.au</a> <br>
+Kieran Spear, VeRSI, <a href="mailto:kieran.spier@versi.edu.au">kieran.spier@versi.edu.au</a> <br>
+<a href="http://www.versi.edu.au">http://www.versi.edu.au</a> <br>
 
-Software home:
-http://www.synchrotron.org.au/pdviper
-Software source:
-http://github.com/AustralianSynchrotron/pdviper
+Software home: <br>
+<a href="http://www.synchrotron.org.au/pdviper">http://www.synchrotron.org.au/pdviper</a> <br>
+Software source: <br>
+<a href="http://github.com/AustralianSynchrotron/pdviper">http://github.com/AustralianSynchrotron/pdviper</a> <br>
 
 Recognition of NeCTAR funding:
-The Australian Synchrotron is proud to be in partnership with the National eResearch Collaboration Tools and
-Resources (NeCTAR) project to develop eResearch Tools for the synchrotron research community. This will enable our
-scientific users to have instant access to the results of data during the course of their experiment which will
-facilitate better decision making and also provide the opportunity for ongoing data analysis via remote access.
+The Australian Synchrotron is proud to be in partnership with the National eResearch
+Collaboration Tools and Resources (NeCTAR) project to develop eResearch Tools for the
+synchrotron research community. This will enable our scientific users to have instant
+access to the results of data during the course of their experiment which will
+facilitate better decision making and also provide the opportunity for ongoing data
+analysis via remote access.<br>
 
-Copyright (c) 2012, Australian Synchrotron Company Ltd
+Copyright (c) 2012,  Australian Synchrotron Company Ltd <br>
 All rights reserved.
 """
 

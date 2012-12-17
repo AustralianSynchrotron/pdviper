@@ -13,7 +13,7 @@ def load_params(filename):
     data = data[1:]
 
     regex = re.compile(r'(.*) = (.*)')
-    param_regex = re.compile(r'\w+:[\w\.]+ (.*) (.*)')
+    param_regex = re.compile(r'[\w:.]+ (.*) (.*)')
 
     params = {}
     for line in data:

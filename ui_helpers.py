@@ -12,6 +12,15 @@ def get_save_as_filename():
             return filename
     return None
 
+def get_save_as_csv_filename():
+    wildcard =  'CSV file (.csv)|*.csv|'
+    dialog = FileDialog(action='save as', title='Save as', wildcard=wildcard)
+    if dialog.open() == OK:
+        filename = dialog.path
+        if filename:
+            return filename
+    return None
+
 xye_wildcard = 'XYE XY (*.xye *.xy)|*.xye; *.xy|' \
            'XYE (*.xye)|*.xye|' \
            'XY (*.xy)|*.xy|' \
