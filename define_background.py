@@ -25,8 +25,8 @@ def empty_xye_dataset(size):
 
 class MyLineDrawer(LineSegmentTool):
     """
-    This class demonstrates how to customize the behavior of the
-    LineSegmentTool via subclassing.
+    This class extends the LineSegmentTool, customised the _finalize_selection routine to evaluate the fitted of the defined points on the
+    dataset points.
     """
     line_points=None
     datasets=None
@@ -41,17 +41,16 @@ class MyLineDrawer(LineSegmentTool):
     def _finalize_selection(self):
         self.line_points=self.points
         xyedata= self._make_points_as_xye()
+        # use the curve fitter to fit a spline to the selected points
         self.curve_fitter.fit_curve(xyedata)
-        #self.background_fit.data[:,0]=deepcopy(self.datasets[0].data[:,0]) # do this to get the metadata and x poins
+        # now evaluate the spline at each of the x points for the data
+        # see 
         self.background_fit.metadata=deepcopy(self.datasets[0].metadata)
         self.background_fit.data[:,1] = self.curve_fitter.eval_curve(self.background_fit.data[:,0])
-        self.background_fit.metadata['ui'].name = 'fit (manual background)'
-        
+        self.background_fit.metadata['ui'].name = 'fit (manual background)'        
         self.datasets.append(self.background_fit)
-        
-        #call curve_fitter to do the actual curve fitting
         self.plot_callback()
-        # fit the curve and get the container to do a e
+
 
     def _make_points_as_xye(self):
         es=np.zeros((len(self.points),1))

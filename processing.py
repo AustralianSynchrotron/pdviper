@@ -206,7 +206,7 @@ def insert_descriptor(filename, insertion):
     foo_[nnnn].xye, foo_[nnnn].xy, foo_[descriptor]_[nnnn].xy, or foo_[descriptor]_[nnnn].xye where
     [nnnn] is a 4-digit sequence id, and
     [descriptor] is a code string that describes the processing that has been performed, where the code
-    may only contain characters from the ordered list ['n','s','m','g','b'] which, if included, will be
+    may only contain characters from the ordered list ['n','s','m','g','b','t'] which, if included, will be
     in the order shown.
     The insertion string may be a character or character combination from the list, which is inserted
     into the descriptor.
@@ -218,16 +218,19 @@ def insert_descriptor(filename, insertion):
         # filename of form foo.ext - return foo_[descriptor].ext
         fname, ext = parts[0].split('.')
         return '{}_{}.{}'.format(fname, insertion, ext)
-    regex = r'^(n?s?m?g?b?)$'
-    match = re.match(regex, parts[-2])      # check if 2nd last group is a descriptor
+    regex = r'^(n?s?m?g?b?t?)$'
+    match = re.match(regex, parts[-2])      # check if 2nd last group is a descriptor     
     if match is not None:
         # descriptor found, so insert the new insertion at the appropriate location
-        order = ['n','s','m','g','b']       # sort order for characters in descriptor group
+        order = ['n','s','m','g','b','t']       # sort order for characters in descriptor group
         # tuple(match_string) -> match_string -> match_string+insertion_string -> sorted string based on order
         descriptor = match.groups()[0]
-        new_descriptor = ''.join(sorted(list(descriptor + insertion),
+        if insertion != descriptor:
+            new_descriptor = ''.join(sorted(list(descriptor + insertion),
                                     key=cmp_to_key(lambda x,y: order.index(x)-order.index(y))))
-        return '_'.join(parts[:-2] + [new_descriptor] + parts[-1:])
+            return '_'.join(parts[:-2] + [new_descriptor] + parts[-1:])
+        else:
+             return  '_'.join(parts[:-2] + [descriptor] + parts[-1:])
     else:
         # no descriptor found, so insert a new one
         return '_'.join(parts[:-1] + [insertion] + parts[-1:])

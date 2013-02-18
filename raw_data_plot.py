@@ -1,17 +1,18 @@
 from numpy import inf
 import numpy as np
 
-from enable.api import Component
+from enable.api import Component, KeySpec
 from traits.api import HasTraits, Instance
 
 from chaco.api import Plot, ArrayPlotData, Legend, PlotAxis
-from chaco.tools.api import TraitsTool, SimpleInspectorTool, RangeSelection, RangeSelectionOverlay
+from chaco.tools.api import TraitsTool, SimpleInspectorTool, RangeSelection, RangeSelectionOverlay,LineSegmentTool
 from chaco.overlays.api import SimpleInspectorOverlay
 
 from tools import ClickUndoZoomTool, KeyboardPanTool, PointerControlTool, LineInspectorTool
 from processing import rescale
 from labels import get_value_scale_label
 import settings
+from define_background import MyLineDrawer
 
 # This is a custom view for the axis editor that enables the tick_label_font item to
 # support font setting for the tick labels
@@ -58,8 +59,15 @@ class MyPlotAxis(PlotAxis):
         """
         return AxisView
 
+
+        
+             
 class RawDataPlot(HasTraits):
     plot = Instance(Component)
+    line_tool=None
+    background_fit=None
+    selected_ranges=[]
+    current_selector=None
 
     def __init__(self):
         self.plots = {}
@@ -150,6 +158,7 @@ class RawDataPlot(HasTraits):
         self.crosslines_y_state = self.crosslines[1].visible
         self.crosslines[0].visible = True
         self.crosslines[1].visible = False
+        self.current_selector=self.range_selection_tool
 
     def end_range_select(self):
         self.plot0renderer.tools.remove(self.range_selection_tool)
@@ -159,6 +168,26 @@ class RawDataPlot(HasTraits):
         self.crosslines[0].visible = self.crosslines_x_state
         self.crosslines[1].visible = self.crosslines_y_state
         return self.range_selection_tool.selection
+
+    def add_new_range_select(self):
+        if (len(self.selected_ranges)==0):
+            self.start_range_select()
+            new_range_selector=self.range_selection_tool
+            self.selected_ranges.append(self.range_selection_tool)
+        else:
+            new_range_selector = RangeSelection(self.plot0renderer, left_button_selects=True)
+            self.plot0renderer.tools.append(self.range_selection_tool)
+            self.selected_ranges.append(new_range_selector)
+        return new_range_selector
+            
+    def add_line_drawer(self,datasets1,fitter,callback,background_fit):
+        self.zoom_tool.drag_button = None
+        self.line_tool=MyLineDrawer(self.plot,datasets=datasets1,curve_fitter=fitter,plot_callback=callback,background_fit=background_fit)
+        self.plot.overlays.append(self.line_tool)
+      
+    def remove_line_tool(self):    
+        self.plot.overlays.remove(self.line_tool)
+        self.zoom_tool.drag_button='left'
 
     def _setup_plot(self):
         self.plot_data = ArrayPlotData()
@@ -242,4 +271,5 @@ class RawDataPlot(HasTraits):
         self.pointer_tool = PointerControlTool(component=plot, pointer='arrow')
         plot.tools.append(self.pointer_tool)
 
+        
 
