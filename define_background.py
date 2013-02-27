@@ -23,6 +23,7 @@ def empty_xye_dataset(size):
     data[:,0]=xs
     return XYEDataset(data=data)
 
+
 class MyLineDrawer(LineSegmentTool):
     """
     This class extends the LineSegmentTool, customised the _finalize_selection routine to evaluate the fitted of the defined points on the
@@ -33,12 +34,17 @@ class MyLineDrawer(LineSegmentTool):
     plot_callback=None
     curve_fitter=None
     background_fit=None
+    
+    def __init__(self, *args, **kwargs):        
+        super(MyLineDrawer, self).__init__(*args, **kwargs)
+        self.line.close_path=False
    
     
     def attach_datasets(self,datasets):
        self.datasets=datasets
    
     def _finalize_selection(self):
+        self.line.line_dash=(4.0,2.0)
         self.line_points=self.points
         xyedata= self._make_points_as_xye()
         # use the curve fitter to fit a spline to the selected points

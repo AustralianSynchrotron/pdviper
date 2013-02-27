@@ -19,7 +19,7 @@ def subtract_background_from_all_datasets(datasets, background, background_fit, 
         if hasattr(d,'background') and d.background is not None:
            dataset = subtract_background(d, d.background)
         # if no individual fit check that this background isn't a background itself
-        elif background is not None and background is not d and background_fit is not d:
+        elif ((background is not None and background is not d) or (background_fit is not None and background_fit is not d)):
             # if we used the line drawing tool to define a background then fitter is not None, use that
             if fitter is not None:
                 dataset=subtract_background_with_fit(d,fitter,background_fit)
@@ -89,7 +89,8 @@ def subtract_background(foreground, background):
     e_interpolator = lambda xs: np.interp(xs, data[:,0], data[:,2])                         # linear interpolation
 
     xs = dataset.data[:,0]
-    dataset.data = np.c_[xs, dataset.data[:,1] - y_interpolator(xs), dataset.data[:,2] + e_interpolator(xs)]
+    ys=np.clip(dataset.data[:,1] - y_interpolator(xs),0,max(dataset.data[:,1]))
+    dataset.data = np.c_[xs, ys, dataset.data[:,2] + e_interpolator(xs)]
     return dataset
 
 def get_subtracted_datasets(datasets):

@@ -60,10 +60,17 @@ def get_transformed_filename(filename):
             return filename
     return None
 
+def get_txt_filename(path):
+    wildcard =   'txt (*.txt)|*.txt| All files (*.*)|*.*|'
+    dialog = FileDialog(default_path=path, action='save as', title='Save as', wildcard=wildcard)
+    if dialog.open() == OK:
+        filename = dialog.path
+        if filename:
+            return filename
+    return None
     
 def startfile(filename):
     try:
         os.startfile(filename)
     except:
         subprocess.Popen(['xdg-open', filename])
-

@@ -59,7 +59,13 @@ class PeakRowUI(HasTraits):
     intensity = Float
     sigma = Float
     gamma=Float
+    fwhm=Float
     
+    def __init__(self, *args, **kwargs):        
+        super(PeakRowUI, self).__init__(*args, **kwargs)
+        fl=2*self.gamma
+        fg=2*self.sigma*np.sqrt(2*np.log(2))
+        self.fwhm=0.54346*fl + np.sqrt(0.2166*np.power(fl,2)+np.power(fg,2))
     
     def row_to_dict(self):
         newdict={}
@@ -79,13 +85,14 @@ class PeakRowUI(HasTraits):
             Item('intensity'),
             Item('sigma'),
             Item('gamma'),
+            Item('fwhm')
             )
     )
 
 
 def autosearch_peaks(dataset,limits,params): 
     xdata=dataset.data[:,0]
-    limits=(xdata[0],xdata[-1])
+    #limits=(xdata[0],xdata[-1])
     iBeg = np.searchsorted(xdata,limits[0])
     iFin = np.searchsorted(xdata,limits[1])
     x = xdata[iBeg:iFin]
@@ -166,14 +173,14 @@ def fit_peaks_background(peaksList,varyListRegx,dataset,background_file,params):
     yb[xBeg:xFin] = getBackground('',params,bakType,x[xBeg:xFin])
     yc[xBeg:xFin]= getPeakProfile(params,x[xBeg:xFin],varyList,bakType)
     yd[xBeg:xFin] = y[xBeg:xFin]-yc[xBeg:xFin]
-    #GetBackgroundParms(params,Background)
+    #getBackgroundParms(params,Background)
     #BackgroundPrint(Background,sigDict)
     #GetInstParms(parmDict,Inst,varyList,Peaks)
     #GetPeaksParms(Inst,parmDict,Peaks,varyList)    
     #PeaksPrint(dataType,parmDict,sigDict,varyList)       
     Values2Dict(params,varyList,result[0]) 
     print params
-    return yb,params
+    return yb,yc,params
 # all this stuff is from GSAS-II with modifications to remove peaks and debye scattering from the background and intrument parameters
 
 def setPeakparms(pos,mag,Parms,iPeak,ifQ=False,useFit=False):

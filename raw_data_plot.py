@@ -4,8 +4,8 @@ import numpy as np
 from enable.api import Component, KeySpec
 from traits.api import HasTraits, Instance
 
-from chaco.api import Plot, ArrayPlotData, Legend, PlotAxis
-from chaco.tools.api import TraitsTool, SimpleInspectorTool, RangeSelection, RangeSelectionOverlay,LineSegmentTool
+from chaco.api import Plot, ArrayPlotData, Legend, PlotAxis,ScatterInspectorOverlay,DataLabel
+from chaco.tools.api import TraitsTool, SimpleInspectorTool, RangeSelection, RangeSelectionOverlay,LineSegmentTool, ScatterInspector
 from chaco.overlays.api import SimpleInspectorOverlay
 
 from tools import ClickUndoZoomTool, KeyboardPanTool, PointerControlTool, LineInspectorTool
@@ -13,6 +13,7 @@ from processing import rescale
 from labels import get_value_scale_label
 import settings
 from define_background import MyLineDrawer
+from peak_editor import PeakSelectorTool
 
 # This is a custom view for the axis editor that enables the tick_label_font item to
 # support font setting for the tick labels
@@ -188,6 +189,30 @@ class RawDataPlot(HasTraits):
     def remove_line_tool(self):    
         self.plot.overlays.remove(self.line_tool)
         self.zoom_tool.drag_button='left'
+
+    def add_peak_selector(self,peak_list,dataset,callback):
+        self.zoom_tool.drag_button = None
+        self.peak_selector_tool=PeakSelectorTool(peak_list,dataset,callback,self.plot)
+        self.plot.overlays.append(self.peak_selector_tool)
+        print self.peak_selector_tool.points
+
+    def remove_peak_selector(self):
+        self.plot.overlays.remove(self.peak_selector_tool)
+        self.zoom_tool.drag_button='left'
+
+    def update_peak_labels(self,peak_labels,peak_list):
+        for label in peak_labels:
+            self.plot.overlays.remove(label)
+       # for dsp in editor.dataset_peaks:
+        peak_labels=[]
+        new_peak_list=[]
+        for peak in peak_list:
+            new_peak_list.append(peak)
+            label=DataLabel(component=self.plot, data_point=[peak.position,peak.intensity],\
+                                label_position="right", padding=20, arrow_visible=True)
+            self.plot.overlays.append(label)
+            peak_labels.append(label)
+        return peak_labels
 
     def _setup_plot(self):
         self.plot_data = ArrayPlotData()
