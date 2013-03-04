@@ -8,6 +8,7 @@ Please send bug reports and suggestions to
 `pdviper _at_ synchrotron.org.au`
 
 | Software authors:
+| Lenneke Jong `lenneke _dot_ jong _at_ synchrotron.org.au`, Australian Synchrotron
 | Gary Ruben `gruben _at_ versi.edu.au`, Victorian eResearch Strategic Initiative (`VeRSI <http://www.versi.edu.au>`_)
 | Kieran Spear `kieran _dot_ spier _at_ versi.edu.au`, VeRSI
 | 

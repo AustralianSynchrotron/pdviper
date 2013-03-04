@@ -23,8 +23,10 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   gen_info
    installation
-   usage
+   how_to_use
+   future_development
    about
    parab_file_format
 
@@ -36,6 +38,7 @@ This section contains auto-generated documentation extracted from the processing
    :maxdepth: 2
 
    processing
+
 
 Indices and tables
 ==================
