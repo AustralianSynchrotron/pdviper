@@ -69,6 +69,8 @@ class RawDataPlot(HasTraits):
     background_fit=None
     selected_ranges=[]
     current_selector=None
+    peak_selector_tool=None
+    
 
     def __init__(self):
         self.plots = {}
@@ -181,24 +183,34 @@ class RawDataPlot(HasTraits):
             self.selected_ranges.append(new_range_selector)
         return new_range_selector
             
-    def add_line_drawer(self,datasets1,fitter,callback,background_fit):
+    def add_line_drawer(self,datasets1,fitter,callback,background_manual):
         self.zoom_tool.drag_button = None
-        self.line_tool=MyLineDrawer(self.plot,datasets=datasets1,curve_fitter=fitter,plot_callback=callback,background_fit=background_fit)
+        self.line_tool=MyLineDrawer(self.plot,datasets=datasets1,curve_fitter=fitter,plot_callback=callback,background_manual=background_manual)
         self.plot.overlays.append(self.line_tool)
       
-    def remove_line_tool(self):    
-        self.plot.overlays.remove(self.line_tool)
+    def remove_line_tool(self):
+        if self.line_tool:    
+            self.plot.overlays.remove(self.line_tool)
+            self.line_tool=None
         self.zoom_tool.drag_button='left'
 
     def add_peak_selector(self,peak_list,dataset,callback):
         self.zoom_tool.drag_button = None
         self.peak_selector_tool=PeakSelectorTool(peak_list,dataset,callback,self.plot)
         self.plot.overlays.append(self.peak_selector_tool)
-        print self.peak_selector_tool.points
-
+        self.peak_selector_tool.request_redraw()
+        
     def remove_peak_selector(self):
-        self.plot.overlays.remove(self.peak_selector_tool)
+        if self.peak_selector_tool:           
+            self.plot.overlays.remove(self.peak_selector_tool)
+            self.peak_selector_tool=None
         self.zoom_tool.drag_button='left'
+
+    def reset_tools(self):
+        self.remove_line_tool()
+        self.remove_peak_selector()
+        # need to also make sure that the peak labels are removed properly
+
 
     def update_peak_labels(self,peak_labels,peak_list):
         for label in peak_labels:
@@ -213,6 +225,10 @@ class RawDataPlot(HasTraits):
             self.plot.overlays.append(label)
             peak_labels.append(label)
         return peak_labels
+
+    def remove_peak_labels(self,peak_labels):
+        for label in peak_labels:
+            self.plot.overlays.remove(label)
 
     def _setup_plot(self):
         self.plot_data = ArrayPlotData()

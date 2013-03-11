@@ -33,7 +33,7 @@ class MyLineDrawer(LineSegmentTool):
     datasets=None
     plot_callback=None
     curve_fitter=None
-    background_fit=None
+    background_manual=None
     
     def __init__(self, *args, **kwargs):        
         super(MyLineDrawer, self).__init__(*args, **kwargs)
@@ -50,11 +50,12 @@ class MyLineDrawer(LineSegmentTool):
         # use the curve fitter to fit a spline to the selected points
         self.curve_fitter.fit_curve(xyedata)
         # now evaluate the spline at each of the x points for the data
-        # see 
-        self.background_fit.metadata=deepcopy(self.datasets[0].metadata)
-        self.background_fit.data[:,1] = self.curve_fitter.eval_curve(self.background_fit.data[:,0])
-        self.background_fit.metadata['ui'].name = 'fit (manual background)'        
-        self.datasets.append(self.background_fit)
+        # this dataset is merely for display, for subtracting we use the fitter and evaluate for each dataset for subtraction again
+        self.background_manual.metadata=deepcopy(self.datasets[0].metadata)
+        self.background_manual.data[:,1] = self.curve_fitter.eval_curve(self.background_manual.data[:,0])
+        self.background_manual.metadata['ui'].name = 'fit (manual background)'   
+        self.background_manual.metadata['ui'].color=None    
+        self.datasets.append(self.background_manual)
         self.plot_callback()
 
 

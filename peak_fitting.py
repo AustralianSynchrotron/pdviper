@@ -13,7 +13,7 @@ import numpy.ma as ma
 import gsas_routines as gsas
 from traits.api import HasTraits, Int, Float, Bool
 from traitsui.api import View,Group,Item
-                  
+import itertools                  
 
 ind = lambda x: math.sin(x*math.pi/180.)
 asind = lambda x: 180.*math.asin(x)/math.pi
@@ -51,6 +51,16 @@ def createPeakRows(params):
         except KeyError:        #no more peaks to process
                 break
     return peakList
+
+def updatePeakRows(params,peaks):
+    for peak in peaks:
+        iPeak=peak.peak_number
+        peak.position= params['pos'+str(iPeak)]
+        peak.intensity=params['int'+str(iPeak)]
+        peak.sigma = params['sig'+str(iPeak)]
+        peak.gamma=params['gam'+str(iPeak)]
+
+    return peaks
 
 class PeakRowUI(HasTraits):
     peak_number = Int
@@ -107,14 +117,17 @@ def autosearch_peaks(dataset,limits,params):
     mags = ymask[indx]
     poss = x[indx]
     iPeak=0
-    for pos,mag in zip(poss,mags):
-        params.update(setPeakparms(pos,mag,params,iPeak))
-        iPeak+=1
-    return createPeakRows(params)
+    max_peaks=50 # arbitrarily set for now
+    old_params=params
+    if len(poss)>max_peaks:
+        return None
+    else:
+        for pos,mag in zip(poss,mags):
+            params.update(setPeakparms(pos,mag,params,iPeak))
+            iPeak+=1
+        return createPeakRows(params)
     
 def fit_peaks_background(peaksList,varyListRegx,dataset,background_file,params):  
-    print "in the peak fitting background routine"
-    print params
     bakType=params['backType']
     varyList=[]# get the list of parameters to vary   
     # this is going to be our version of the doPeaksFit routine in GSASII
@@ -123,8 +136,7 @@ def fit_peaks_background(peaksList,varyListRegx,dataset,background_file,params):
     y=dataset.data[:,1]
     cw = np.diff(x)
     w= 1/dataset.data[:,2]**2 
-    print w
-                   #these are numpy arrays!
+
     yc = np.zeros_like(y)                           #set calcd ones to zero
     yb = np.zeros_like(y)
     yd = np.zeros_like(y)
@@ -132,12 +144,13 @@ def fit_peaks_background(peaksList,varyListRegx,dataset,background_file,params):
     xFin = len(x)-1
     params['Pdabc'] = []      #dummy Pdabc
     varyList = []
-    varyList= np.sort([key for regex in varyListRegx for key in params.keys() if re.search(regex,key)]).tolist()
-   # varyList.remove('')
- #   for regkey in varyListRegx:
-   #     [key for key in (re.search(regkey, l) for l in lines) if m]
-  #      varyList.extend([re.findall(regkey,params.keys())])               
-    print varyList
+    peakNumList=[peak.peak_number for peak in peaksList]
+    param_combos=list(itertools.product(*[varyListRegx,peakNumList]))
+    param_list=[str(param[0])+str(param[1]) for param in param_combos]
+    back_keys=np.sort([key for key in params.keys() if re.search(r'Back:',key)]).tolist()
+    #varyList= np.sort([key for regex in varyListRegx for key in params.keys() if re.search(regex,key)]).tolist()
+    varyList=back_keys+param_list
+    
     while True:
         values =  np.array(Dict2Values(params, varyList))
         try:

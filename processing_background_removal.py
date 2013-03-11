@@ -12,53 +12,72 @@ __doc__ = \
 Routines to remove background.
 """
 
-def subtract_background_from_all_datasets(datasets, background, background_fit, fitter):
+def subtract_background_from_all_datasets(datasets, background_file, background_manual,fitter):
+    processed_datasets = []
+    
+    def update_metadata(dataset):
+        dataset.name = insert_descriptor(dataset.name, 'b')
+        dataset.metadata['ui'].name = dataset.name + ' (processed)'
+        dataset.metadata['ui'].color = None
+    
+    # If there is a background file uploaded, use that
+    if background_file is not None:
+        for d in datasets:
+            if background_file is not d:
+                # does there need to be s
+                dataset=subtract_background_with_file(d,background_file)
+                processed_datasets.append(dataset)
+                update_metadata(dataset)
+    # next check if there is a manually fitted background instead
+    elif fitter is not None:
+        for d in datasets:
+            if d is not background_manual:
+                dataset=subtract_background_with_fit(d,fitter)
+                processed_datasets.append(dataset)
+                update_metadata(dataset)
+    else:
+        # first check if there is an individual curve fit attached to this dataset 
+        for d in datasets:           
+            if hasattr(d,'background') and d.background is not None:
+                dataset = subtract_background(d, d.background)
+                processed_datasets.append(dataset)
+                update_metadata(dataset)
+        #Next see if there's a background file uploaded and use that
+              
+    return processed_datasets
+
+def subtract_manual_background_from_all_datasets(datasets, fitter):
     processed_datasets = []
     for d in datasets:
-        # first check if there is an individual curve fit attached to this dataset            
-        if hasattr(d,'background') and d.background is not None:
-           dataset = subtract_background(d, d.background)
-        # if no individual fit check that this background isn't a background itself
-        elif ((background is not None and background is not d) or (background_fit is not None and background_fit is not d)):
-            # if we used the line drawing tool to define a background then fitter is not None, use that
-            if fitter is not None:
-                dataset=subtract_background_with_fit(d,fitter,background_fit)
-            elif background_fit is not None:
-                dataset = subtract_background(d, background_fit)
-            else:
-                dataset = subtract_background(d, background)
-        else:
-            break # this dataset is a fitted dataset, we don't want to add it again
+        dataset = subtract_background_with_fit(d, fitter)
         processed_datasets.append(dataset)
         dataset.name = insert_descriptor(dataset.name, 'b')
         dataset.metadata['ui'].name = dataset.name + ' (processed)'
         dataset.metadata['ui'].color = None
-              
     return processed_datasets
 
-def subtract_manual_background_from_all_datasets(datasets, fitter, background_fit):
-    processed_datasets = []
-    for d in datasets:
-        if background_fit is not d: 
-            dataset = subtract_background_with_fit(d, fitter,background_fit)
-            processed_datasets.append(dataset)
-            dataset.name = insert_descriptor(dataset.name, 'b')
-            dataset.metadata['ui'].name = dataset.name + ' (processed)'
-            dataset.metadata['ui'].color = None
-    return processed_datasets
-
-
-def subtract_background_with_fit(foreground,fitter,background_fit):
+def subtract_background(foreground,background):
+    """
+    use this method for subtracting a background from a foreground where they have the same x datapoints
+    This is used where we fit a curve for an individual dataset
+    """
     dataset = foreground.copy()
-    data=background_fit.data   
-    ys=np.clip(dataset.data[:,1]-fitter.eval_curve(dataset.data[:,0]),0,max(dataset.data[:,1]))
-    #ys=np.clip(ys,0,max(ys)) # truncate neg values to 0
-    e_interpolator = lambda xs: np.interp(xs, data[:,0], data[:,2])                         # linear interpolation
+    data = background.data
     xs = dataset.data[:,0]
-    dataset.data = np.c_[xs, ys, dataset.data[:,2] + e_interpolator(xs)]
+    ys=np.clip(foreground.data[:,1] - background.data[:,1],0,max(dataset.data[:,1]))
+    dataset.data = np.c_[xs, ys, dataset.data[:,2]]
     return dataset
 
-def subtract_background(foreground, background):
+def subtract_background_with_fit(foreground,fitter):
+    background_dataset = foreground.copy()  
+    ys=np.clip(background_dataset.data[:,1]-fitter.eval_curve(background_dataset.data[:,0]),0,max(background_dataset.data[:,1]))
+    #ys=np.clip(ys,0,max(ys)) # truncate neg values to 0
+    e_interpolator = lambda xs: np.interp(xs, background_dataset.data[:,0], background_dataset.data[:,2])                         # linear interpolation
+    xs = background_dataset.data[:,0]
+    background_dataset.data = np.c_[xs, ys, background_dataset.data[:,2] + e_interpolator(background_dataset.data[:,0])]
+    return background_dataset
+
+def subtract_background_with_file(foreground, background):
     '''
     Resample background dataset at the same x-values as the forgeround and subtract it,
     returning a new XYE dataset sans background.
@@ -104,11 +123,9 @@ def get_subtracted_datasets(datasets):
 class CurveFitter:
     def __init__(self, curve_type, deg):
         self.fit_func = {'Spline' : self._fit_spline_to_background,
-                         'Polynomial' : self._fit_poly_to_background,
-                         'Linear Interpolation' : self._fit_linear_interp_background}[curve_type]
+                         'Polynomial' : self._fit_poly_to_background}[curve_type]
         self.eval_func = {'Spline' : self._eval_spline_at_xs,
-                          'Polynomial' : self._eval_poly_at_xs,
-                          'Linear Interpolation' : self._eval_linear_interp_background}[curve_type]
+                          'Polynomial' : self._eval_poly_at_xs}[curve_type]
         self.deg = deg
         self.min_filter_length = 100 
         self.numpoints=curve_type
@@ -119,26 +136,6 @@ class CurveFitter:
     def eval_curve(self, xs):
         return self.eval_func(xs)
 
-    def _fit_linear_interp_background(self, dataset,min_filter=True):
-        '''
-        Do a linear interpolation to the dataset data
-        '''
-        dataset2 = dataset.copy()
-        if min_filter:
-            filter_length = dataset.data.shape[0]/self.deg/2
-            dataset2.data[:,1] = \
-                sn.filters.median_filter(dataset.data[:,1], size=filter_length, mode='nearest')
-        factor = dataset2.data.shape[0]/10
-        self.y_interpolator = interpolate.interp1d(dataset2.data[::factor,0], dataset2.data[::factor,1],bounds_error=False,fill_value=0.0)
-        return self.y_interpolator
-
-    def _eval_linear_interp_background(self,xs):
-        newxs=np.linspace(min(xs),max(xs), self.numpoints)
-        ys=self.y_interpolator(newxs)
-        newdata=np.zeros((self.numpoints,3))
-        newdata[:,0]=newxs
-        newdata[:,1]=ys
-        return newdata
 
     def _fit_poly(self, dataset):
         '''
@@ -174,17 +171,14 @@ class CurveFitter:
     def _eval_spline_at_xs(self, xs):
         return self.y_interpolator(xs)
 
-   
-    
-        
+               
     def _background_test(self,xdata,order,params):
         background=np.zeros_like(xdata)
         for iback in range(order):
             background+=params[iback]*(xdata-xdata[0])**iback
         return background
     
-    def _eval_chebyshev(self,xs):
-        return self.y_interpolator(xs)  
+
 
 if __name__=='__main__':
     import xye

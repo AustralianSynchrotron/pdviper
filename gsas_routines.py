@@ -1,5 +1,5 @@
 ## These routines are copied from GSAS-II 
-## The fortran routines that they use I will rewrite in python here below
+## 
 import math
 import numpy as np
 import scipy as sp
@@ -182,12 +182,3 @@ def getdEpsVoigt(pos,alp,bet,sig,gam,xdata):
 
 
 
-
-########################
-# Python rewrites of fortran routines from gsas II
-
-def pyepsvoigt(len_xdata,xdata_pos,alp,bet,sig,gam):
-    pass
-
-def pydepsvoigt(len_xdata,xdata_pos,alp,bet,sig,gam):
-    pass

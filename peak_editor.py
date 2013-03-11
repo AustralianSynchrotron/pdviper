@@ -10,7 +10,7 @@ from traitsui.tabular_adapter import TabularAdapter
 from fixes import fix_background_color, ColorEditor
 fix_background_color()
 from xye import XYEDataset
-from peak_fitting import fit_peaks_background, createPeakRows, PeakRowUI,autosearch_peaks
+from peak_fitting import fit_peaks_background, createPeakRows, PeakRowUI,autosearch_peaks,updatePeakRows
 import re
 from chaco.tools.api import LineSegmentTool
 from copy import deepcopy
@@ -19,7 +19,7 @@ import numpy as np
 
 
 def createDatasetPeaks(dataset):
-    peaklist=createPeakRows(dataset.fit_params)
+    peaklist=createPeakRows(dataset.select_peaks_params)
     dspeaks=DatasetPeaks(peaks=peaklist,name=dataset.name,dataset=dataset)
     
     return dspeaks
@@ -88,7 +88,7 @@ def update_peak_list_by_list(peaklist,params):
 
 class PeakFitEditorHandler(Handler):
     
-    varyList=[r'Back:',r'int',r'sig',r'gam']
+    varyList=[r'int',r'sig',r'gam']
     
 #    def update_peak_list(self,dspeaks,params):
 #        thisdict= dspeaks.to_dict()
@@ -102,22 +102,28 @@ class PeakFitEditorHandler(Handler):
     def close(self,info,is_ok):
         print "close the editor"
         if is_ok:
-            update_peak_list(info.object.selected,info.object.selected.dataset.fit_params)
+            update_peak_list(info.object.selected,info.object.selected.dataset.select_peaks_params)
         return True
                
     def do_refine(self,info):
-        update_peak_list(info.object.selected,info.object.selected.dataset.fit_params)
         print 'refining...'
+        update_peak_list(info.object.selected,info.object.selected.dataset.select_peaks_params)
         dataset=info.object.selected.dataset
+        new_select_peaks=[]
         for pr in info.object.selected.peaks:
-            if pr.fit is False:
-                info.object.selected.peaks.remove(pr)     
-        background,peak_profile,new_params=fit_peaks_background(info.object.selected.peaks,self.varyList,dataset,None,dataset.fit_params)
-        dataset.background=background
-        dataset.fit_params.update(new_params)
-        print new_params
+            if pr.fit is True:
+                new_select_peaks.append(pr)  
+        background,peak_profile,new_params=fit_peaks_background(new_select_peaks,self.varyList,dataset,None,dataset.select_peaks_params)
+        if not hasattr(dataset,'background'):
+            background_fit=dataset.copy() 
+            background_fit.metadata['ui'].name = dataset.name+' fit (background)'
+            background_fit.metadata['ui'].color=None  
+            dataset.background=background_fit
+        dataset.background.data[:,1]=background  
+        dataset.select_peaks_params.update(new_params)
         # update the peaks list
-        newPeaks=createPeakRows(new_params)
+        newPeaks=updatePeakRows(new_params,info.object.selected.peaks)
+        #newPeaks=createPeakRows(new_params)
         info.object.selected.peaks=newPeaks
         info.object.peak_profile.data[:,1]=peak_profile
       
@@ -147,7 +153,7 @@ class PeakFittingEditor(HasTraits):
                 action="do_save")
     
     traits_view = View(
-         Item('selected@'),
+         UItem('selected@'),
 #        Item('selected@', editor=ListEditor(use_notebook=True, deletable=False, page_name='.name',selected='selected'), show_label=False),
             #VGroup(
                 #Label('Modify all selected items:'),
@@ -210,9 +216,8 @@ class PeakSelectorTool(LineSegmentTool):
             xmin= x-window
             xmax=x+window
             peakrows=autosearch_peaks(self.dataset,(xmin,xmax),self.params)
-            if len(peakrows)>1:
+            if peakrows is None or len(peakrows)>1:
                 #reduce limits
-                print len(peakrows)
                 window=window/10
                 if window<1e-6:
                     break
@@ -232,7 +237,7 @@ class PeakSelectorTool(LineSegmentTool):
         self.line.vertex_size=5.0
         self.dataset=dataset
         self.callback=callback
-        self.params=dataset.fit_params
+        self.params=dataset.select_peaks_params
         newpoints=[(peak.position,peak.intensity) for peak in peak_list]
         #self.selected_peaks_y=[peak.intensity for peak in peak_list]
         #self.points[:,0]=self.selected_peaks_x
@@ -246,7 +251,7 @@ class PeakSelectorTool(LineSegmentTool):
         for point in self.points:
             peaks.append(self.searchOnePeak(point[0],iPeak))
             iPeak+=1
-        update_peak_list_by_list(peaks,self.dataset.fit_params)
+        update_peak_list_by_list(peaks,self.dataset.select_peaks_params)
         self.peak_list=peaks
         self.callback(self.dataset)
 

@@ -25,5 +25,10 @@ class RescaleTests(unittest.TestCase):
         raise SkipTest
         self.assertTrue(True)
 
+
+
+
+
+
 if __name__ == '__main__':
     nose.main()
