@@ -3,6 +3,7 @@ from traits.api import Str, List, Bool, HasTraits, Color, on_trait_change, Insta
 from traitsui.api import View, Item, TableEditor, VGroup, HGroup, Label
 from traitsui.table_column import ObjectColumn
 from traitsui.extras.checkbox_column import CheckboxColumn
+from traitsui.menu import OKButton, CancelButton
 
 from fixes import fix_background_color, ColorEditor
 fix_background_color()
@@ -68,6 +69,7 @@ class DatasetEditor(HasTraits):
             DatasetColumn(name='marker_size'),
             DatasetColumn(name='line_width'),
         ]
+                                 
     )
 
     traits_view = View(
@@ -84,9 +86,11 @@ class DatasetEditor(HasTraits):
                     springy=True
                 ),
             ),
+            
         ),
         resizable=True, width=0.5, height=0.5, kind='livemodal',
-        title='Edit datasets'
+        title='Edit datasets',
+        buttons = [OKButton, CancelButton],
     )
 
     def __init__(self, *args, **kwargs):

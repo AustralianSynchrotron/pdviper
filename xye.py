@@ -70,8 +70,10 @@ class XYEDataset(object):
         self.metadata[name] = value
 
     def save(self, filename):
+        open(filename,'w')
         savetxt(filename, self.data, fmt='%1.6f')
         logger.logger.info('Saved {}'.format(filename))
+        
 
     def copy(self):
         return deepcopy(self)

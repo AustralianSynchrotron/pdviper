@@ -35,3 +35,6 @@ nosetests.xml
 # Test image output
 tests/tmp
 
+docs/_build
+.project
+.settings

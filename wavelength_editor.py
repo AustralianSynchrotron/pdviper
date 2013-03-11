@@ -5,6 +5,7 @@ from traitsui.api import View, Item, UItem, TableEditor, EnumEditor, Group, VGro
 from traitsui.table_column import ObjectColumn
 from fixes import fix_background_color
 from processing_rescale import rescale_xye_datasets, write_xye_datasets
+from traitsui.menu import OKButton, CancelButton
 
 fix_background_color()
 
