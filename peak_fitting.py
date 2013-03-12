@@ -7,7 +7,7 @@ from numpy.fft import ifft, fft, fftshift
 import scipy.interpolate as si
 import scipy.stats as st
 import scipy.optimize as so
-import pypowder as pyd
+import bin.pypowder as pyd
 import copy
 import numpy.ma as ma
 import gsas_routines as gsas
