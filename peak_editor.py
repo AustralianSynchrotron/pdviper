@@ -8,6 +8,7 @@ from traits.api import List, Str, Float, HasTraits, Instance, Button, Enum, Bool
                         DelegatesTo, Range, HTML, Int
 from traitsui.tabular_adapter import TabularAdapter       
 from fixes import fix_background_color, ColorEditor
+from traitsui.wx.table_editor import TableEditorToolbar
 fix_background_color()
 from xye import XYEDataset
 from peak_fitting import fit_peaks_background, createPeakRows, PeakRowUI,autosearch_peaks,updatePeakRows
@@ -38,7 +39,9 @@ class DatasetPeaks(HasTraits):
         selection_mode='cells',
         sortable=False,
         editable=True,
+        auto_add=False,
         deletable=True,
+        configurable=False,
         edit_on_first_click=False,
         cell_bg_color='white',
         label_bg_color=(232,232,232),
@@ -52,8 +55,7 @@ class DatasetPeaks(HasTraits):
             NumericColumn(name='gamma',label='Gamma',cell_color='white', editable=True),
             NumericColumn(name='fwhm',label='FWHM',cell_color='white', editable=False)
         ],
-        show_toolbar=True,
-        row_factory=PeakRowUI                     
+        show_toolbar=True                   
     )
 
     traits_view=View(

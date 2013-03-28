@@ -34,6 +34,7 @@ class MyLineDrawer(LineSegmentTool):
     plot_callback=None
     curve_fitter=None
     background_manual=None
+    flag = False
     
     def __init__(self, *args, **kwargs):        
         super(MyLineDrawer, self).__init__(*args, **kwargs)
@@ -54,7 +55,8 @@ class MyLineDrawer(LineSegmentTool):
         self.background_manual.metadata=deepcopy(self.datasets[0].metadata)
         self.background_manual.data[:,1] = self.curve_fitter.eval_curve(self.background_manual.data[:,0])
         self.background_manual.metadata['ui'].name = 'fit (manual background)'   
-        self.background_manual.metadata['ui'].color=None    
+        self.background_manual.metadata['ui'].color=None   
+        self.background_manual.fitted=True 
         self.datasets.append(self.background_manual)
         self.plot_callback()
 

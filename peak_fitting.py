@@ -7,7 +7,7 @@ from numpy.fft import ifft, fft, fftshift
 import scipy.interpolate as si
 import scipy.stats as st
 import scipy.optimize as so
-import pypowder as pyd
+import bin.pypowder as pyd
 import copy
 import numpy.ma as ma
 import gsas_routines as gsas
@@ -118,7 +118,6 @@ def autosearch_peaks(dataset,limits,params):
     poss = x[indx]
     iPeak=0
     max_peaks=50 # arbitrarily set for now
-    old_params=params
     if len(poss)>max_peaks:
         return None
     else:

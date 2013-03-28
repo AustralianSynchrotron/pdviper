@@ -30,6 +30,14 @@ PDViPeR relies on the (free) `Enthought Python Distribution`_ for easy one-click
 
 .. _`Enthought Python Distribution`: http://www.enthought.com/products/epd_free.php
 
+Installation
+------------
+To install the correct pre-compiled binaries for the peak fitting routines run the install.sh (Linux) or install.bat (Windows)
+script after cloning the project. In some case you may get a message about fortran code needing to be compiled by hand.
+You will need the f2py tool and a fortran compiler (such as GFortran) installed. Then perfom the following steps:
+- cd to the fsource directory
+- run 'scons'
+
 Run
 ---
 To run PDViPeR, just call python on app.py from the cloned project directory: ::
@@ -38,12 +46,18 @@ To run PDViPeR, just call python on app.py from the cloned project directory: ::
 
 Version History
 ---------------
-0.2 This version
-    Changed 2d surface plot rendering method
-    More robust file renaming of processed files
-    Data converted to reciprocal-space units are now supported by all plot types
-    Improved behaviour of 3d waterfall plot quality setting
-0.1 Initial release
+0.3 -Automatic curve fitting and manual curve definition for background subtraction
+    -Peak detection and fitting 
+	-Rescaling and offset of both axes
+	-Output of all active datasets into .xyz format
+	
+
+0.2 -Changed 2d surface plot rendering method
+    -More robust file renaming of processed files
+    -Data converted to reciprocal-space units are now supported by all plot types
+    -Improved behaviour of 3d waterfall plot quality setting
+
+0.1 -Initial release
 
 Known Issues
 ------------
