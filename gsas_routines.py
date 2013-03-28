@@ -9,7 +9,7 @@ import scipy.interpolate as si
 import scipy.stats as st
 import scipy.optimize as so
 
-import pypowder as pyd
+import bin.pypowder as pyd
 
 ind = lambda x: math.sin(x*math.pi/180.)
 asind = lambda x: 180.*math.asin(x)/math.pi
