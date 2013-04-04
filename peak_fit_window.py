@@ -6,6 +6,7 @@ from traitsui.table_column import ObjectColumn
 from chaco.api import Plot, ArrayPlotData
 
 from fixes import fix_background_color
+from traitsui.menu import OKButton
 fix_background_color()
 
 from xye import XYEDataset
@@ -54,7 +55,8 @@ class PeakFitWindow(HasTraits):
             UItem('plot', editor=ComponentEditor(bgcolor='white')),
         ),
         resizable=True, width=0.75, height=0.5, kind='livemodal',
-        title='View peak fits'
+        title='View peak fits',
+        buttons=[OKButton]
     )
 
     def __init__(self, *args, **kwargs):

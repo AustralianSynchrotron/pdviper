@@ -1,7 +1,7 @@
 from traits.api import Str, List, Enum, Bool, Float, HasTraits, on_trait_change, Instance, \
                         Event, Button
 from traitsui.api import View, Item, UItem, TableEditor, EnumEditor, Group, VGroup, HGroup, \
-                        Label, Handler
+                        Label, Handler,Action
 from traitsui.table_column import ObjectColumn
 from fixes import fix_background_color
 from processing_rescale import rescale_xye_datasets, write_xye_datasets
@@ -37,6 +37,19 @@ class WavelengthColumn(ObjectColumn):
     pass
 
 
+class WavelengthEditorHandler(Handler):
+    
+    def do_rescale(self,info):
+        rescale_xye_datasets(info.object.datasets, info.object.target_value, info.object.convert_from, info.object.convert_to)
+        write_xye_datasets(info.object.datasets, info.object.filename_field)
+        # disable rescale button
+        #info.object.can_rescale = False 
+        info.ui.dispose()
+        return
+        
+        
+        
+
 class WavelengthEditor(HasTraits):
     datasets = List(WavelengthUI)
     filename_field = Str
@@ -45,7 +58,7 @@ class WavelengthEditor(HasTraits):
 
     x = Float(1.0)
     target_value = Float(1.0)
-    bt_rescale = Button("Rescale")
+    #bt_rescale = Button("Rescale")
 
     convert_from = Enum('theta', 'd', 'Q')('theta')
     convert_to = Enum('theta', 'd', 'Q')('d')
@@ -67,6 +80,10 @@ class WavelengthEditor(HasTraits):
             WavelengthColumn(name='x'),
         ]
     )
+
+    rescale = Action(name = "Rescale",
+                action = "do_rescale")
+
 
     traits_view = View(
         VGroup(
@@ -96,12 +113,14 @@ class WavelengthEditor(HasTraits):
                             label='To'),
                     ),
                 ),
-                UItem('bt_rescale', enabled_when='can_rescale'),
-                enabled_when='can_rescale',
+               # UItem('bt_rescale', enabled_when='can_rescale'),
+               # enabled_when='can_rescale',
             ),
         ),
         resizable=True, width=0.5, height=0.5, kind='livemodal',
         title='Convert/scale abscissa',
+        handler=WavelengthEditorHandler(),
+        buttons=[rescale,CancelButton]
 #        handler = ClosingHandler(),
     )
 

@@ -183,18 +183,28 @@ class RawDataPlot(HasTraits):
             self.plot0renderer.tools.append(self.range_selection_tool)
             self.selected_ranges.append(new_range_selector)
         return new_range_selector
+       
+    def remove_tooltips(self,tool):
+        if tool=='peak_selector':
+            if self.peak_selector_tool_tip:
+                self.plot.overlays.remove(self.peak_selector_tool_tip)
+                self.peak_selector_tool_tip=None
+        if tool=='line_drawer_tool':
+            if self.line_drawer_tool_tip:
+                self.plot.overlays.remove(self.line_drawer_tool_tip)
+                self.line_drawer_tool_tip=None   
             
     def add_line_drawer(self,datasets1,fitter,callback,background_manual):
         self.zoom_tool.drag_button = None
         self.line_tool=MyLineDrawer(self.plot,datasets=datasets1,curve_fitter=fitter,plot_callback=callback,background_manual=background_manual)
-        self.line_drawer_tool_tip=ToolTip(component=self.plot.container,lines=["left-click to define points and press ENTER to fit a spline to the points"], padding=10, position=[0,self.plot.container.height])
+        self.line_drawer_tool_tip=ToolTip(component=self.plot.container,bgcolor='yellow',lines=["left-click to define points and press ENTER to fit a spline to the points"], padding=10, position=[0,self.plot.container.height])
         self.plot.overlays.append(self.line_tool)
         self.plot.overlays.append(self.line_drawer_tool_tip)
       
     def remove_line_tool(self):
         if self.line_tool:    
             self.plot.overlays.remove(self.line_tool)
-            self.plot.overlays.remove(self.line_drawer_tool_tip)
+            self.remove_tooltips('line_drawer_tool')
             self.line_tool=None
         self.zoom_tool.drag_button='left'
 
@@ -203,7 +213,7 @@ class RawDataPlot(HasTraits):
         self.zoom_tool.drag_button = None
         self.peak_selector_tool=PeakSelectorTool(peak_list,dataset,callback,self.plot)
         height= self.plot.container.height
-        self.peak_selector_tool_tip=ToolTip(component=self.plot.container, lines=["left-click to select peaks, press ENTER to fit curve to each"],padding=10, position=[0,height])
+        self.peak_selector_tool_tip=ToolTip(component=self.plot.container, bgcolor='yellow',lines=["left-click to select peaks, press ENTER to fit curve to each"],padding=10, position=[0,height])
         self.plot.overlays.append(self.peak_selector_tool)
         self.plot.overlays.append(self.peak_selector_tool_tip)
         self.peak_selector_tool.request_redraw()
@@ -211,7 +221,7 @@ class RawDataPlot(HasTraits):
     def remove_peak_selector(self):
         if self.peak_selector_tool:           
             self.plot.overlays.remove(self.peak_selector_tool)
-            self.plot.overlays.remove(self.peak_selector_tool_tip)
+            self.remove_tooltips('peak_selector')
             self.peak_selector_tool=None
         self.zoom_tool.drag_button='left'
 

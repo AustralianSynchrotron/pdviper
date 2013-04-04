@@ -788,6 +788,7 @@ class MainApp(HasTraits):
         self.man_define_bg_button_label="Define"
         self.manual_bg_fitted=True
         self._plot_processed_datasets()
+        self.raw_data_plot.remove_tooltips('line_drawer_tool')
         self.container.request_redraw()
 
     def _bt_manually_define_background_changed(self):        
@@ -1079,6 +1080,7 @@ class MainApp(HasTraits):
         self.toggle_peaks_label_value="Hide Peak Labels"
         self.raw_data_plot.remove_peak_selector()
         self.select_peaks_button_label="Select peaks"
+        self.raw_data_plot.remove_tooltips('peak_selector')
         self._plot_processed_datasets()
 
     def _bt_select_peaks_changed(self):
