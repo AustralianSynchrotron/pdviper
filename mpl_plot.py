@@ -3,14 +3,13 @@ import logger
 import numpy as np
 from numpy import array
 
-from traits.api import Instance, Range, Bool, Float, Str, Dict, Enum, on_trait_change
+from traits.api import Instance, Range, Bool, Float, Str, Enum, on_trait_change
 from traitsui.api import Item, UItem, VGroup, HGroup, DefaultOverride
 from traits_extensions import HasTraitsGroup
 
 import matplotlib.pyplot as plt
 from mpl_figure_editor import MPLFigureEditor
 from matplotlib.figure import Figure
-from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.collections import LineCollection
 
 from processing import stack_datasets, rebin_preserving_peaks

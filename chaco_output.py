@@ -1,4 +1,4 @@
-import logger
+
 import os
 from pyface.api import error
 

@@ -1,4 +1,4 @@
-import logger
+#import logger
 from os.path import basename, split
 from numpy import loadtxt, savetxt, asfarray
 import numpy as np
@@ -72,7 +72,7 @@ class XYEDataset(object):
     def save(self, filename):
         open(filename,'w')
         savetxt(filename, self.data, fmt='%1.6f')
-        logger.logger.info('Saved {}'.format(filename))
+   #     logger.logger.info('Saved {}'.format(filename))
         
 
     def copy(self):

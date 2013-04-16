@@ -1,17 +1,15 @@
-import logger
 import os
 import re
 
-from enable.api import ComponentEditor, KeySpec
+from enable.api import ComponentEditor
 from traits.api import List, Str, Float, HasTraits, Instance, Button, Enum, Bool, \
-                        DelegatesTo, Range, HTML, Int, Set
+                        DelegatesTo, Range, HTML
 from traitsui.api import Item, UItem, HGroup, VGroup, View, spring, Label, HSplit, Group, \
-                        CheckListEditor, Tabbed, DefaultOverride, EnumEditor, HTMLEditor,DirectoryEditor, \
-                        ListEditor, ListStrEditor, TabularEditor
-from traitsui.tabular_adapter import TabularAdapter                        
+                        CheckListEditor, Tabbed, DefaultOverride, EnumEditor, HTMLEditor
+                      
 from pyface.api import DirectoryDialog, OK, ImageResource
-from chaco.api import OverlayPlotContainer,DataLabel, ArrayPlotData,Plot
-from chaco.tools.api import RangeSelection, RangeSelectionOverlay
+from chaco.api import OverlayPlotContainer
+
 
 
 import csv
@@ -29,16 +27,16 @@ import processing
 from processing import DatasetProcessor
 from plot_generator import PlotGenerator
 from peak_fit_window import PeakFitWindow
-from processing_background_removal import subtract_background_from_all_datasets, subtract_manual_background_from_all_datasets, \
+from processing_background_removal import subtract_background_from_all_datasets, \
                                             get_subtracted_datasets, CurveFitter
-from define_background import background_as_xye, empty_xye_dataset,min_max_x
+from define_background import empty_xye_dataset,min_max_x
 from xyzoutput import write_to_file, XYZGenerator
 from transform_data import apply_transform, find_datasets_with_descriptor
 from peak_fitting import autosearch_peaks, fit_peaks_background, createPeakRows
-from peak_editor import PeakFittingEditor, DatasetPeaks,createDatasetPeaks
-from traitsui.editors.instance_editor import InstanceEditor
-from traitsui.message import Message, message
+from peak_editor import PeakFittingEditor
+from traitsui.message import message
 from traitsui.editors.button_editor import ButtonEditor
+import numpy
 # Linux/Ubuntu themes cause the background of windows to be ugly and dark
 # grey. This fixes that.
 fix_background_color()
@@ -100,7 +98,7 @@ class MainApp(HasTraits):
     edit_datasets = Button("Edit datasets...")
     generate_plot = Button("Generate plot...")
     help_button = Button("Help...")
-    close_files = Button("Reset")
+    close_files = Button("Reset data and plots")
     export_xyz = Button("Save as xyz file...")
 
     # View tab
@@ -184,12 +182,11 @@ class MainApp(HasTraits):
     bt_apply_transform=Button("Apply")
     bt_save_transformed=Button("Save...")
     transform_selected_dataset=Enum(values='dataset_names')
+    select_range_min=Float(0.0)
+    select_range_max=Float(-1.0)
+    bt_crop_range=Button("Select range")
 
-    # selecting ranges of data
-    selected_list= []
-    bt_select_ranges=Button("Select ranges")
-    bt_add_selected_range=Button("Add selection")
-    bt_finalise_ranges=Button("Finalise ranges")
+   
 
     # peak fitting
     bt_autosearch_peaks=Button("Auto search peaks")
@@ -216,7 +213,7 @@ class MainApp(HasTraits):
         Label('Scale:'),
         UItem('scale', enabled_when='object._has_data()'),
         UItem('options', editor=CheckListEditor(name='_options'), style='custom', enabled_when='object._has_data()'),
-        UItem('reset_button', enabled_when='object._has_data()'),
+        UItem('reset_button',enabled_when='object._has_data()'),
         spring,
         '_',
         spring,
@@ -315,7 +312,7 @@ class MainApp(HasTraits):
             show_border = True,
         ),
         UItem('bt_subtract_background', enabled_when='object._has_data() and (object.background_file!=None or object.manual_bg_fitted or object.backgrounds_fitted)'),
-        UItem('bt_save_background', enabled_when='object._has_data() and object.processed_datasets!=[] and (object.background_file!=None or object.background_fit!=None or object.backgrounds_fitted)'),
+        UItem('bt_save_background', enabled_when='object._has_data() and object.processed_datasets!=[] and (object.background_file!=None or object.manual_bg_fitted or object.backgrounds_fitted)'),
         label='Background',
         springy=False,
     )
@@ -345,13 +342,19 @@ class MainApp(HasTraits):
                     Label('Multiplier'),
                     Item('x_multiplier',label='x',enabled_when='object._has_data()'),    
                     Item('y_multiplier', label='y', enabled_when='object._has_data()'),
-                    ),    
-            ),
+                    ),     
+            ),           
             HGroup( 
                 UItem('bt_apply_transform', enabled_when='object._has_data()'),
                 UItem('bt_save_transformed', enabled_when='object._has_data()'),
                 springy=True
             ),
+            HGroup(
+                Label('Range (x) axis'),
+                Item('select_range_min',label='min', enabled_when='object._has_data()'),
+                Item('select_range_max',label='max',enabled_when='object._has_data()'),
+                UItem('bt_crop_range',enabled_when='object._has_data()'),   
+            ),    
             show_border=True
         ),
       
@@ -427,6 +430,7 @@ class MainApp(HasTraits):
         self.bg_removed_datasets=set()
         self.background_datasets=set()
         self.peak_list=[]
+        self.fitter=None
         self.raw_data_plot.reset_tools()
         if self.peak_labels is not []:
             self.raw_data_plot.remove_peak_labels(self.peak_labels)
@@ -695,7 +699,7 @@ class MainApp(HasTraits):
             limits=(dataset_to_fit.data[0,0],dataset_to_fit.data[-1,0])
             peak_list=autosearch_peaks(dataset_to_fit,limits,dataset_to_fit.fit_params)
             if peak_list is None:
-                message(message='Unable to fit background (too many peaks in dataset), try manually defining a background',title = 'Background Fit Error', buttons = [ 'OK' ], parent = None)
+                message(message='Unable to fit background, try manually defining a background',title = 'Background Fit Error', buttons = [ 'OK' ], parent = None)
                 peak_list=[]
                 self._set_basic_fit_params(dataset_to_fit, 'fit_params') # reset the peaks parameters
                 return
@@ -725,10 +729,10 @@ class MainApp(HasTraits):
         """
         d=self._find_dataset_by_name(self.selection_dataset_names,self.datasets+self.processed_datasets)
         if hasattr(d,'background') and re.search(r'fit \(background\)$',d.background.metadata['ui'].name) is not None:
-           self.datasets.remove(d.background)
-           self.background_datasets.remove(d.background)
-           self.background_fits.remove(d.background)
-           delattr(d,'background')
+            self.datasets.remove(d.background)
+            self.background_datasets.remove(d.background)
+            self.background_fits.remove(d.background)
+            delattr(d,'background')
         self._plot_processed_datasets()
         
     def _bt_save_curve_changed(self):
@@ -789,6 +793,8 @@ class MainApp(HasTraits):
         self.manual_bg_fitted=True
         self._plot_processed_datasets()
         self.raw_data_plot.remove_tooltips('line_drawer_tool')
+        self.raw_data_plot.plot.overlays.remove(self.raw_data_plot.line_tool)        
+        self.raw_data_plot.zoom_tool.drag_button="left"
         self.container.request_redraw()
 
     def _bt_manually_define_background_changed(self):        
@@ -905,7 +911,8 @@ class MainApp(HasTraits):
     def _edit_datasets_changed(self):
         editor = DatasetEditor(datasets=self.datasets)
         editor.edit_traits()
-        self._plot_datasets(self.datasets, reset_view=False)
+        if self._plot_datasets(self.datasets, reset_view=False) is None:
+            self.raw_data_plot.remove_peak_labels(self.peak_labels)
 
     def _generate_plot_changed(self):
         if self.datasets:
@@ -984,6 +991,29 @@ class MainApp(HasTraits):
                                 
         self._plot_processed_datasets()
 
+    def _bt_crop_range_changed(self):
+        """
+        Crops dataset to within the range specified.
+        """
+        dataset=self._find_dataset_by_name(self.transform_selected_dataset,self.datasets+self.processed_datasets)
+        cropped_dataset=dataset.copy()
+        
+        cropped_indices=numpy.where(cropped_dataset.data[:,0]>self.select_range_min)[0]
+        if self.select_range_max!=-1.0:
+            cropped_indices2=numpy.where(cropped_dataset.data[:,0]<self.select_range_max)[0]
+            cropped_indices=numpy.intersect1d(cropped_indices, cropped_indices2)
+        #  cropped_data=numpy.where(cropped_data<self.select_range_max)
+        
+        newdata=cropped_dataset.data[cropped_indices[0]:numpy.max(cropped_indices)]
+        cropped_dataset.data=newdata
+        cropped_dataset.metadata['ui'].color=None
+        cropped_dataset.name = processing.insert_descriptor(cropped_dataset.name, 't')
+        cropped_dataset.metadata['ui'].name = cropped_dataset.name + ' (transformed)'
+        self.processed_datasets.append(cropped_dataset)
+        self._refresh_dataset_name_list()
+        self._plot_processed_datasets()
+
+
     def _bt_save_transformed_changed(self):
         """
         Saves transformed datasets to an xye file
@@ -995,18 +1025,6 @@ class MainApp(HasTraits):
             if filename:
                 d.save(filename)
  
-    
-    #def _bt_select_ranges_changed(self):
-    #    self.raw_data_plot.start_range_select()
-
-
-   # def _bt_add_selected_range_changed(self):
-   #     self.selected_list.append(self.raw_data_plot.current_selector.selection)
-   #     selector=self.raw_data_plot.add_new_range_select()
-
-
-   # def _bt_finalise_ranges_changed(self):
-   #     self.raw_data_plot.end_range_select()
     
     def _set_basic_fit_params(self,dataset,property_name):
         """
@@ -1029,11 +1047,11 @@ class MainApp(HasTraits):
         #varyList=[r'Back']
         dataset=self._find_dataset_by_name(self.peak_select_dataset,self.datasets+self.processed_datasets)
         self._set_basic_fit_params(dataset,'select_peaks_params')
-       # for d in datasets:
+        # for d in datasets:
         limits=(dataset.data[0,0],dataset.data[-1,0])
         peak_list=autosearch_peaks(dataset,limits,dataset.select_peaks_params)
         if peak_list is None:
-            message(message='Too many peaks detected,\n try selecting peaks manually',title = 'Peak Search Error', buttons = [ 'OK' ], parent = None)
+            message(message='Unable to find and fit peaks,\n try selecting peaks manually',title = 'Peak Search Error', buttons = [ 'OK' ], parent = None)
             peak_list=[]
             self._set_basic_fit_params(dataset, 'select_peaks_params') # reset the peaks parameters
             return
@@ -1044,7 +1062,7 @@ class MainApp(HasTraits):
     #    editor = PeakFittingEditor(datasets=datasets)
         self.peak_editor=PeakFittingEditor(raw_dataset=dataset)
         self.peak_editor.edit_traits()        
-        self.peak_labels=self.raw_data_plot.update_peak_labels(self.peak_labels,self.peak_editor.selected.peaks)
+        self.peak_labels=self.raw_data_plot.update_peak_labels(self.peak_labels,self.peak_editor.selected.peaks,self.peak_editor.peak_profile)
         self.show_peak_labels=True  
         self.toggle_peaks_label_value="Hide Peak Labels"
         self._plot_processed_datasets()
@@ -1054,7 +1072,7 @@ class MainApp(HasTraits):
         Opens the peak editor window so that peak parameters can be manipulated either directly or by doing a least squares refinement
         """
         self.peak_editor.edit_traits()
-        self.peak_labels=self.raw_data_plot.update_peak_labels(self.peak_labels,self.peak_editor.selected.peaks)
+        self.peak_labels=self.raw_data_plot.update_peak_labels(self.peak_labels,self.peak_editor.selected.peaks,self.peak_editor.peak_profile)
         self.show_peak_labels=True
         self.toggle_peaks_label_value="Hide Peak Labels"
         self._plot_datasets(self.datasets, reset_view=False)
@@ -1075,7 +1093,7 @@ class MainApp(HasTraits):
             self.peak_editor = PeakFittingEditor(raw_dataset=dataset)
         self.peak_editor.selected.peaks=self.raw_data_plot.peak_selector_tool.peak_list
         self.peak_editor.edit_traits()
-        self.peak_labels=self.raw_data_plot.update_peak_labels(self.peak_labels,self.peak_editor.selected.peaks)
+        self.peak_labels=self.raw_data_plot.update_peak_labels(self.peak_labels,self.peak_editor.selected.peaks,self.peak_editor.peak_profile)
         self.show_peak_labels=True
         self.toggle_peaks_label_value="Hide Peak Labels"
         self.raw_data_plot.remove_peak_selector()
@@ -1114,7 +1132,7 @@ class MainApp(HasTraits):
             self.raw_data_plot.remove_peak_labels(self.peak_labels)
             self.peak_labels=[]
             self.peak_editor=None
-            peakfitdataset=self._find_dataset_by_uiname(dataset.name+' (fitted peak profile)',self.datasets+self.processed_datasets)
+            peakfitdataset=self._find_dataset_by_uiname(dataset.metadata['ui'].name+' (fitted peak profile)',self.datasets+self.processed_datasets)
             if peakfitdataset:
                 self.processed_datasets.remove(peakfitdataset)
             # remove peak fit dataset
@@ -1157,6 +1175,10 @@ Right drag = Pan the plot <br>
 Right click = Undo zoom <br>
 Esc = Reset zoom/pan <br>
 Mousewheel = Zoom in/out <br>
+
+For further help refer to the PDViPer manual located at:
+<a href="http://pdviper.readthedocs.org"/>http://pdviper.readthedocs.org</a> <br>
+
 
 <h5>About the software</h5>
 Please send bug reports and suggestions to <br>

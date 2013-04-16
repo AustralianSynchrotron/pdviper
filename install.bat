@@ -1,2 +1,2 @@
 @echo off
-python setup.py
+python setup_fortran_bin.py

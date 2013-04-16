@@ -1,20 +1,16 @@
-from traits.api import Str, List, Bool, HasTraits, Color, on_trait_change, Instance, Event, Float
+from traits.api import Str, List, HasTraits, Instance
 
-from traitsui.api import View, Item, UItem, TableEditor, VGroup, HGroup, Label,ListEditor, Group,Action, Handler
+from traitsui.api import View,UItem, TableEditor, Action, Handler
 from traitsui.table_column import ObjectColumn,NumericColumn
 from traitsui.extras.checkbox_column import CheckboxColumn
 from traitsui.menu import OKButton, CancelButton
-from traits.api import List, Str, Float, HasTraits, Instance, Button, Enum, Bool, \
-                        DelegatesTo, Range, HTML, Int
-from traitsui.tabular_adapter import TabularAdapter       
-from fixes import fix_background_color, ColorEditor
-from traitsui.wx.table_editor import TableEditorToolbar
+from fixes import fix_background_color
+
 fix_background_color()
 from xye import XYEDataset
 from peak_fitting import fit_peaks_background, createPeakRows, PeakRowUI,autosearch_peaks,updatePeakRows
 import re
 from chaco.tools.api import LineSegmentTool
-from copy import deepcopy
 from ui_helpers import get_txt_filename
 import numpy as np
 
@@ -102,13 +98,11 @@ class PeakFitEditorHandler(Handler):
     
     
     def close(self,info,is_ok):
-        print "close the editor"
         if is_ok:
             update_peak_list(info.object.selected,info.object.selected.dataset.select_peaks_params)
         return True
                
     def do_refine(self,info):
-        print 'refining...'
         update_peak_list(info.object.selected,info.object.selected.dataset.select_peaks_params)
         dataset=info.object.selected.dataset
         new_select_peaks=[]
@@ -211,7 +205,6 @@ class PeakSelectorTool(LineSegmentTool):
     
     def searchOnePeak(self,position,peakNumber):
         window=0.5
-        print position  
         peakrows=[]      
         while (True):
             x=self.find_nearest(self.dataset.data[:,0],position)
@@ -226,7 +219,6 @@ class PeakSelectorTool(LineSegmentTool):
                 peakrows=[]
                 
             else: break
-        print peakrows[0].intensity
         peakrows[0].peak_number=peakNumber
         return peakrows[0]
             

@@ -1,9 +1,6 @@
-import numpy as np
 import re
-from numpy import array
 from copy import deepcopy
 from processing import insert_descriptor
-from chaco.tools.api import RangeSelection, RangeSelectionOverlay
 
 
 def apply_transform(datasets,x,y,x_multiplier,y_multiplier):

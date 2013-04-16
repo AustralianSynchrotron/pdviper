@@ -12,6 +12,7 @@ class PanToolWithHistory(PanTool):
         if 'history_tool' in kwargs:
             del kwargs['history_tool']
         super(PanToolWithHistory, self).__init__(*args, **kwargs)
+   
 
     def _start_pan(self, event, capture_mouse=False):
         super(PanToolWithHistory, self)._start_pan(event, capture_mouse=False)
@@ -43,6 +44,7 @@ class KeyboardPanTool(PanToolWithHistory):
     right_key = Instance(KeySpec, args=("Right",))
     up_key = Instance(KeySpec, args=("Up",))
     down_key = Instance(KeySpec, args=("Down",))
+
 
     def normal_key_pressed(self, event):
         x, y = (0, 0)

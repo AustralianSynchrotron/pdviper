@@ -3,7 +3,6 @@ import re
 import numpy as np
 import scipy as sp
 import numpy.linalg as nl
-from numpy.fft import ifft, fft, fftshift
 import scipy.interpolate as si
 import scipy.stats as st
 import scipy.optimize as so
@@ -44,7 +43,6 @@ def createPeakRows(params):
             intens = params['int'+str(iPeak)]
             sig = params['sig'+str(iPeak)]
             gam=params['gam'+str(iPeak)]
-            print pos,intens,sig,gam
             peak=PeakRowUI(peak_number=iPeak,position=pos,intensity=intens,sigma=sig,gamma=gam)
             peakList.append(peak)
             iPeak+=1
@@ -71,6 +69,7 @@ class PeakRowUI(HasTraits):
     gamma=Float
     fwhm=Float
     
+    
     def __init__(self, *args, **kwargs):        
         super(PeakRowUI, self).__init__(*args, **kwargs)
         fl=2*self.gamma
@@ -86,6 +85,7 @@ class PeakRowUI(HasTraits):
             print b.__class__
             print b.args
         return newdict
+
 
     traits_view = View(
         Group(
@@ -191,7 +191,6 @@ def fit_peaks_background(peaksList,varyListRegx,dataset,background_file,params):
     #GetPeaksParms(Inst,parmDict,Peaks,varyList)    
     #PeaksPrint(dataType,parmDict,sigDict,varyList)       
     Values2Dict(params,varyList,result[0]) 
-    print params
     return yb,yc,params
 # all this stuff is from GSAS-II with modifications to remove peaks and debye scattering from the background and intrument parameters
 

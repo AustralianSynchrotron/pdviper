@@ -1,8 +1,5 @@
-from numpy import inf
 import numpy as np
 from chaco.tools.api import LineSegmentTool
-from traits.api import HasTraits, Instance, Bool
-from processing_background_removal import CurveFitter
 from xye import XYEDataset
 from copy import deepcopy
 

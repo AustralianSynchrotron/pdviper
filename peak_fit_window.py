@@ -1,6 +1,6 @@
 from traits.api import Str, List, HasTraits, Instance, Float
 
-from traitsui.api import View, Item, TableEditor, VGroup, HGroup, Label, UItem
+from traitsui.api import View, Item, TableEditor, HGroup, UItem
 from enable.api import ComponentEditor
 from traitsui.table_column import ObjectColumn
 from chaco.api import Plot, ArrayPlotData

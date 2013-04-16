@@ -1,11 +1,11 @@
 from traits.api import Str, List, Enum, Bool, Float, HasTraits, on_trait_change, Instance, \
-                        Event, Button
-from traitsui.api import View, Item, UItem, TableEditor, EnumEditor, Group, VGroup, HGroup, \
-                        Label, Handler,Action
+                        Event
+from traitsui.api import View, Item,  TableEditor, EnumEditor, Group, VGroup, HGroup, \
+                       Handler,Action
 from traitsui.table_column import ObjectColumn
 from fixes import fix_background_color
 from processing_rescale import rescale_xye_datasets, write_xye_datasets
-from traitsui.menu import OKButton, CancelButton
+from traitsui.menu import CancelButton
 
 fix_background_color()
 

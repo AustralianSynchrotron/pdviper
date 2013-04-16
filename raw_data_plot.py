@@ -1,11 +1,11 @@
 from numpy import inf
 import numpy as np
 
-from enable.api import Component, KeySpec
+from enable.api import Component
 from traits.api import HasTraits, Instance
 
-from chaco.api import Plot, ArrayPlotData, Legend, PlotAxis,ScatterInspectorOverlay,DataLabel
-from chaco.tools.api import TraitsTool, SimpleInspectorTool, RangeSelection, RangeSelectionOverlay,LineSegmentTool, ScatterInspector
+from chaco.api import Plot, ArrayPlotData, Legend, PlotAxis,DataLabel
+from chaco.tools.api import ZoomTool,TraitsTool, SimpleInspectorTool, RangeSelection, RangeSelectionOverlay,LineSegmentTool, ScatterInspector
 from chaco.overlays.api import SimpleInspectorOverlay
 from chaco.tooltip import ToolTip
 
@@ -20,6 +20,7 @@ from peak_editor import PeakSelectorTool
 # support font setting for the tick labels
 from traitsui.api import View, HGroup, Group, VGroup, Item, TextEditor
 from chaco.axis_view import float_or_auto
+from chaco.tools.line_inspector import LineInspector
 # Traits UI for our PlotAxis. This is copied and edited from chaco/axis_view.py
 AxisView = View(VGroup(
                 Group(
@@ -61,8 +62,16 @@ class MyPlotAxis(PlotAxis):
         """
         return AxisView
 
-
-        
+class MyPlotClass(Plot):
+            ''' A Plot class that exposes the normal_right_dclick event handler. '''
+            def normal_left_dclick(self, event):
+                ''' Handles a double-click event on the Plot canvas. We want to reset the
+                zoom in this event. '''
+                self.index_range.reset()
+                self.value_range.reset()
+                #self.zoom_tool.clear_undo_history()
+                
+           
              
 class RawDataPlot(HasTraits):
     plot = Instance(Component)
@@ -72,17 +81,23 @@ class RawDataPlot(HasTraits):
     current_selector=None
     peak_selector_tool=None
     
+  
 
     def __init__(self):
-        self.plots = {}
+        self.plots = {}                    
         self._setup_plot()
-
+       
+  
     def plot_datasets(self, datasets, scale='linear', reset_view=True):
         if self.plots:
             self.plot.delplot(*self.plot.plots.keys())
             self.plots = {}
         active = filter(lambda d: d.metadata['ui'].active, datasets)
         hilite = filter(lambda d: d.metadata['ui'].markers, active)
+        
+        if len(active)==0:
+            return None
+            
         for dataset in active:
             ui = dataset.metadata['ui']
             data = dataset.data
@@ -130,7 +145,7 @@ class RawDataPlot(HasTraits):
     def reset_view(self):
         self.plot.index_range.reset()
         self.plot.value_range.reset()
-        self.zoom_tool.clear_undo_history()
+        #self.zoom_tool.clear_undo_history()
 
     def _set_scale(self, scale):
         self.plot.y_axis.title = 'Intensity (%s)' % get_value_scale_label(scale)
@@ -202,8 +217,9 @@ class RawDataPlot(HasTraits):
         self.plot.overlays.append(self.line_drawer_tool_tip)
       
     def remove_line_tool(self):
-        if self.line_tool:    
-            self.plot.overlays.remove(self.line_tool)
+        if self.line_tool: 
+            if self.line_tool in self.plot.overlays:   
+                self.plot.overlays.remove(self.line_tool)
             self.remove_tooltips('line_drawer_tool')
             self.line_tool=None
         self.zoom_tool.drag_button='left'
@@ -231,7 +247,7 @@ class RawDataPlot(HasTraits):
         # need to also make sure that the peak labels are removed properly
 
 
-    def update_peak_labels(self,peak_labels,peak_list):
+    def update_peak_labels(self,peak_labels,peak_list,peak_profile):
         for label in peak_labels:
             self.plot.overlays.remove(label)
        # for dsp in editor.dataset_peaks:
@@ -239,8 +255,10 @@ class RawDataPlot(HasTraits):
         new_peak_list=[]
         for peak in peak_list:
             new_peak_list.append(peak)
-            label=DataLabel(component=self.plot, data_point=[peak.position,peak.intensity],\
-                                label_position="right", padding=20, arrow_visible=True)
+            pos_index=np.where(peak_profile.data[:,0]==peak.position)
+            label_intensity=peak_profile.data[pos_index[0],1]
+            label=DataLabel(component=self.plot, data_point=[peak.position,label_intensity],\
+                                label_position="right", padding=20, arrow_visible=True, label_format='(%(x)f')
             self.plot.overlays.append(label)
             peak_labels.append(label)
         return peak_labels
@@ -250,11 +268,14 @@ class RawDataPlot(HasTraits):
             if label in set(self.plot.overlays):
                 self.plot.overlays.remove(label)
 
+
     def _setup_plot(self):
-        self.plot_data = ArrayPlotData()
-        self.plot = Plot(self.plot_data,
+ 
+        self.plot_data = ArrayPlotData()            
+        self.plot = MyPlotClass(self.plot_data,
             padding_left=120, fill_padding=True,
             bgcolor="white", use_backbuffer=True)
+        
 
         self._setup_plot_tools(self.plot)
 
@@ -288,11 +309,12 @@ class RawDataPlot(HasTraits):
 
         # The ZoomTool tool is stateful and allows drawing a zoom
         # box to select a zoom region.
-        self.zoom_tool = ClickUndoZoomTool(plot,
+        #self.zoom_tool = ClickUndoZoomTool(plot,
+        self.zoom_tool = ZoomTool(plot,
                         x_min_zoom_factor=-inf, y_min_zoom_factor=-inf,
                         tool_mode="box", always_on=True,
                         drag_button=settings.zoom_button,
-                        undo_button=settings.undo_button,
+                      #  undo_button=settings.undo_button,
                         zoom_to_mouse=True)
 
         # The PanTool allows panning around the plot
@@ -302,15 +324,17 @@ class RawDataPlot(HasTraits):
         plot.tools.append(self.pan_tool)
         plot.overlays.append(self.zoom_tool)
 
-        x_crossline = LineInspectorTool(component=plot,
+        x_crossline = LineInspector(component=plot,
                                     axis='index_x',
                                     inspect_mode="indexed",
                                     is_listener=False,
+                                    draw_mode='overlay',
                                     color="grey")
-        y_crossline = LineInspectorTool(component=plot,
+        y_crossline = LineInspector(component=plot,
                                     axis='index_y',
                                     inspect_mode="indexed",
                                     color="grey",
+                                    draw_mode='overlay',
                                     is_listener=False)
         plot.overlays.append(x_crossline)
         plot.overlays.append(y_crossline)
