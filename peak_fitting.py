@@ -61,6 +61,9 @@ def updatePeakRows(params,peaks):
     return peaks
 
 class PeakRowUI(HasTraits):
+    """
+    Class used to display the peak information in the peak_editor table.
+    """
     peak_number = Int
     fit = Bool(True)
     position = Float
@@ -77,6 +80,9 @@ class PeakRowUI(HasTraits):
         self.fwhm=0.54346*fl + np.sqrt(0.2166*np.power(fl,2)+np.power(fg,2))
     
     def row_to_dict(self):
+        """
+        Converts a PeakRowUI instance to the dictionary format used in the fitting routines.
+        """
         newdict={}
         try:
             newdict={'pos'+str(self.peak_number):self.position,'int'+str(self.peak_number):self.intensity,'sig'+str(self.peak_number):self.sigma,'gam'+str(self.peak_number):self.gamma}
@@ -101,6 +107,9 @@ class PeakRowUI(HasTraits):
 
 
 def autosearch_peaks(dataset,limits,params): 
+    """
+    Detects peaks in the y axis of a dataset and returns a list of PeakRowUI objects for each peak
+    """
     xdata=dataset.data[:,0]
     #limits=(xdata[0],xdata[-1])
     iBeg = np.searchsorted(xdata,limits[0])
@@ -127,6 +136,9 @@ def autosearch_peaks(dataset,limits,params):
         return createPeakRows(params)
     
 def fit_peaks_background(peaksList,varyListRegx,dataset,background_file,params):  
+    """
+    Performs a fit on the y axis of the dataset, varying the peak parameters given by varyListRegx
+    """
     bakType=params['backType']
     varyList=[]# get the list of parameters to vary   
     # this is going to be our version of the doPeaksFit routine in GSASII
@@ -195,6 +207,9 @@ def fit_peaks_background(peaksList,varyListRegx,dataset,background_file,params):
 # all this stuff is from GSAS-II with modifications to remove peaks and debye scattering from the background and intrument parameters
 
 def setPeakparms(pos,mag,Parms,iPeak,ifQ=False,useFit=False):
+    """
+    Calculates a sigma and gamma value for sigma and gamma
+    """
     ind = 0
     if useFit:
         ind = 1

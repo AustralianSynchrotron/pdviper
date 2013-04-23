@@ -5,11 +5,11 @@ from enable.api import Component
 from traits.api import HasTraits, Instance
 
 from chaco.api import Plot, ArrayPlotData, Legend, PlotAxis,DataLabel
-from chaco.tools.api import ZoomTool,TraitsTool, SimpleInspectorTool, RangeSelection, RangeSelectionOverlay,LineSegmentTool, ScatterInspector
+from chaco.tools.api import ZoomTool,TraitsTool, SimpleInspectorTool, RangeSelection, RangeSelectionOverlay
 from chaco.overlays.api import SimpleInspectorOverlay
 from chaco.tooltip import ToolTip
 
-from tools import ClickUndoZoomTool, KeyboardPanTool, PointerControlTool, LineInspectorTool
+from tools import ClickUndoZoomTool, KeyboardPanTool, PointerControlTool
 from processing import rescale
 from labels import get_value_scale_label
 import settings
@@ -69,7 +69,7 @@ class MyPlotClass(Plot):
                 zoom in this event. '''
                 self.index_range.reset()
                 self.value_range.reset()
-                #self.zoom_tool.clear_undo_history()
+                self.zoom_tool.clear_undo_history()
                 
            
              
@@ -309,8 +309,8 @@ class RawDataPlot(HasTraits):
 
         # The ZoomTool tool is stateful and allows drawing a zoom
         # box to select a zoom region.
-        #self.zoom_tool = ClickUndoZoomTool(plot,
-        self.zoom_tool = ZoomTool(plot,
+        self.zoom_tool = ClickUndoZoomTool(plot,
+        #self.zoom_tool = ZoomTool(plot,
                         x_min_zoom_factor=-inf, y_min_zoom_factor=-inf,
                         tool_mode="box", always_on=True,
                         drag_button=settings.zoom_button,

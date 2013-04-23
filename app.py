@@ -31,7 +31,7 @@ from processing_background_removal import subtract_background_from_all_datasets,
                                             get_subtracted_datasets, CurveFitter
 from define_background import empty_xye_dataset,min_max_x
 from xyzoutput import write_to_file, XYZGenerator
-from transform_data import apply_transform, find_datasets_with_descriptor
+from transform_data import apply_transform, find_datasets_with_descriptor,dataset_already_transformed
 from peak_fitting import autosearch_peaks, fit_peaks_background, createPeakRows
 from peak_editor import PeakFittingEditor
 from traitsui.message import message
@@ -330,9 +330,18 @@ class MainApp(HasTraits):
             show_border=True   
         ),
         VGroup(
-            Label('X and Y offsets and multipliers to rescale data'),
             Item('transform_selected_dataset',label='Dataset', enabled_when='object._has_data()'),
             VGroup(
+                Label('Select Range (x) axis'),
+                HGroup(
+                    Item('select_range_min',label='min', enabled_when='object._has_data()'),
+                    Item('select_range_max',label='max',enabled_when='object._has_data()', tooltip='-1.0 selects to the maximum x value'),
+                ), 
+                UItem('bt_crop_range',enabled_when='object._has_data()'),      
+                show_border=True,  
+            ),
+            VGroup(
+                Label('X and Y offsets and multipliers to rescale data'),
                 HGroup(
                     Label('Offset'),
                     Item('x_offset', label='x', enabled_when='object._has_data()'),
@@ -342,25 +351,17 @@ class MainApp(HasTraits):
                     Label('Multiplier'),
                     Item('x_multiplier',label='x',enabled_when='object._has_data()'),    
                     Item('y_multiplier', label='y', enabled_when='object._has_data()'),
-                    ),     
-            ),           
-            HGroup( 
+                ),
                 UItem('bt_apply_transform', enabled_when='object._has_data()'),
-                UItem('bt_save_transformed', enabled_when='object._has_data()'),
-                springy=True
+                show_border=True,                       
             ),
-            HGroup(
-                Label('Range (x) axis'),
-                Item('select_range_min',label='min', enabled_when='object._has_data()'),
-                Item('select_range_max',label='max',enabled_when='object._has_data()'),
-                UItem('bt_crop_range',enabled_when='object._has_data()'),   
-            ),    
+            UItem('bt_save_transformed', enabled_when='object._has_data()'),                  
             show_border=True
-        ),
-      
+            ),
         label='Transforms',
         springy=True,
     )
+    
     peak_fitting_group = VGroup(
         VGroup(
             Item('peak_select_dataset',label='Dataset',enabled_when='object._has_data()'),
@@ -996,8 +997,18 @@ class MainApp(HasTraits):
         Crops dataset to within the range specified.
         """
         dataset=self._find_dataset_by_name(self.transform_selected_dataset,self.datasets+self.processed_datasets)
-        cropped_dataset=dataset.copy()
-        
+        tdataset=dataset_already_transformed(dataset,self.processed_datasets)
+        if tdataset is None:
+            cropped_dataset=dataset.copy()
+            cropped_dataset.metadata['ui'].color=None
+            cropped_dataset.name = processing.insert_descriptor(cropped_dataset.name, 't')
+            cropped_dataset.metadata['ui'].name = cropped_dataset.name + ' (transformed)'
+            self.processed_datasets.append(cropped_dataset)
+        elif tdataset is not None and (self.select_range_max>max(tdataset.data[:,0]) or self.select_range_min<min(tdataset.data[:,0])):
+            cropped_dataset=tdataset
+            cropped_dataset.data=dataset.data
+        else:
+            cropped_dataset=tdataset
         cropped_indices=numpy.where(cropped_dataset.data[:,0]>self.select_range_min)[0]
         if self.select_range_max!=-1.0:
             cropped_indices2=numpy.where(cropped_dataset.data[:,0]<self.select_range_max)[0]
@@ -1006,10 +1017,6 @@ class MainApp(HasTraits):
         
         newdata=cropped_dataset.data[cropped_indices[0]:numpy.max(cropped_indices)]
         cropped_dataset.data=newdata
-        cropped_dataset.metadata['ui'].color=None
-        cropped_dataset.name = processing.insert_descriptor(cropped_dataset.name, 't')
-        cropped_dataset.metadata['ui'].name = cropped_dataset.name + ' (transformed)'
-        self.processed_datasets.append(cropped_dataset)
         self._refresh_dataset_name_list()
         self._plot_processed_datasets()
 
@@ -1171,6 +1178,7 @@ class HelpBox(HasTraits):
 """
 <h5>Plot region usage</h5>
 Left drag = Zoom a selection of the plot <br>
+Left double click = Reset to the original plot view <br>
 Right drag = Pan the plot <br>
 Right click = Undo zoom <br>
 Esc = Reset zoom/pan <br>

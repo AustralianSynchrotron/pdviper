@@ -15,13 +15,19 @@ def apply_transform(datasets,x,y,x_multiplier,y_multiplier):
             newd.name = insert_descriptor(newd.name, 't')
             newd.metadata['ui'].name = newd.name + ' (transformed)'
             transformed_datasets.append(newd)
+        else:
+            newd=d
+            newd.data[:,0]=newd.data[:,0]*x_multiplier+x
+            newd.data[:,1]=newd.data[:,1]*y_multiplier+y 
+            newd.data[:,2]=newd.data[:,2]*y_multiplier+y
+            transformed_datasets.append(newd)
     return transformed_datasets    
 
 def find_datasets_with_descriptor(datasets,descriptors):
     return [d for d in datasets if d.metadata['ui'].name==d.name+' (transformed)']
 
 def dataset_already_transformed(dataset,transformed_datasets):
-    td=[d for d in transformed_datasets if d.metadata['ui'].name==d.name+' (transformed)']
+    td=[d for d in transformed_datasets if d.metadata['ui'].name==dataset.name+' (transformed)']
     if len(td)>0:
         return td[0]
     else:
