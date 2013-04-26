@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import os, stat, sys, shutil,platform, subprocess
+import os, stat, sys, shutil,platform, subprocess, struct
 home = 'http://synchrotron.org.au/pdviper'
 print 70*'*'
 print 'Checking python packages...',
