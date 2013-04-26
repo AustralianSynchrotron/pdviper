@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from mpl_figure_editor import MPLFigureEditor
 from matplotlib.figure import Figure
 from matplotlib.collections import LineCollection
+from mpl_toolkits.mplot3d import Axes3D
 
 from processing import stack_datasets, rebin_preserving_peaks
 from base_plot import BasePlot
