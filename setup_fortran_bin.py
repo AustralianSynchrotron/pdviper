@@ -21,7 +21,7 @@ for PDViPeR. It is missing the following package(s):
 
 if not os.path.exists('bin'):
     os.mkdir('bin')
-    open(os.path.join('bin','/__init__.py'),'w')
+    open(os.path.join('bin','__init__.py'),'w')
 
 
 if sys.platform.startswith('linux'):
