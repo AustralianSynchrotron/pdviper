@@ -11,7 +11,6 @@ from pyface.api import DirectoryDialog, OK, ImageResource
 from chaco.api import OverlayPlotContainer
 
 
-
 import csv
 from xye import XYEDataset
 from chaco_output import PlotOutput

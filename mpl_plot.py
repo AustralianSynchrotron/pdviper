@@ -7,6 +7,7 @@ from traits.api import Instance, Range, Bool, Float, Str, Enum, on_trait_change
 from traitsui.api import Item, UItem, VGroup, HGroup, DefaultOverride
 from traits_extensions import HasTraitsGroup
 
+
 import matplotlib.pyplot as plt
 from mpl_figure_editor import MPLFigureEditor
 from matplotlib.figure import Figure

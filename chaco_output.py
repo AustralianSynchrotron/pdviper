@@ -1,4 +1,4 @@
-
+import logger
 import os
 from pyface.api import error
 
@@ -71,10 +71,11 @@ class PlotOutput(object):
         plot.request_redraw()
 
         ext = os.path.splitext(filename)[1][1:]
-        if ext in ( 'svg', 'eps', 'pdf' ):
+        if ext in ( 'svg', 'eps', 'pdf'):
             PlotOutput.save_with_matplotlib(plot, width, height, dpi, filename)
         else:
-            PlotOutput.save_with_kiva(plot, width, height, dpi, filename)
+         #   PlotOutput.save_with_kiva(plot, width, height, dpi, filename)
+            PlotOutput.save_with_kiva(plot, width, height, dpi, filename,ext)
 
         if change_bounds:
             plot.outer_bounds = old_bounds
@@ -85,10 +86,10 @@ class PlotOutput(object):
         plot.request_redraw()
 
     @staticmethod
-    def save_with_kiva(plot, width, height, dpi, filename):
+    def save_with_kiva(plot, width, height, dpi, filename,ext):
         gc = PlotGraphicsContext((width, height), dpi=dpi)
         gc.render_component(plot)
-        gc.save(filename)
+        gc.save(filename,ext)
         logger.logger.info('Saved plot {}'.format(filename))
 
     @staticmethod

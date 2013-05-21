@@ -1,4 +1,4 @@
-#import logger
+import logger
 from os.path import basename, split
 from numpy import loadtxt, savetxt, asfarray
 import numpy as np

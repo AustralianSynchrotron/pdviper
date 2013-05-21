@@ -67,5 +67,5 @@ class PlotGraphicsContextMixin(object):
 #       super(PlotGraphicsContextMixin, self).clip_to_rect(x-0.5, y-0.5, width+1, height+1)
 
 class PlotGraphicsContext(PlotGraphicsContextMixin, GraphicsContext):
-    pass
+   pass
 

@@ -28,6 +28,7 @@ from kiva import constants
 from kiva.constants import FILL, FILL_STROKE, EOF_FILL_STROKE, EOF_FILL, STROKE
 from kiva import agg
 
+
 from matplotlib.font_manager import FontProperties
 from matplotlib.path import Path
 from matplotlib.transforms import Affine2D, TransformedPath
@@ -87,7 +88,7 @@ def unicode_to_mathtext(string):
 
 class GraphicsContext(basecore2d.GraphicsContextBase):
 
-    def __init__(self, size, dpi=72, format='svg', renderer=None, *args, **kwargs):
+    def __init__(self, size, dpi=72, format='png', renderer=None, *args, **kwargs):
         super(GraphicsContext, self).__init__(self, size, *args, **kwargs)
         width, height = size
         self.size = size

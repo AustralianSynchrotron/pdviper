@@ -66,7 +66,9 @@ includes.append('enable.drawing')
 includes.append('enable.tools')
 includes.append('enable.wx')
 includes.append('enable.wx.*')
- 
+
+includes.append('mpl_toolkits.mplot3d') 
+
 #includes.append('enable.savage')
 #includes.append('enable.savage.*')
 #includes.append('enable.savage.svg')
@@ -122,7 +124,7 @@ for folder, relative_path in data_folders:
 setup(windows = ['app.py'],
     author = "Kieran Spear, Gary Ruben, Lenneke Jong",
     author_email='pdviper@synchrotron.org.au',
-    version = "0.3",
+    version = "1.0",
     description = "PDViPeR",
     name = "PDViPeR",
     options = {"py2exe": {    "optimize": 0,
