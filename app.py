@@ -917,6 +917,7 @@ class MainApp(HasTraits):
     def _generate_plot_changed(self):
         if self.datasets:
             datasets=list(set(self.datasets)-self.background_datasets)
+            datasets.sort(key=lambda d: d.name)
             generator = PlotGenerator(datasets=datasets)
             generator.show()
 
