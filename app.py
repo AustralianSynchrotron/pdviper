@@ -917,6 +917,7 @@ class MainApp(HasTraits):
     def _generate_plot_changed(self):
         if self.datasets:
             datasets=list(set(self.datasets)-self.background_datasets)
+            datasets.sort(key=lambda d: d.name)
             generator = PlotGenerator(datasets=datasets)
             generator.show()
 
@@ -957,6 +958,7 @@ class MainApp(HasTraits):
         """
         xyzgen=XYZGenerator()
         datasets=list(set(self.datasets)-self.background_datasets)
+        datasets.sort(key=lambda d: d.name)
         xyzdata=xyzgen.process_data(datasets=datasets)
         defaultfilename=os.path.basename(self.file_paths[0])
         defaultfilename=re.sub(r"_p[0-9]*[_nsmbgt]*_\d{4}.xye?",".xyz",defaultfilename)

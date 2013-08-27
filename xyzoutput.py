@@ -11,14 +11,9 @@ class XYZGenerator():
 
     def process_data(self, datasets):
         data=[ dataset.data[:len(dataset.data)] for dataset in datasets if dataset.metadata['ui'].active ]
+        print data
         stack = np.vstack(data)
 
-        otherstack=stack_datasets(datasets)
-        
-       # xs = stack[:,:,0].ravel()
-        #zs = stack[:,:,1].ravel()
-       # ys = np.array([ [i]*stack[:,:,1].shape[1] for i in range(1, len(datasets) + 1) ]).ravel()
-        
         xs = stack[:,0]
         zs=stack[:,1]
         
