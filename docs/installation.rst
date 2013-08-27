@@ -96,3 +96,12 @@ Example 6. Mac OSX installation (recommended)
 #. Move the .zip package to the Applications folder.
 #. Double click the Application .zip package to unpack it the first time.
 #. Now you can double click the package to start PDViPeR.
+
+Notes on Installing Fortran binaries
+************************************
+
+The peak fitting and background fitting routines incorporate code developed by for the GSAS and GSASII (https://subversion.xor.aps.anl.gov/trac/pyGSAS) projects developed at the APS. Compiled binaries are included for 32 and 64 bit Windows and for Mac OSX. The windows installer should detect which version you require and place it in the "bin" directory. If performing the peak fitting or background subtraction routines results in an error simply copy the correct binary version from pdviper/binwin2.7 or pdviper/binwin64-2.7
+
+The fortran libraries may need to be compiled for your system. You will need a fortran compiler such as GFortran installed. 
+#. In a terminal change to the fsource directory within the pdviper source tree. cd <path>/pdviper/fsource
+#. Run the command "scons", this will compile the fortran code and place it in the <path>/pdviper/bin directory.
