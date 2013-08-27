@@ -1,10 +1,4 @@
-#!/bin/bash                                                                     
-if [ `uname` == 'Darwin' ]
-then
-    if [ -f ~/.bash_profile ]
-    then
-        source ~/.bash_profile
-    fi
-fi
+#!/bin/bash
 echo "Starting PDViPeR..."
+source ./install.sh
 python app.py

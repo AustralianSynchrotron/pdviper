@@ -4,7 +4,9 @@
 Installation
 ***************
 
-PDViPeR is written in `Python <http://python.org>`_ (2.7 at the time of writing) and has several module dependencies that require installation. For Windows, Linux and Mac users the easiest way to install these dependencies is to install one of the `Enthought Python Distributions <http://www.enthought.com/products/epd.php>`_. The `EPDFree <http://www.enthought.com/products/epd_free.php>`_ distribution contains all the modules on which PDViPeR depends. A typical user can just download and install EPDFree then download and unpack PDViPeR and run it immediately.
+PDViPeR is written in `Python <http://python.org>`_ (2.7 at the time of writing) and has several module dependencies that require installation. For Windows users, there is a self-contained installation package file available as the recommended download option for PDViPeR that does not require the dependencies to be installed separately. It can be downloaded from the `PDViPeR download page  <http://www.synchrotron.org.au/index.php/aussyncbeamlines/powder-diffraction/pdviper>`_ 
+
+For Linux and Mac users the easiest way to install these dependencies is to install one of the `Enthought Python Distributions <http://www.enthought.com/products/epd.php>`_. The `EPDFree <http://www.enthought.com/products/epd_free.php>`_ distribution contains all the modules on which PDViPeR depends. A typical user can just download and install EPDFree then download and unpack PDViPeR and run it immediately.
 
 Some users might prefer alternatives to EPDFree. For example Academic or Commercial users may prefer to use one of Enthought's other distributions. Other popular Python distributions include `Python(x,y) <http://code.google.com/p/pythonxy/>`_, `WinPython <http://code.google.com/p/winpython/>`_ and ActiveState's `ActivePython <http://www.activestate.com/activepython/downloads>`_, all of which will require installation of at least some of the following dependencies:
 
@@ -29,7 +31,13 @@ For those familiar with installing Python packages, the dependencies can be foun
 
 .. _example1:
 
-Example 1. Windows installation using Enthought Python Distribution (recommended)
+Example 1. Windows installation using the self-contained executable file (recommended)
+--------------------------------------------------------------------------------------
+
+#. Visit the `PDViPeR download page <http://www.synchrotron.org.au/pdviper>`_ and select the latest version of the Windows Installer. To install PDViPeR double click the downloaded executable file and follow the step-by-step instructions
+
+
+Example 2. Windows installation using Enthought Python Distribution (recommended)
 ---------------------------------------------------------------------------------
 
 #. Visit the `PDViPeR download page <http://www.synchrotron.org.au/pdviper>`_ and follow the instructions to obtain the EPD Free Python installer and the PDViPeR installer files for Windows. You may wish to visit the `Enthought website <http://www.enthought.com/products/epd.php>`_, directly, and choose one of Enthought's other Python distributions. Note, `EPD Free <http://www.enthought.com/products/epd_free.php>`_ satisfies the dependencies listed above.
@@ -40,7 +48,7 @@ Example 1. Windows installation using Enthought Python Distribution (recommended
    Verify that ``hello world`` is displayed.
 #. Running the PDViPeR installer will install PDViPeR and create a start menu entry.
 
-Example 2. Windows installation using Python(x,y) (optional)
+Example 3. Windows installation using Python(x,y) (optional)
 ------------------------------------------------------------
 
 #. Visit the `Python(x,y) <http://code.google.com/p/pythonxy/>`_ `downloads page <http://code.google.com/p/pythonxy/wiki/Downloads>`_ and install a distribution.
@@ -48,7 +56,7 @@ Example 2. Windows installation using Python(x,y) (optional)
 #. Visit the `PDViPeR download page <http://www.synchrotron.org.au/pdviper>`_ and follow the instructions to obtain the PDViPeR setup file.
 #. Running the installer will install PDViPeR and create a start menu entry.
 
-Example 3. Windows installation on a system with Python already installed (experienced)
+Example 4. Windows installation on a system with Python already installed (experienced)
 ---------------------------------------------------------------------------------------
 
 Note: untested.
@@ -58,7 +66,7 @@ Note: untested.
    Install in turn ``numpy`` (if in doubt choose the numpy-MKL-... version), ``scipy``,
    ``matplotlib``, ``wxPython``, and finally ``ETS``.
 
-Example 4. Linux installation using Enthought Python Distribution (recommended)
+Example 5. Linux installation using Enthought Python Distribution (recommended)
 -------------------------------------------------------------------------------
 
 #. Visit the `PDViPeR download page <http://www.synchrotron.org.au/pdviper>`_ and follow the instructions to obtain the EPD Free Python installer and the PDViPeR .zip package for Linux. You may wish to visit the `Enthought website <http://www.enthought.com/products/epd.php>`_, directly, and choose one of Enthought's other Python distributions. Note, `EPD Free <http://www.enthought.com/products/epd_free.php>`_ satisfies the dependencies listed above.
@@ -71,7 +79,7 @@ Example 4. Linux installation using Enthought Python Distribution (recommended)
 #. PDViPeR can be started by running ``./start_pdviper.sh`` or ``./app.py``. To do this,
    at the ``$`` prompt type ``chmod 777 start_pdviper.sh app.py`` followed by, for example, ``./start_pdviper.sh``
 
-Example 5. Linux installation using synaptic (experienced)
+Example 6. Linux installation using synaptic (experienced)
 ----------------------------------------------------------
 
 Note: untested.
@@ -88,7 +96,7 @@ This description is for Ubuntu Linux. yum packaged names in Fedora Linux flavour
 #. PDViPeR can be started by running ``./start_pdviper.sh`` or ``./app.py``. To do this,
    at the ``$`` prompt type ``chmod 777 start_pdviper.sh app.py`` followed by, for example, ``./start_pdviper.sh``
 
-Example 6. Mac OSX installation (recommended)
+Example 7. Mac OSX installation (recommended)
 ---------------------------------------------
 
 #. Visit the `PDViPeR download page <http://www.synchrotron.org.au/pdviper>`_ and follow the instructions to obtain the EPD Free Python installer and the PDViPeR .zip package for Mac OSX. You may wish to visit the `Enthought website <http://www.enthought.com/products/epd.php>`_, directly, and choose one of Enthought's other Python distributions. Note, `EPD Free <http://www.enthought.com/products/epd_free.php>`_ satisfies the dependencies listed above.
@@ -97,11 +105,13 @@ Example 6. Mac OSX installation (recommended)
 #. Double click the Application .zip package to unpack it the first time.
 #. Now you can double click the package to start PDViPeR.
 
+
 Notes on Installing Fortran binaries
 ************************************
 
-The peak fitting and background fitting routines incorporate code developed by for the GSAS and GSASII (https://subversion.xor.aps.anl.gov/trac/pyGSAS) projects developed at the APS. Compiled binaries are included for 32 and 64 bit Windows and for Mac OSX. The windows installer should detect which version you require and place it in the "bin" directory. If performing the peak fitting or background subtraction routines results in an error simply copy the correct binary version from pdviper/binwin2.7 or pdviper/binwin64-2.7
+The peak fitting and background fitting routines incorporate code developed by for the GSASII (https://subversion.xor.aps.anl.gov/trac/pyGSAS) projects developed at the APS. Compiled binaries are included for 32 and 64 bit Windows and for Mac OSX. The windows installer should detect which version you require and place it in the "bin" directory. If performing the peak fitting or background subtraction routines results in an error simply copy the correct binary version from pdviper/binwin2.7 or pdviper/binwin64-2.7
 
-The fortran libraries may need to be compiled for your system. You will need a fortran compiler such as GFortran installed. 
+For Linux users the fortran libraries may need to be compiled for your system. You will to have need a fortran compiler such as GFortran installed. 
+
 #. In a terminal change to the fsource directory within the pdviper source tree. cd <path>/pdviper/fsource
 #. Run the command "scons", this will compile the fortran code and place it in the <path>/pdviper/bin directory.
