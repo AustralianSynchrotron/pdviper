@@ -29,10 +29,10 @@ def get_save_as_csv_filename():
             return filename
     return None
 
-xye_wildcard = 'XYE XY (*.xye *.xy)|*.xye; *.xy|' \
-           'XYE (*.xye)|*.xye|' \
+xye_wildcard = 'XYE (*.xye)|*.xye|' \
            'XY (*.xy)|*.xy|' \
-           'All files (*.*)|*.*'
+           'DAT (*.dat)|*.dat|'\
+           'All files (*.*)|*.*|'
 def get_file_list_from_dialog():
     dlg = FileDialog(title='Choose files', action='open files', wildcard=xye_wildcard)
     if dlg.open() == OK:

@@ -171,9 +171,15 @@ class DatasetProcessor(object):
 
         # Create a new dataset to store the merged data in.
         current_directory = path.abspath(dataset1.source)
-        merged_data_filebase = dataset1.name.replace('_p12_', '_p1234_')\
-                                       .replace('_p1_', '_p12_')\
-                                       .replace('_p3_', '_p34_')
+       
+        def getmatch(m):
+            newnames={'12':'1234','1':'12','3':'34'}
+            return m.group(1)+newnames[m.group(2)]+m.group(3)
+       
+        merged_data_filebase = re.sub(r"(_[pP])(\d+)(_)", getmatch, dataset1.name)
+        #dataset1.name.replace('_p12_', '_p1234_')\
+        #                               .replace('_p1_', '_p12_')\
+        #                               .replace('_p3_', '_p34_')
         merged_data_filebase = insert_descriptor(merged_data_filebase, merge_label)
         merged_data_filename = path.join(current_directory, merged_data_filebase)
         merged_dataset = XYEDataset(merged_data, merged_data_filebase,

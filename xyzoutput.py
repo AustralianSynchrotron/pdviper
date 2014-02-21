@@ -11,7 +11,6 @@ class XYZGenerator():
 
     def process_data(self, datasets):
         data=[ dataset.data[:len(dataset.data)] for dataset in datasets if dataset.metadata['ui'].active ]
-        print data
         stack = np.vstack(data)
 
         xs = stack[:,0]

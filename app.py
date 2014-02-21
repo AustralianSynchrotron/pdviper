@@ -463,13 +463,19 @@ class MainApp(HasTraits):
         self.background_datasets=set()
         self.bg_removed_datasets=set() # keep track of datasets where we have removed the background so we don't do it twice
 
-    
+    def _rename_dats(self,file_list):
+        for f in file_list:
+            file_list.remove(f)
+            f=re.sub(r'(.*?)(\.dat)$',r"\1.xye",f)
+            file_list.append(f)
+        return file_list
 
     def _open_files_changed(self):
         file_list = get_file_list_from_dialog()
         if file_list:
             self._reset_all()
             self.most_recent_path = os.path.dirname(file_list[0])
+            file_list=self._rename_dats(file_list)
             self.file_paths = file_list
 
     def _options_changed(self, opts):
@@ -640,11 +646,15 @@ class MainApp(HasTraits):
         return partner
 
     def _get_position(self, filename):
-        m = re.search('_p([0-9]*)_', filename)
+        m = re.search('_[pP]([0-9]+)_', filename)
         try:
             return int(m.group(1))
         except (AttributeError, ValueError):
             return None
+
+    def _repl(self,m):
+            newindex=self._get_partner(int(m.group(2)))
+            return m.group(1)+str(newindex)+m.group(3)    
 
     def _add_dataset_pair(self, filename):
         current_directory, filebase = os.path.split(filename)
@@ -653,9 +663,10 @@ class MainApp(HasTraits):
             return
 
         # base filename for the associated position.
-        other_filebase = re.sub('_p{}_'.format(position_index),
-                                '_p{}_'.format(self._get_partner(position_index)),
-                                filebase)
+      #  other_filebase = re.sub(r"_[pP]{}_".format(position_index),
+      #                          r"_[pP]{}_".format(self._get_partner(position_index)),
+      #                          filebase)
+        other_filebase = re.sub(r"(_[pP])(\d+)(_)", self._repl, filename)
         other_filename = os.path.join(current_directory, other_filebase)
         if not os.path.exists(other_filename):
             return
@@ -779,7 +790,7 @@ class MainApp(HasTraits):
         """
         Outputs the fitted background parameters to a file.
         """
-        wildcard = 'All files (*.*)|*.*'
+        wildcard = 'All files (*.*)|*.*|'
         dlg = DirectoryDialog(title='Save results', default_path=self.most_recent_path)
         if dlg.open() == OK:
             self.most_recent_path = dlg.path
@@ -848,9 +859,9 @@ class MainApp(HasTraits):
         self.file_paths corresponding to the merge_positions radiobutton selection.
         """
         matching_re = {'all':    ''            ,
-                       'p1+p2':  '_p[12]_'     ,
-                       'p3+p4':  '_p[34]_'     ,
-                       'p12+p34':'_p(?:12|34)_',
+                       'p1+p2':  '_[pP][12]_'     ,
+                       'p3+p4':  '_[pP][34]_'     ,
+                       'p12+p34':'_[pP](?:12|34)_',
                       }
         basenames = [os.path.basename(f) for f in self.file_paths]
         filtered_paths = [f for f in basenames if re.search(matching_re[self.merge_positions], f) is not None]
@@ -860,9 +871,7 @@ class MainApp(HasTraits):
             position_index = self._get_position(filebase)
             if position_index is None:
                 return
-            other_filebase = re.sub('_p{}_'.format(position_index),
-                                    '_p{}_'.format(self._get_partner(position_index)),
-                                    filebase)
+            other_filebase = re.sub(r"(_[pP])(\d+)(_)", self._repl, filebase)
             if filebase in basenames and other_filebase in basenames:
                 if position_index!=12 and (position_index&1)==0:
                     self.dataset_pairs.add((other_filebase, filebase))
@@ -961,7 +970,7 @@ class MainApp(HasTraits):
         datasets.sort(key=lambda d: d.name)
         xyzdata=xyzgen.process_data(datasets=datasets)
         defaultfilename=os.path.basename(self.file_paths[0])
-        defaultfilename=re.sub(r"_p[0-9]*[_nsmbgt]*_\d{4}.xye?",".xyz",defaultfilename)
+        defaultfilename=re.sub(r"_[pP][0-9]*[_nsmbgt]*_\d{4}.xye?",".xyz",defaultfilename)
         filename=get_save_as_xyz_filename(directory=self.most_recent_path,filename=defaultfilename)
         if filename is not None:
             write_to_file(filename,xyzdata)

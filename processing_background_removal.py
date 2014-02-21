@@ -115,7 +115,7 @@ def subtract_background_with_file(foreground, background):
 def get_subtracted_datasets(datasets):
     subtracted_datasets=[]
     for d in datasets:
-        if re.search(r'_n?s?m?g?bt?_\d\d\d\d.xye?',d.name):
+        if re.search(r'_n?s?m?g?bt?_\d+.xye?',d.name):
             subtracted_datasets.append(d)
     return subtracted_datasets
 
@@ -183,8 +183,8 @@ class CurveFitter:
 if __name__=='__main__':
     import xye
     import matplotlib.pyplot as plt
-#    dataset = xye.XYEDataset.from_file(r'tests/testdata/si640c_low_temp_cal_p1_scan0.000000_adv0_0000.xye')
-    dataset = xye.XYEDataset.from_file(r'/home/jongl/Desktop/ht/si_al2o3_ht_p1_scan0.000000_adv0_0000.xye')
+    dataset = xye.XYEDataset.from_file(r'tests/testdata/si640c_low_temp_cal_p1_scan0.000000_adv0_0000.xye')
+  # dataset = xye.XYEDataset.from_file(r'/home/jongl/Desktop/ht/si_al2o3_ht_p1_scan0.000000_adv0_0000.xye')
 
     deg = 7
     xs, ys, _ = dataset.data.T
