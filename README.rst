@@ -46,7 +46,9 @@ To run PDViPeR, just call python on app.py from the cloned project directory: ::
 
 Version History
 ---------------
-0.3 -Automatic curve fitting and manual curve definition for background subtraction
+1.1 -Improved handling of filename conventions for robustness
+
+1.0 -Automatic curve fitting and manual curve definition for background subtraction
     -Peak detection and fitting 
 	-Rescaling and offset of both axes
 	-Output of all active datasets into .xyz format
@@ -62,3 +64,10 @@ Version History
 Known Issues
 ------------
 - 2d surface plot sometimes literally "loses the plot" when zooming. The symptom of this is that zooming occasionally shows a blank window. Workaround: If this occurs, click back to the Stacked plot then click back to 2d surface.
+
+Acknowledgements
+----------------
+This product includes software produced by UChicago Argonne, LLC under Contract No. DE-AC02-06CH11357 with the Department of Energy. 
+The curve fitting routines included in PDViPeR include fortran source code and python routines adapted from GSAS-II. 
+Toby, B. H., & Von Dreele, R. B. (2013). GSAS-II: the genesis of a modern open-source all purpose crystallography software package. Journal of Applied Crystallography, 46(2), 544-549.
+

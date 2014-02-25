@@ -1221,7 +1221,7 @@ access to the results of data during the course of their experiment which will
 facilitate better decision making and also provide the opportunity for ongoing data
 analysis via remote access.<br>
 
-Copyright (c) 2013, Synchrotron Light Source Australia Pty Ltd <br>
+Copyright (c) 2014, Synchrotron Light Source Australia Pty Ltd <br>
 All rights reserved.
 """
 

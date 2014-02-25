@@ -109,7 +109,9 @@ Example 7. Mac OSX installation (recommended)
 Notes on Installing Fortran binaries
 ************************************
 
-The peak fitting and background fitting routines incorporate code developed by for the GSASII (https://subversion.xor.aps.anl.gov/trac/pyGSAS) projects developed at the APS. Compiled binaries are included for 32 and 64 bit Windows and for Mac OSX. The windows installer should detect which version you require and place it in the "bin" directory. If performing the peak fitting or background subtraction routines results in an error simply copy the correct binary version from pdviper/binwin2.7 or pdviper/binwin64-2.7
+The peak fitting and background fitting routines incorporate code developed by for the GSAS-II (https://subversion.xor.aps.anl.gov/trac/pyGSAS) project developed at the APS, details of which can be found in this paper:
+Toby, B. H., & Von Dreele, R. B. (2013). GSAS-II: the genesis of a modern open-source all purpose crystallography software package. Journal of Applied Crystallography, 46(2), 544-549. 
+Compiled binaries are included for 32 and 64 bit Windows and for Mac OSX. The windows installer should detect which version you require and place it in the "bin" directory. If performing the peak fitting or background subtraction routines results in an error simply copy the correct binary version from pdviper/binwin2.7 or pdviper/binwin64-2.7
 
 For Linux users the fortran libraries may need to be compiled for your system. You will to have need a fortran compiler such as GFortran installed. 
 

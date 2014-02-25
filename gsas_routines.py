@@ -1,5 +1,9 @@
-## These routines are copied from GSAS-II 
+## This product includes software produced by UChicago Argonne, LLC
+## under Contract No. DE-AC02-06CH11357 with the Department of Energy.
+## We acknowledge that these routines have been adapted from code in GSAS-II. 
+## All fortran code in pypowder.for used by these routines belongs to GSAS-II.
 ## 
+
 import math
 import numpy as np
 import scipy as sp

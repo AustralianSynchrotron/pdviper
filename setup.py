@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='PDViPeR',
-    version='1.0',
+    version='1.1',
     author = "Kieran Spear, Gary Ruben, Lenneke Jong",
     author_email='pdviper@synchrotron.org.au',
     description = "PDViPeR",
