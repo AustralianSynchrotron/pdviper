@@ -1,11 +1,12 @@
 from numpy import inf
 import numpy as np
 
-from enable.api import Component
-from traits.api import HasTraits, Instance
+from enable.api import Component, Window
+from traits.api import Str,List,HasTraits, Instance, Event
+from enable.api import ComponentEditor
 
-from chaco.api import Plot, ArrayPlotData, Legend, PlotAxis,DataLabel
-from chaco.tools.api import ZoomTool,TraitsTool, SimpleInspectorTool, RangeSelection, RangeSelectionOverlay
+from chaco.api import Plot, ArrayPlotData, Legend, PlotAxis,DataLabel, OverlayPlotContainer, VPlotContainer
+from chaco.tools.api import ZoomTool,TraitsTool, SimpleInspectorTool, RangeSelection, RangeSelectionOverlay, LegendTool
 from chaco.overlays.api import SimpleInspectorOverlay
 from chaco.tooltip import ToolTip
 
@@ -15,10 +16,12 @@ from labels import get_value_scale_label
 import settings
 from define_background import MyLineDrawer
 from peak_editor import PeakSelectorTool
+from chaco.plotscrollbar import PlotScrollBar
+
 
 # This is a custom view for the axis editor that enables the tick_label_font item to
 # support font setting for the tick labels
-from traitsui.api import View, HGroup, Group, VGroup, Item, TextEditor
+from traitsui.api import View, HGroup, Group, VGroup, Item, UItem,ListEditor, TextEditor, Handler
 from chaco.axis_view import float_or_auto
 from chaco.tools.line_inspector import LineInspector
 # Traits UI for our PlotAxis. This is copied and edited from chaco/axis_view.py
@@ -139,7 +142,8 @@ class RawDataPlot(HasTraits):
         # Since highlighted datasets are plotted twice, both plots show up in
         # the legend. This fixes that.
         self.plot.legend.plots = self.plots
-        self.show_legend(True)
+
+        self.show_legend('Overlay')
         self._set_scale(scale)
 
     def reset_view(self):
@@ -150,8 +154,30 @@ class RawDataPlot(HasTraits):
     def _set_scale(self, scale):
         self.plot.y_axis.title = 'Intensity (%s)' % get_value_scale_label(scale)
 
-    def show_legend(self, visible=True):
-        self.plot.legend.visible = visible
+    def show_legend(self, legend='Overlay'):
+        if legend=='Window':
+            self.legend = self.plot.legend
+            self.plot.legend=None
+            self.legend_window = LegendWindow(self.legend)
+           # self.legend_window._plot()
+            self.legend_window.edit_traits()
+
+            #self.plot.legend.overlay(newplot)
+            #self.plot.legend.visible = True
+            # create new window with legend in it
+        elif legend=='Off':
+            if hasattr(self,'legend'): # legend in sepate window exists
+                self.legend.set(component=self.plot)
+                self.plot.legend = self.legend
+   
+            self.plot.legend.visible = False
+        else:
+            if hasattr(self,'legend'): # legend in sepate window exists
+                self.legend.set(component=self.plot)
+                self.plot.legend = self.legend
+
+            self.plot.legend.visible = True
+
 
     def show_grids(self, visible=True):
         self.plot.x_grid.visible = visible
@@ -284,7 +310,12 @@ class RawDataPlot(HasTraits):
                                   padding=10,
                                   error_icon='blank',
                                   visible=False,
-                                  plots=self.plots)
+                                  scrollable=True,
+                                  plots=self.plots,clip_to_component=True)
+        
+        self.plot.legend.tools.append(LegendTool(self.plot.legend, drag_button="right"))
+
+
 
         self.plot.x_axis = MyPlotAxis(component=self.plot,
                                       orientation='bottom')
@@ -303,9 +334,12 @@ class RawDataPlot(HasTraits):
         # Add the traits inspector tool to the container
         self.plot.tools.append(TraitsTool(self.plot))
 
+        
+
     def _setup_plot_tools(self, plot):
         """Sets up the background, and several tools on a plot"""
         plot.bgcolor = "white"
+        
 
         # The ZoomTool tool is stateful and allows drawing a zoom
         # box to select a zoom region.
@@ -356,5 +390,38 @@ class RawDataPlot(HasTraits):
         self.pointer_tool = PointerControlTool(component=plot, pointer='arrow')
         plot.tools.append(self.pointer_tool)
 
+    
+    
         
+class LegendWindow(HasTraits):
+    
+    plot = Instance(OverlayPlotContainer)
+       
+    traits_view = View(
+                       UItem('plot', editor=ComponentEditor(bgcolor='white',
+                       width=500, height=500), show_label=False, resizable=True),
+                        title='Legend', scrollable=True,
+               )
+    
+    def __init__(self,legend):
+        super(LegendWindow,self).__init__()
+        self.legend = self.add_legend(legend)
+ 
+    def _plot_default(self):      
+        self.container = OverlayPlotContainer(bgcolor="white", padding=10)
+        self.container.add(self.legend)
+        return self.container
+         
+    def get_legend(self):
+        if self.legend:
+            return self.legend
+         
+    def add_legend(self, legend):
+        legend.set(component=None,
+                                  padding=10,
+                                  error_icon='blank',
+                                  visible=True,
+                                  resizable='hv',
+                                 clip_to_component=True)
+        return legend
 

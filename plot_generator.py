@@ -1,7 +1,7 @@
 from traits.api import Str, HasTraits, Button, Enum, Bool
 from traitsui.api import UItem, HGroup, VGroup, Group, View, spring
 
-from processing import rescale
+from processing import rescale, stack_datasets
 from mpl_plot import MplPlot
 from chaco_plot import StackedPlot, Surface2DPlot
 from ui_helpers import get_save_as_filename, open_file_with_default_handler
@@ -23,6 +23,7 @@ class PlotGenerator(HasTraits):
     replot = Bool(False)
 
     status = Str
+
 
     def _on_redraw(self, drawing):
         self.status = 'Rendering plot...' if drawing else 'Done'
@@ -47,6 +48,7 @@ class PlotGenerator(HasTraits):
         )
         super(PlotGenerator, self).__init__(*args, **kws)
         self.datasets = kws['datasets']
+        self.stack = stack_datasets(self.datasets)
         self.cached_data = {}
         self._plot_type_changed()
 
@@ -115,8 +117,9 @@ class PlotGenerator(HasTraits):
         self._update_status('Done')
 
     def _generate_plot(self):
-        if self.plot_type not in self.cached_data or self.replot:
-            x, y, z = self.plots[self.plot_type].prepare_data(self.datasets)
+        if self.plot_type not in self.cached_data and self.replot:
+#            x, y, z = self.plots[self.plot_type].prepare_data(self.datasets)
+            x, y, z = self.plots[self.plot_type].prepare_data(self.stack)
             z = rescale(z, method=self.scale)
             self.cached_data[self.plot_type] = x, y, z
             self.replot = False

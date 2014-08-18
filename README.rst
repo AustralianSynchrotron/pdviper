@@ -46,6 +46,8 @@ To run PDViPeR, just call python on app.py from the cloned project directory: ::
 
 Version History
 ---------------
+1.2 -Improvements in speed for reading a large number of datasets and 2D surface plots
+
 1.1 -Improved handling of filename conventions for robustness
 
 1.0 -Automatic curve fitting and manual curve definition for background subtraction

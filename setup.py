@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='PDViPeR',
-    version='1.1',
+    version='1.2',
     author = "Kieran Spear, Gary Ruben, Lenneke Jong",
     author_email='pdviper@synchrotron.org.au',
     description = "PDViPeR",
@@ -20,5 +20,6 @@ setup(
 	"traitsui",
 	"matplotlib ",
 	"wxPython",
+    "pandas"
     ],
 )

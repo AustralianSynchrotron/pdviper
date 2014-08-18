@@ -138,11 +138,14 @@ class MplPlot(BasePlot, HasTraitsGroup):
             self._draw_pending = True
             self._redraw_timer.Start()
 
-    def _prepare_data(self, datasets):
-        stack = stack_datasets(datasets)
+#    def _prepare_data(self, datasets):
+    def _prepare_data(self, stack):
+#        stack = stack_datasets(datasets)
+        
         x = stack[:,:,0]
         z = stack[:,:,1]
-        y = array([ [i]*z.shape[1] for i in range(1, len(datasets) + 1) ])
+#        y = array([ [i]*z.shape[1] for i in range(1, len(datasets) + 1) ])
+        y = array([ [i]*z.shape[1] for i in range(1, stack.shape[1] + 1) ])
 
         if x[0,0] < x[0,-1]:
             self.x_lower = x[0,0]

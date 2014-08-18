@@ -277,10 +277,10 @@ def stack_datasets(datasets):
     """
     shapes = [ len(dataset.data) for dataset in datasets if dataset.metadata['ui'].active]
     min_x_len = np.min(shapes)
-    data = [ dataset.data[:min_x_len] for dataset in datasets if dataset.metadata['ui'].active ]
+    data = np.asarray([ dataset.data[:min_x_len] for dataset in datasets if dataset.metadata['ui'].active ])
 
-    stack = np.vstack([data])
-    return stack
+#    stack = np.vstack([data])
+    return data
 
 
 def interpolate_datasets(datasets, points):

@@ -8,6 +8,7 @@
 *.egg-info
 dist
 build
+fsource
 eggs
 parts
 bin
@@ -17,6 +18,7 @@ develop-eggs
 .installed.cfg
 lib
 lib64
+
 
 # Installer logs
 pip-log.txt
@@ -37,4 +39,8 @@ tests/tmp
 
 docs/_build
 .project
+.pydevproject
 .settings
+
+fsource/**
+upx.exe

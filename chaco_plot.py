@@ -7,7 +7,7 @@ from traits.api import Instance, Range, Bool, Int, on_trait_change
 from traitsui.api import Group, UItem, VGroup, Item, HGroup
 from chaco.api import Plot, ArrayPlotData, jet, ColorBar, LinearMapper, HPlotContainer, \
     PlotLabel, OverlayPlotContainer, LinePlot
-from chaco.tools.api import TraitsTool
+from chaco.tools.api import TraitsTool,RangeSelection, RangeSelectionOverlay
 from chaco.default_colormaps import fix
 from chaco.function_image_data import FunctionImageData
 
@@ -110,8 +110,9 @@ class StackedPlot(ChacoPlot):
         self._plot(self.data_x, None, self.data_z, self.scale)
         self.container.request_redraw()
 
-    def _prepare_data(self, datasets):
-        stack = stack_datasets(datasets)
+#    def _prepare_data(self, datasets):
+    def _prepare_data(self, stack):
+        # stack = stack_datasets(datasets)
         x = stack[:,:,0]
         z = stack[:,:,2]
         return x, None, z
@@ -294,7 +295,8 @@ class Surface2DPlot(ChacoPlot):
     sidelength = Int(1000)
 
 
-    def _prepare_data(self, datasets):
+#    def _prepare_data(self, datasets):
+    def _prepare_data(self, stack):
         '''
         This is called as the 2d chaco plot window is being set up. The return values
         are not used for plotting but are used for getting the tick marker scales and
@@ -302,7 +304,8 @@ class Surface2DPlot(ChacoPlot):
         I bin it down to a small arbitrary number of bins to keep things fast.
         '''
         self.update_content = True
-        stack = stack_datasets(datasets)
+        self.loop1 = True
+       # stack = stack_datasets(datasets)
         self.dataset_stack = stack
         BINS = 4
         xi, yi, zi = bin_data(stack, BINS)
@@ -316,7 +319,8 @@ class Surface2DPlot(ChacoPlot):
         rendering to stay relatively fast since data is binned down to a resolution
         roughly matching what the window can usefully display. 
         '''
-        if not self.update_content:
+        #if not self.update_content:
+        if not self.loop1:
             return self.zi
         stack = self.dataset_stack.copy()
 
@@ -332,7 +336,6 @@ class Surface2DPlot(ChacoPlot):
 
         # get a typical interval
         interval = np.median(np.diff(stack[0,:10,0]))
-
         # get a region a couple of samples bigger on each side of the window to allow for
         # misalignment
         xs = stack[:,:,0]
@@ -355,12 +358,13 @@ class Surface2DPlot(ChacoPlot):
         zs = zs[:,mask].reshape(zs.shape[0],-1)
 
         YBINS = zs.shape[0]*10
-        BINS = min(1000, zs.shape[1])
+        BINS = min(5000, zs.shape[1])
         zi = congrid(zs, (YBINS, BINS), method='neighbour', minusone=True)
 
         zi = np.clip(zi, 1, zi.max())
 
         self.zi = zi
+        self.loop1=False
         return zi
 
 
@@ -378,11 +382,11 @@ class Surface2DPlot(ChacoPlot):
 
     def _plot(self, x, y, z, scale):
         pd = ArrayPlotData()
-        pd.set_data("imagedata", z)
+     #   pd.set_data("imagedata", z)
         plot = Plot(pd, padding_left=60, fill_padding=True)
         plot.bgcolor = 'white'
         cmap = fix(jet, (0, z.max()))
-        origin = 'bottom left' # origin = 'top left' # to flip y-axis
+        plot.default_origin = 'bottom left' # origin = 'top left' # to flip y-axis
 
         fid = FunctionImageData(func=self._prepare_data_for_window, data_range=plot.range2d)
         pd.set_data("imagedata", fid)
@@ -390,10 +394,11 @@ class Surface2DPlot(ChacoPlot):
         self.img_plot = plot.img_plot("imagedata", name="surface2d",
                       xbounds=(np.min(x), np.max(x)),
                       ybounds=(1.0, y[-1,-1]),
-                      colormap=cmap, hide_grids=True, interpolation='nearest',
-                      origin=origin,
+                      colormap=cmap, hide_grids=True, interpolation='nearest'
+                     # origin=origin,
                       )[0]
-        plot.default_origin = origin
+        #plot.default_origin = origin
+        
         plot.x_axis = MyPlotAxis(component=plot, orientation='bottom')
         plot.y_axis = MyPlotAxis(component=plot, orientation='left')
         plot.x_axis.title = u'Angle (2\u0398)'
@@ -404,7 +409,11 @@ class Surface2DPlot(ChacoPlot):
         plot.x_axis.tick_label_font = tick_font
         plot.y_axis.tick_label_font = tick_font
         plot.y_axis.title = "Dataset"
-        plot.y_axis.tick_interval = 1.0
+        # if <10 datasets we want to reduce down the tickmarks to multiples
+        if len(y)<10:
+            plot.y_axis.tick_interval = 1.0
+        else:
+            plot.y_axis.tick_interval = len(y)/10
         actual_plot = plot.plots["surface2d"][0]
 
         self.plot_zoom_tool = ClickUndoZoomTool(
@@ -433,13 +442,14 @@ class Surface2DPlot(ChacoPlot):
         colorbar._axis.title_font = settings.axis_title_font
         colorbar._axis.tick_label_font = settings.tick_font
 
+
         # Add pan and zoom tools to the colorbar
         self.colorbar_zoom_tool = ClickUndoZoomTool(colorbar,
                                                     axis="index",
                                                     tool_mode="range",
                                                     always_on=True,
                                                     drag_button=settings.zoom_button,
-                                                    undo_button=settings.undo_button)
+                                                   undo_button=settings.undo_button)
         pan_tool = PanToolWithHistory(colorbar,
                                       history_tool=self.colorbar_zoom_tool,
                                       constrain_direction="y", constrain=True,
@@ -460,7 +470,7 @@ class Surface2DPlot(ChacoPlot):
         container = HPlotContainer(use_backbuffer=True)
         container.add(plot)
         container.add(colorbar)
-        self.twod_plot = plot
+        self.twod_plot = plot 
         return container
 
     def _reset_view(self):

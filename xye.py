@@ -3,6 +3,7 @@ from os.path import basename, split
 from numpy import loadtxt, savetxt, asfarray
 import numpy as np
 from csv import reader
+from pandas import read_csv
 
 from parab import load_params
 from copy import deepcopy
@@ -11,8 +12,9 @@ class XYEDataset(object):
     @classmethod
     def _load_xye_data(cls, filename):
         try:
-            return cls._load_xye_data_fast(filename)
-        except:
+            return cls._load_xye_data_fast2(filename)
+        except Exception as ex:
+            print ex.message
             return cls._load_xye_data_slow(filename)
 
     @staticmethod
@@ -24,6 +26,18 @@ class XYEDataset(object):
             # and append a column of zeros.
             a = np.hstack((a, np.zeros((a.shape[0],1))))
         return a
+
+    @staticmethod
+    def _load_xye_data_fast2(filename, dtype=np.float64, skiprows=1, delimiter=' '):
+        df = read_csv(filename,dtype=np.float64,delim_whitespace=True)
+        a = df.get_values()
+        if a.shape[1] == 2:
+            # only 2-columns of data in input, so identify this as xy data
+            # and append a column of zeros.
+            a = np.hstack((a, np.zeros((a.shape[0],1))))
+        return a        
+
+
 
     @staticmethod
     def _load_xye_data_slow(filename):

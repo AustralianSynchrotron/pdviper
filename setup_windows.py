@@ -68,6 +68,7 @@ includes.append('enable.wx')
 includes.append('enable.wx.*')
 
 includes.append('mpl_toolkits.mplot3d') 
+includes.append('pandas.read_csv')
 
 #includes.append('enable.savage')
 #includes.append('enable.savage.*')
@@ -124,7 +125,7 @@ for folder, relative_path in data_folders:
 setup(windows = ['app.py'],
     author = "Kieran Spear, Gary Ruben, Lenneke Jong",
     author_email='pdviper@synchrotron.org.au',
-    version = "1.1",
+    version = "1.2",
     description = "PDViPeR",
     name = "PDViPeR",
     options = {"py2exe": {    "optimize": 0,
