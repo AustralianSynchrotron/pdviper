@@ -5,9 +5,10 @@ from functools import cmp_to_key
 
 import numpy as np
 from numpy import array, linspace, meshgrid, exp
-from scipy import interpolate
+
 import scipy.ndimage as sn
 import scipy.optimize as so
+import scipy.interpolate as interpolate
 import matplotlib.pyplot as plt
 
 from xye import XYEDataset

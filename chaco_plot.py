@@ -1,6 +1,6 @@
 import logger
 import numpy as np
-from numpy import array
+
 
 from enable.api import Component, ComponentEditor
 from traits.api import Instance, Range, Bool, Int, on_trait_change
@@ -13,8 +13,7 @@ from chaco.function_image_data import FunctionImageData
 
 from chaco_output import PlotOutput
 from tools import ClickUndoZoomTool, PanToolWithHistory
-from processing import stack_datasets, interpolate_datasets, rebin_preserving_peaks, \
-    bin_data, cubic_interpolate, regrid_data
+from processing import bin_data, regrid_data
 from base_plot import BasePlot
 from labels import get_value_scale_label
 import settings

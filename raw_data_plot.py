@@ -1,12 +1,12 @@
 from numpy import inf
 import numpy as np
 
-from enable.api import Component, Window
-from traits.api import Str,List,HasTraits, Instance, Event
-from enable.api import ComponentEditor
+from enable.api import Component, ComponentEditor
+from traits.api import HasTraits, Instance
 
-from chaco.api import Plot, ArrayPlotData, Legend, PlotAxis,DataLabel, OverlayPlotContainer, VPlotContainer
-from chaco.tools.api import ZoomTool,TraitsTool, SimpleInspectorTool, RangeSelection, RangeSelectionOverlay, LegendTool
+
+from chaco.api import Plot, ArrayPlotData, Legend, PlotAxis,DataLabel, OverlayPlotContainer
+from chaco.tools.api import TraitsTool, SimpleInspectorTool, RangeSelection, RangeSelectionOverlay, LegendTool
 from chaco.overlays.api import SimpleInspectorOverlay
 from chaco.tooltip import ToolTip
 
@@ -16,12 +16,12 @@ from labels import get_value_scale_label
 import settings
 from define_background import MyLineDrawer
 from peak_editor import PeakSelectorTool
-from chaco.plotscrollbar import PlotScrollBar
+
 
 
 # This is a custom view for the axis editor that enables the tick_label_font item to
 # support font setting for the tick labels
-from traitsui.api import View, HGroup, Group, VGroup, Item, UItem,ListEditor, TextEditor, Handler
+from traitsui.api import View, HGroup, Group, VGroup, Item, UItem, TextEditor
 from chaco.axis_view import float_or_auto
 from chaco.tools.line_inspector import LineInspector
 # Traits UI for our PlotAxis. This is copied and edited from chaco/axis_view.py

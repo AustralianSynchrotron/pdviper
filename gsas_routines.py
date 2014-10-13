@@ -6,12 +6,11 @@
 
 import math
 import numpy as np
-import scipy as sp
-import numpy.linalg as nl
+
 from numpy.fft import ifft, fft, fftshift
 import scipy.interpolate as si
 import scipy.stats as st
-import scipy.optimize as so
+
 
 import bin.pypowder as pyd
 

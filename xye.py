@@ -1,5 +1,5 @@
 import logger
-from os.path import basename, split
+from os.path import basename, split, splitext
 from numpy import loadtxt, savetxt, asfarray
 import numpy as np
 from csv import reader
@@ -7,6 +7,7 @@ from pandas import read_csv
 
 from parab import load_params
 from copy import deepcopy
+from data_formats import read_raw
 
 class XYEDataset(object):
     @classmethod
@@ -48,10 +49,20 @@ class XYEDataset(object):
             a = np.hstack((a, np.zeros((a.shape[0],1))))
         return a
 
+    @staticmethod
+    def _load_bruker_raw_data(filename):
+        data_array, meta_data = read_raw(filename)
+        return data_array,meta_data
+
+
+
     @classmethod
     def from_file(cls, filename, positions=2):
-        data = cls._load_xye_data(filename)
-        metadata = cls.load_metadata(filename)
+        if splitext(filename)[1]=='.raw':
+            data,metadata = cls._load_bruker_raw_data(filename)
+        else:
+            data = cls._load_xye_data(filename)
+            metadata = cls.load_metadata(filename)
         return cls(data, name=basename(filename), source=filename,
                    metadata=metadata)
 

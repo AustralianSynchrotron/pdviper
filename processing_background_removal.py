@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.ndimage as sn
-import scipy.optimize as so
+
 from numpy.polynomial.polynomial import polyfit, polyval
 from scipy import interpolate
 from processing import insert_descriptor

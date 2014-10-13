@@ -91,14 +91,15 @@ class PlotGenerator(HasTraits):
     def _reset_button_changed(self):
         self.plots[self.plot_type].reset_view()
 
-    def _update_status(self, status, delay=0):
-        def _update():
-            self.status = status
-        import wx
-        if delay == 0:
-            _update()
-        else:
-            wx.CallLater(delay, _update).Start()
+#     def _update_status(self, status, delay=0):
+#         def _update():
+#             self.status = status
+#         #from pyface.timer.do_later import DoLaterTimer
+#         if delay == 0:
+#             _update()
+#         else:
+#             _update()
+#         #    DoLaterTimer(delay,_update).Start()
 
     def _save_button_changed(self):
         filename = get_save_as_filename()
@@ -111,10 +112,10 @@ class PlotGenerator(HasTraits):
         self.plots[self.plot_type].copy_to_clipboard()
 
     def _plot_type_changed(self):
-        self._update_status('Generating plot...')
+        #self._update_status('Generating plot...')
         self.replot = True
         self._generate_plot()
-        self._update_status('Done')
+        #self._update_status('Done')
 
     def _generate_plot(self):
         if self.plot_type not in self.cached_data and self.replot:

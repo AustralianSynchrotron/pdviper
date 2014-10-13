@@ -7,9 +7,8 @@ from traits.api import Instance, Range, Bool, Float, Str, Enum, on_trait_change
 from traitsui.api import Item, UItem, VGroup, HGroup, DefaultOverride
 from traits_extensions import HasTraitsGroup
 
-
-import matplotlib.pyplot as plt
 from mpl_figure_editor import MPLFigureEditor
+import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.collections import LineCollection
 from mpl_toolkits.mplot3d import Axes3D
@@ -119,7 +118,7 @@ class MplPlot(BasePlot, HasTraitsGroup):
         if not now and self._draw_pending:
             self._redraw_timer.Restart()
             return
-        import wx
+        #import wx
         canvas = self.figure.canvas
         if canvas is None:
             return
@@ -134,9 +133,10 @@ class MplPlot(BasePlot, HasTraitsGroup):
         if now:
             _draw()
         else:
-            self._redraw_timer = wx.CallLater(250, _draw)
-            self._draw_pending = True
-            self._redraw_timer.Start()
+            _draw()
+            #self._redraw_timer = wx.CallLater(250, _draw)
+            #self._draw_pending = True
+            #self._redraw_timer.Start()
 
 #    def _prepare_data(self, datasets):
     def _prepare_data(self, stack):

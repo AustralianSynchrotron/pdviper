@@ -180,7 +180,7 @@ Cf2py depend(NPTS) GAMPART
       END DO
       RETURN
       END
-
+      
 C Fortran (fast) linear interpolation -- B.H. Toby 9/2011
       SUBROUTINE PYFINTERP(NIN,XIN,YIN,NOUT,XOUT,YOUT)
 C XIN(1:NIN) and YIN(1:NIN) are arrays of (x,y) points to be interpolated
