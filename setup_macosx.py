@@ -4,7 +4,7 @@
 #    (version 2.7), all dependencies that satisfy PDViPer as well as
 #    py2app and setuptools obiously
 #
-# 2. Select appripriate pypowder.so (binwin64-2.7) and copy it into bin/
+# 2. Select appripriate pypowder.so (binmac64-2.7) and copy it into bin/
 #    $ cp binmac64-2.7/pypowder.so bin/
 #
 # 3. Ensure PDViPeR works with the standalone Python installation
