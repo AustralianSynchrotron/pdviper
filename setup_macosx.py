@@ -11,7 +11,7 @@
 #    $ python2.7 app.py
 #    $ tail ~/.PDViPeR/logfile.log
 #
-# 4. Clean build and dist directories if they exists
+# 4. Clean build and dist directories if they exist
 #    $ rm -rf build/* dist/*
 #
 # 5. Bundle app
@@ -82,7 +82,6 @@ setup(
     author = 'Gary Ruben, Kieran Spears, Lenneke Jong',
     author_email='pdviper@synchrotron.org.au',
     version = __version__,
-    version = '1.2',
     description = 'PDViPeR',
     options = {'py2app' : {
         'iconfile': 'pdviper_icon.icns',
