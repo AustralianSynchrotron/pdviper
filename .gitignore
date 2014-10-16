@@ -41,6 +41,7 @@ docs/_build
 .project
 .pydevproject
 .settings
+.idea
 
 fsource/**
 upx.exe

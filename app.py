@@ -250,9 +250,9 @@ class ControlPanel(HasTraits):
         VGroup(
             Item('align_positions', enabled_when='object._has_data() and (object.merge_positions != "all")'),
             HGroup(
-                UItem('bt_start_peak_select', label='Select peak', resizable=True,
+                UItem('bt_start_peak_select', label='Select peak',
                       enabled_when='object.align_positions and not object.peak_selecting and (object.merge_positions != "all")'),
-                UItem('bt_end_peak_select', label='Align', resizable=True,
+                UItem('bt_end_peak_select', label='Align',
                       enabled_when='object.peak_selecting and (object.merge_positions != "all")'),
                 springy=True,
                 ),

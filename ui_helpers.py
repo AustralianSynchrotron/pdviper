@@ -32,7 +32,7 @@ def get_save_as_csv_filename():
 xye_wildcard = 'XYE (*.xye)|*.xye|' \
            'XY (*.xy)|*.xy|' \
            'DAT (*.dat)|*.dat|'\
-           'RAW (*.raw)|*.raw|'\
+           'RAW (Bruker V3) (*.raw)|*.raw|'\
            'All files (*.*)|*.*|'
 
 def get_file_list_from_dialog():
