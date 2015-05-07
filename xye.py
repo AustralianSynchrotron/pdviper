@@ -99,6 +99,13 @@ class XYEDataset(object):
         savetxt(filename, self.data, fmt='%1.6f')
    #     logger.logger.info('Saved {}'.format(filename))
         
+    def save_fxye(self,filename):
+        f=open(filename,'w')
+        newx=self.data[:,0]*100
+        newdata=np.column_stack((newx,self.data[:,1],self.data[:,2]))
+        f.writelines(['Automatically generated file {} from PDViPeR \n'.format(splitext(basename(filename))[0]),
+                     'BANK\t1\t{0}\t{1}\tCONS\t{2}\t{3} 0 0 FXYE \n'.format(len(newx),len(self.data[:,1]),newx[0],newx[1]-newx[0])])
+        savetxt(filename, newdata, fmt='%1.6f')
 
     def copy(self):
         return deepcopy(self)

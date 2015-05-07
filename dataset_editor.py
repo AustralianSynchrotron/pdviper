@@ -1,3 +1,6 @@
+from traits.etsconfig.api import ETSConfig
+ETSConfig.toolkit ='qt4'
+
 from traits.api import Str, List, Bool, HasTraits, Color, on_trait_change, Instance, Event, Float
 
 from traitsui.api import View, Item, TableEditor, VGroup, HGroup, Label
@@ -7,6 +10,7 @@ from traitsui.menu import OKButton, CancelButton
 
 from fixes import fix_background_color, ColorEditor
 fix_background_color()
+
 
 
 class DatasetUI(HasTraits):

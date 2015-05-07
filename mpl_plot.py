@@ -145,7 +145,7 @@ class MplPlot(BasePlot, HasTraitsGroup):
         x = stack[:,:,0]
         z = stack[:,:,1]
 #        y = array([ [i]*z.shape[1] for i in range(1, len(datasets) + 1) ])
-        y = array([ [i]*z.shape[1] for i in range(1, stack.shape[1] + 1) ])
+        y = array([ [i]*z.shape[1] for i in range(1, stack.shape[0] + 1) ]) #this is slow
 
         if x[0,0] < x[0,-1]:
             self.x_lower = x[0,0]

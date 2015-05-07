@@ -29,7 +29,7 @@ from wavelength_editor import WavelengthEditor, WavelengthUI
 from ui_helpers import get_save_as_filename, get_save_as_csv_filename, \
     open_file_dir_with_default_handler, open_file_with_default_handler, \
     get_file_list_from_dialog, get_file_from_dialog, get_save_as_xyz_filename, get_transformed_filename, \
-    get_txt_filename
+    get_txt_filename, get_save_processed_dir
 import processing
 from processing import DatasetProcessor
 from plot_generator import PlotGenerator
@@ -638,13 +638,27 @@ class ControlPanel(HasTraits):
         self._plot_datasets(self.datasets)
 
     def _bt_save_changed(self):
-        dlg = DirectoryDialog(title='Save results', default_path=self.most_recent_path)
-        if dlg.open() == OK:
-            self.most_recent_path = dlg.path
-            for dataset in self.processed_datasets:
-                filename = os.path.join(dlg.path, dataset.name)
-                dataset.save(filename)
-            open_file_with_default_handler(dlg.path)
+        wildcard = 'GSAS file (.fxye)|*.fxye|XYE file (.xye)|*.xye'
+        result,path,extension = get_save_processed_dir(self.most_recent_path,wildcard)
+        if result:
+            print path,extension
+            if extension=='fxye':
+                for dataset in self.processed_datasets:
+                    tmpname=dataset.name.split('.')[0]+".fxye"
+                    filename= os.path.join(path, tmpname)
+                    dataset.save_fxye(filename)
+            else:
+                for dataset in self.processed_datasets:
+                    filename= os.path.join(path, dataset.name)
+                    dataset.save(filename)
+            open_file_with_default_handler(path)
+    #dlg = DirectoryDialog(title='Save results', action='save as', wildcard=wildcard, default_path=self.most_recent_path)
+          # if dlg.open() == OK:
+      #      self.most_recent_path = dlg.path
+       #     for dataset in self.processed_datasets:
+       #         filename = os.path.join(dlg.path, dataset.name)
+      #          dataset.save(filename)
+       #     open_file_with_default_handler(dlg.path)
 
     def _save_as_image_changed(self):
         if len(self.datasets) == 0:
@@ -1026,7 +1040,7 @@ class ControlPanel(HasTraits):
         datasets = list(set(self.datasets) - self.background_datasets)
         datasets.sort(key=lambda d: d.name)
         xyzdata = xyzgen.process_data(datasets=datasets)
-        defaultfilename = os.path.basename(self.file_paths[0])
+        defaultfilename = os.path.basename(self.file_paths[0]) # TODO stuff for fxye file option
         defaultfilename = re.sub(r"_[pP][0-9]*[_nsmbgt]*_\d{4}.xye?", ".xyz", defaultfilename)
         filename = get_save_as_xyz_filename(directory=self.most_recent_path, filename=defaultfilename)
         if filename is not None:

@@ -6,6 +6,9 @@ def write_to_file(filename,xyzdata):
         outfile.write("2Theta(X)\tDataset(Y)\tIntensity(Z)\n")
         np.savetxt(outfile,xyzdata,fmt='%4.5f\t%2.1f\t%10.5f',delimiter='\t',newline='\n')
 
+
+
+
 class XYZGenerator():
 
 
