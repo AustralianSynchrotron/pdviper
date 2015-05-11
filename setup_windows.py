@@ -88,17 +88,17 @@ data_folders = []
 
 
 #data_folders.append( ( os.path.join(ETS_folder,r'enable\images'), r'enable\images' ) )
-data_folders.append( ( os.path.join(enable.__path__, r'images'), r'enable\images' ) )
+data_folders.append( ( os.path.join(enable.__path__[0], 'images'), r'enable\images' ) )
 #data_folders.append( ( os.path.join(ETS_folder,r'pyface\images'), r'pyface\images' ) )
-data_folders.append( ( os.path.join(pyface.__path__, r'images'), r'pyface\images' ) )
+data_folders.append( ( os.path.join(pyface.__path__[0], 'images'), r'pyface\images' ) )
 #data_folders.append( ( os.path.join(ETS_folder,r'pyface\dock\images'), r'pyface\dock\images' ) )
-data_folders.append( ( os.path.join(pyface.__path__, r'dock/images'), r'pyface\dock\images' ) )
+data_folders.append( ( os.path.join(pyface.__path__[0], 'dock/images'), r'pyface\dock\images' ) )
 #data_folders.append( ( os.path.join(ETS_folder,r'pyface\ui\qt4\images'), r'pyface\ui\qt4\images' ) )
-data_folders.append( ( os.path.join(pyface.__path__, r'ui/qt4/images'), r'pyface\ui\qt4\images' ) )
+data_folders.append( ( os.path.join(pyface.__path__[0], 'ui/qt4/images'), r'pyface\ui\qt4\images' ) )
 #data_folders.append( ( os.path.join(ETS_folder,r'pyface\ui\wx\grid\images'), r'pyface\ui\wx\grid\images' ) )
 #data_folders.append( ( os.path.join(ETS_folder,r'traitsui\wx\images'), r'traitsui\wx\images' ) )
 #data_folders.append( ( os.path.join(ETS_folder,r'traitsui\image\library'), r'traitsui\image\library' ) )
-data_folders.append( ( os.path.join(traitsui.__path__, r'image/library'), r'traitsui\image\library' ) )
+data_folders.append( ( os.path.join(traitsui.__path__[0], 'image/library'), r'traitsui\image\library' ) )
 #data_folders.append( ( os.path.join(ETS_folder,r'enable\savage\trait_defs\ui\wx\data'), r'enable\savage\trait_defs\ui\wx\data' ) )
 
 data_folders.append( ( r'bin', r'bin' ) )
