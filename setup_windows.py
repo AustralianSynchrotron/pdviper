@@ -22,7 +22,9 @@ import py2exe
 import os
 
 
-
+import enable
+import pyface
+import traitsui
 import zmq
 os.environ["PATH"] = \
     os.environ["PATH"] + os.path.pathsep + os.path.split(zmq.__file__)[0]
@@ -82,15 +84,21 @@ packages = []
 data_folders = []
  
 # Traited apps:
-ETS_folder = r'C:\Python27\Lib\site-packages'
+# ETS_folder = r'C:\Python27\Lib\site-packages'
 
-data_folders.append( ( os.path.join(ETS_folder,r'enable\images'), r'enable\images' ) )
-data_folders.append( ( os.path.join(ETS_folder,r'pyface\images'), r'pyface\images' ) )
-data_folders.append( ( os.path.join(ETS_folder,r'pyface\dock\images'), r'pyface\dock\images' ) )
-data_folders.append( ( os.path.join(ETS_folder,r'pyface\ui\qt4\images'), r'pyface\ui\qt4\images' ) )
+
+#data_folders.append( ( os.path.join(ETS_folder,r'enable\images'), r'enable\images' ) )
+data_folders.append( ( os.path.join(enable.__path__, r'images'), r'enable\images' ) )
+#data_folders.append( ( os.path.join(ETS_folder,r'pyface\images'), r'pyface\images' ) )
+data_folders.append( ( os.path.join(pyface.__path__, r'images'), r'pyface\images' ) )
+#data_folders.append( ( os.path.join(ETS_folder,r'pyface\dock\images'), r'pyface\dock\images' ) )
+data_folders.append( ( os.path.join(pyface.__path__, r'dock/images'), r'pyface\dock\images' ) )
+#data_folders.append( ( os.path.join(ETS_folder,r'pyface\ui\qt4\images'), r'pyface\ui\qt4\images' ) )
+data_folders.append( ( os.path.join(pyface.__path__, r'ui/qt4/images'), r'pyface\ui\qt4\images' ) )
 #data_folders.append( ( os.path.join(ETS_folder,r'pyface\ui\wx\grid\images'), r'pyface\ui\wx\grid\images' ) )
 #data_folders.append( ( os.path.join(ETS_folder,r'traitsui\wx\images'), r'traitsui\wx\images' ) )
-data_folders.append( ( os.path.join(ETS_folder,r'traitsui\image\library'), r'traitsui\image\library' ) )
+#data_folders.append( ( os.path.join(ETS_folder,r'traitsui\image\library'), r'traitsui\image\library' ) )
+data_folders.append( ( os.path.join(traitsui.__path__, r'image/library'), r'traitsui\image\library' ) )
 #data_folders.append( ( os.path.join(ETS_folder,r'enable\savage\trait_defs\ui\wx\data'), r'enable\savage\trait_defs\ui\wx\data' ) )
 
 data_folders.append( ( r'bin', r'bin' ) )
