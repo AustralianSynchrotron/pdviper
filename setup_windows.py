@@ -111,7 +111,7 @@ for folder, relative_path in data_folders:
  
 setup(windows = ['app.py'],
     author = "Kieran Spear, Gary Ruben, Lenneke Jong",
-    author_email='pdviper@synchrotron.org.au',
+    author_email = 'pdviper@synchrotron.org.au',
     version = "2.0",
     description = "PDViPeR",
     name = "PDViPeR",

@@ -76,11 +76,11 @@ for folder, relative_path in data_folders:
             data_files.append(f2)
 
 setup(
-    name='PDViPeR',
-    app=['app.py'],
-    setup_requires=['py2app'],
+    name = 'PDViPeR',
+    app = ['app.py'],
+    setup_requires = ['py2app'],
     author = 'Gary Ruben, Kieran Spears, Lenneke Jong',
-    author_email='pdviper@synchrotron.org.au',
+    author_email = 'pdviper@synchrotron.org.au',
     version = __version__,
     description = 'PDViPeR',
     options = {'py2app' : {
@@ -95,4 +95,4 @@ setup(
         'argv_emulation': False,
     },},
     data_files=data_files)
-   
+
