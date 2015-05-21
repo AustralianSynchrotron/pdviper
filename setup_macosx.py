@@ -49,16 +49,25 @@ includes.extend([# The backends are dynamically imported and thus we need to
                  ])
 
 excludes = []
-excludes.extend(['bottleneck', 
+excludes.extend(['_ssl',
+                 'bottleneck', 
                  'cairo', 
                  'Carbon', 
+                 'Cython',
+                 'doctest',
                  'Finder', 
+                 'IPython',
                  'jinja2', 
+                 'multiprocessing',
                  'nose', 
-                 'PyQT4',
+                 'optparse',
+                 'PyQt4',
+                 'pyreadline'
                  'pytz'
                  'reportlab', 
+                 'tcl,'
                  'test', 
+                 'traits.wx',
                  'tornado', 
                  'wx'])
 
