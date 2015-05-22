@@ -68,6 +68,7 @@ except IOError:
 
 logging.basicConfig(filename=LOG_FILENAME, format='%(asctime)-24s %(message)s')
 logger = logging.getLogger(LOG_FILENAME)
+logger.propagate=False
 # If we can't create a logfile, as determined above, set the logger level to not log
 # INFO (or for the errorlogger DEBUG) messages; basically only attempt to log if the
 # program is going to crash anyway. This should effectively disable logging.
@@ -89,6 +90,7 @@ except IOError:
 
 logging.basicConfig(filename=ERRORLOG_FILENAME, format='%(asctime)-24s %(message)s')
 errorlogger = logging.getLogger(ERRORLOG_FILENAME)
+errorlogger.propagate=False
 if error_logger_writeable:
     errorlogger.setLevel(logging.DEBUG)
 else:

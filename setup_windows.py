@@ -36,9 +36,8 @@ includes.append('traitsui.extras')
 includes.append('traitsui.extras.*')
 includes.append('traitsui.menu')
 includes.append('traitsui.menu.*')
- 
-includes.append('kiva')
 
+includes.append('kiva')
 includes.append('PySide')
 includes.append('PySide.*')
 includes.append('PySide.QtGui.*')
@@ -60,12 +59,14 @@ includes.append('enable.tools')
 includes.append('enable.qt4')
 includes.append('enable.qt4.*')
 
+includes.append('mpl_toolkits')
 includes.append('mpl_toolkits.mplot3d')
 
 includes.append('pandas')
 
 
-excludes=['wx', 
+excludes=['wx',
+          'Tkinter',
           'traitsui.wx', 
           '_ssl',
           'IPython',
@@ -76,7 +77,7 @@ excludes=['wx',
           'multiprocessing',
           'tornado',
           'tcl',
-          'email',
+
           'nose']
 
 
@@ -103,8 +104,11 @@ for folder, relative_path in data_folders:
             data_files.append(f2)
 
 # data_files.append((r'enable', [os.path.join(ETS_folder, r'enable\images.zip')]))
- 
-setup(windows = ['app.py'],
+
+setup(windows = [
+    {"script": 'app.py',
+     "icon_resources":[(0,"pdviper_icon.ico")],
+     "dest_base":"PDViPeR"}],
     author = "Kieran Spear, Gary Ruben, Lenneke Jong",
     author_email = 'pdviper@synchrotron.org.au',
     version = __version__,

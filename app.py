@@ -1,6 +1,10 @@
 import os
 import re
 import matplotlib
+import warnings
+warnings.simplefilter('ignore')
+
+
 
 matplotlib.use('Qt4Agg')
 matplotlib.rcParams['backend.qt4'] = 'PySide'
