@@ -16,12 +16,23 @@ def get_save_as_xyz_filename(directory,filename):
     return None
 
 def get_save_as_filename():
-    wildcard =  'PNG file (.png)|*.png|TIFF file (.tiff)|*.tiff|EPS file (.eps)|*.eps|SVG file (.svg)|*.svg'
-    dialog = FileDialog(action='save as', title='Save as', wildcard=wildcard)
+    wildcards = [
+        {'label': 'PNG file (.png)', 'ext': 'png'},
+        {'label': 'TIFF file (.tiff)', 'ext': 'tiff'},
+        {'label': 'EPS file (.eps)', 'ext': 'eps'},
+        {'label': 'SVG file (.svg)', 'ext': 'svg'}
+    ]
+
+    dialog = FileDialog(action='save as', title='Save as',
+                        wildcard='|'.join(['%s|*.%s' % (w['label'], w['ext']) for w in wildcards]))
     if dialog.open() == OK:
-        filename = dialog.path
+        filename, extension = os.path.splitext(dialog.path)
+        print filename
+        print extension
         if filename:
-            return filename
+            if not extension:
+                extension = wildcards[dialog.wildcard_index]['ext']
+            return "%s.%s" % (filename, extension)
     return None
 
 def get_save_as_csv_filename():

@@ -66,8 +66,12 @@ except IOError:
     print '{} unwriteable. Event logging disabled.'.format(LOG_FILENAME)
     event_logger_writeable = False
 
-logging.basicConfig(filename=LOG_FILENAME, format='%(asctime)-24s %(message)s')
+#logging.basicConfig(filename=LOG_FILENAME, format='%(asctime)-24s %(message)s')
 logger = logging.getLogger(LOG_FILENAME)
+handler = logging.FileHandler(LOG_FILENAME)
+formatter = logging.Formatter('%(asctime)-24s %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 logger.propagate=False
 # If we can't create a logfile, as determined above, set the logger level to not log
 # INFO (or for the errorlogger DEBUG) messages; basically only attempt to log if the
@@ -88,8 +92,12 @@ except IOError:
     print '{} unwriteable. Error logging disabled.'.format(ERRORLOG_FILENAME)
     error_logger_writeable = False
 
-logging.basicConfig(filename=ERRORLOG_FILENAME, format='%(asctime)-24s %(message)s')
+#logging.basicConfig(filename=ERRORLOG_FILENAME, format='%(asctime)-24s %(message)s')
 errorlogger = logging.getLogger(ERRORLOG_FILENAME)
+error_handler = logging.FileHandler(LOG_FILENAME)
+error_formatter = logging.Formatter('%(asctime)-24s %(message)s')
+error_handler.setFormatter(error_formatter)
+errorlogger.addHandler(error_handler)
 errorlogger.propagate=False
 if error_logger_writeable:
     errorlogger.setLevel(logging.DEBUG)

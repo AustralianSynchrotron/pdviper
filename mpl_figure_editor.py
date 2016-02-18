@@ -14,7 +14,11 @@ from pyface.qt import QtGui, QtCore
 #from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg
+
+try:
+    from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar2QT
+except ImportError:
+    from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT
 #from traitsui.wx.editor import Editor
 #from traitsui.wx.basic_editor_factory import BasicEditorFactory
 
@@ -39,7 +43,7 @@ class _MPLFigureEditor(Editor):
         frame = QtGui.QWidget()
         mpl_canvas = FigureCanvas(self.value)
         mpl_canvas.setParent(frame)
-#        mpl_toolbar = NavigationToolbar2QTAgg(mpl_canvas,frame)
+#        mpl_toolbar = NavigationToolbar2QT(mpl_canvas,frame)
         
         vbox=QtGui.QVBoxLayout()
         vbox.addWidget(mpl_canvas)
