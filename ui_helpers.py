@@ -27,8 +27,6 @@ def get_save_as_filename():
                         wildcard='|'.join(['%s|*.%s' % (w['label'], w['ext']) for w in wildcards]))
     if dialog.open() == OK:
         filename, extension = os.path.splitext(dialog.path)
-        print filename
-        print extension
         if filename:
             if not extension:
                 extension = wildcards[dialog.wildcard_index]['ext']
