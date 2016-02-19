@@ -35,6 +35,9 @@ class ChacoFigure(object):
     def set_dpi(self, dpi):
         self.dpi = dpi
 
+    def get_dpi(self):
+        return self.dpi
+
     def get_size_inches(self):
         return self.width / float(self.dpi), self.height / float(self.dpi)
 
@@ -73,10 +76,9 @@ class PlotOutput(object):
         plot.request_redraw()
 
         ext = os.path.splitext(filename)[1][1:]
-        if ext in ( 'svg', 'eps', 'pdf'):
+        if ext in ('svg', 'eps', 'pdf'):
             PlotOutput.save_with_matplotlib(plot, width, height, dpi, filename)
         else:
-         #   PlotOutput.save_with_kiva(plot, width, height, dpi, filename)
             PlotOutput.save_with_kiva(plot, width, height, dpi, filename, ext)
 
         if change_bounds:
@@ -99,24 +101,9 @@ class PlotOutput(object):
         from matplotlib.backend_bases import FigureCanvasBase
         figure = ChacoFigure(plot, width, height, dpi)
         canvas = FigureCanvasBase(figure)
-        ext = os.path.splitext(filename)[1][1:]
+        canvas.print_figure(filename)
+        logger.logger.info('Saved plot {}'.format(filename))
 
-        try:
-            # Call the relevant print_ method on the canvas.
-            # This invokes the correct backend and prints the "figure".
-            func = getattr(canvas, 'print_' + ext)
-        except AttributeError, e:
-            errmsg = ("The filename must have an extension that matches "
-                      "a graphics format, such as '.png' or '.tiff'.")
-            if str(e.message) != '':
-                errmsg = ("Unknown filename extension: '%s'\n" %
-                          str(e.message)) + errmsg
-            error(None, errmsg, title="Invalid Filename Extension")
-        else:
-            # Call the function
-            func(filename)
-            logger.logger.info('Saved plot {}'.format(filename))
-    
     @staticmethod
     def copy_to_clipboard(plot):
 #        pass

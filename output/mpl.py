@@ -257,7 +257,7 @@ class GraphicsContext(basecore2d.GraphicsContextBase):
             gc.set_clip_path(self._get_transformed_clip_path())
         gc.set_joinstyle(line_join_map[self.state.line_join])
         gc.set_capstyle(line_cap_map[self.state.line_cap])
-        gc.set_foreground(color, isRGB=True)
+        gc.set_foreground(color, isRGBA=True)
         gc.set_alpha(self.state.alpha)
         transform = Affine2D.from_values(*affine.affine_params(self.get_ctm()))
         self._backend.draw_path(gc, path, transform, fill)

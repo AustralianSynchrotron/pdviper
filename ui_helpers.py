@@ -17,10 +17,14 @@ def get_save_as_xyz_filename(directory,filename):
 
 def get_save_as_filename():
     wildcards = [
-        {'label': 'PNG file (.png)', 'ext': 'png'},
-        {'label': 'TIFF file (.tiff)', 'ext': 'tiff'},
-        {'label': 'EPS file (.eps)', 'ext': 'eps'},
-        {'label': 'SVG file (.svg)', 'ext': 'svg'}
+        {'label': 'PNG image (.png)', 'ext': 'png'},
+        {'label': 'JPEG image (.jpeg)', 'ext': 'jpeg'},
+        {'label': 'TIFF image (.tiff)', 'ext': 'tiff'},
+        {'label': 'Windows BMP image (.bmp)', 'ext': 'bmp'},
+        {'label': 'GIF image (.gif)', 'ext': 'gif'},
+        {'label': 'Portable Document Format (.pdf)', 'ext': 'pdf'},
+        {'label': 'Encapsulated PostScript image (.eps)', 'ext': 'eps'},
+        {'label': 'Scalable Vector Graphics (.svg)', 'ext': 'svg'}
     ]
 
     dialog = FileDialog(action='save as', title='Save as',
