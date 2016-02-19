@@ -41,9 +41,11 @@ def get_save_as_csv_filename():
     wildcard =  'CSV file (.csv)|*.csv'
     dialog = FileDialog(action='save as', title='Save as', wildcard=wildcard)
     if dialog.open() == OK:
-        filename = dialog.path
+        filename, extension = os.path.splitext(dialog.path)
         if filename:
-            return filename
+            if not extension:
+                extension = 'csv'
+            return "%s.%s" % (filename, extension)
     return None
 
 xye_wildcard = 'XYE (*.xye)|*.xye|' \
