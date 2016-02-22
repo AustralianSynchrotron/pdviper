@@ -38,6 +38,9 @@ class MplPlot(BasePlot, HasTraitsGroup):
     z_upper = Float
     z_label = Str
     z_labels = {}   # A dictionary to hold edited labels for each scaling type
+    x = None
+    y = None
+    z = None
 
     group = VGroup(
         HGroup(
@@ -118,7 +121,6 @@ class MplPlot(BasePlot, HasTraitsGroup):
         if not now and self._draw_pending:
             self._redraw_timer.Restart()
             return
-        #import wx
         canvas = self.figure.canvas
         if canvas is None:
             return
@@ -134,16 +136,10 @@ class MplPlot(BasePlot, HasTraitsGroup):
             _draw()
         else:
             _draw()
-            #self._redraw_timer = wx.CallLater(250, _draw)
-            #self._draw_pending = True
-            #self._redraw_timer.Start()
 
-#    def _prepare_data(self, datasets):
     def _prepare_data(self, stack):
-#        stack = stack_datasets(datasets)
-        
-        x = stack[:,:,0]
-        z = stack[:,:,1]
+        x = stack[:, :, 0]
+        z = stack[:, :, 1]
 #        y = array([ [i]*z.shape[1] for i in range(1, len(datasets) + 1) ])
         y = array([ [i]*z.shape[1] for i in range(1, stack.shape[0] + 1) ]) #this is slow
 
@@ -154,10 +150,17 @@ class MplPlot(BasePlot, HasTraitsGroup):
             self.x_lower = x[0,-1]
             self.x_upper = x[0,0]
         self.z_upper = z.max()
+
+        self.x = x
+        self.y = y
+        self.z = z
+
         return x, y, z
 
-
     def _plot(self, x, y, z, scale='linear'):
+        if x is None or y is None or z is None:
+            return None
+
         self.x, self.y, self.z = x, y, z
         x, y, z = x.copy(), y.copy(), z.copy()
 
