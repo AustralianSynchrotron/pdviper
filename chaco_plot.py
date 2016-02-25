@@ -366,18 +366,9 @@ class Surface2DPlot(ChacoPlot):
         self.loop1=False
         return zi
 
-
     @on_trait_change('twod_plot.range2d.updated')
     def _update_ranges(self):
         self.update_content = not self.update_content
-        if self.img_plot is not None:
-            low_xy = self.twod_plot.range2d.low
-            high_xy = self.twod_plot.range2d.high
-            self.img_plot.index.set_data(
-                np.linspace(low_xy[0], high_xy[0], self.sidelength),
-                np.linspace(low_xy[1], high_xy[1], self.sidelength),
-                ('ascending', 'ascending'),
-            )
 
     def _plot(self, x, y, z, scale):
         pd = ArrayPlotData()
@@ -392,12 +383,12 @@ class Surface2DPlot(ChacoPlot):
 
         self.img_plot = plot.img_plot("imagedata", name="surface2d",
                       xbounds=(np.min(x), np.max(x)),
-                      ybounds=(1.0, y[-1,-1]),
+                      ybounds=(1.0, y[-1, -1]),
                       colormap=cmap, hide_grids=True, interpolation='nearest'
                      # origin=origin,
                       )[0]
         #plot.default_origin = origin
-        
+
         plot.x_axis = MyPlotAxis(component=plot, orientation='bottom')
         plot.y_axis = MyPlotAxis(component=plot, orientation='left')
         plot.x_axis.title = u'Angle (2\u0398)'
