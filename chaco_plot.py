@@ -383,7 +383,7 @@ class Surface2DPlot(ChacoPlot):
 
         self.img_plot = plot.img_plot("imagedata", name="surface2d",
                       xbounds=(np.min(x), np.max(x)),
-                      ybounds=(1.0, y[-1, -1]),
+                      ybounds=(1.0, y[-1, -1] if y[-1, -1] > 1 else 2.0),
                       colormap=cmap, hide_grids=True, interpolation='nearest'
                      # origin=origin,
                       )[0]
