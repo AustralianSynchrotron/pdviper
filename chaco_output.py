@@ -118,12 +118,8 @@ class PlotOutput(object):
         # Create a bitmap the same size as the plot
         # and copy the plot data to it
         bmp = gc.bmp_array
-        if gc.format().startswith('bgra'):
-            bmp_rgba = bmp[:, :, [2, 1, 0, 3]]
-        else:
-            bmp_rgba = bmp
 
-        cache_bmp = bmp_rgba.tobytes()
+        cache_bmp = bmp.tobytes()
         bitmap = QImage(cache_bmp, width+1, height+1, QImage.Format_RGB32)
         if QApplication.clipboard():
             QApplication.clipboard().setImage(bitmap.copy(), QClipboard.Clipboard)
