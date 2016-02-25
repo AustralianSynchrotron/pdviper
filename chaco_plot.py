@@ -164,12 +164,15 @@ class StackedPlot(ChacoPlot):
         self.y_axis.mapper = self.value_mapper
         self.y_axis.title = 'Normalized intensity (%s)' % \
                 get_value_scale_label(scale)
-        self.zoom_tool = ClickUndoZoomTool(
-            plot, tool_mode="box", always_on=True, pointer="cross",
-            drag_button=settings.zoom_button,
-            undo_button=settings.undo_button,
-        )
-        plot.overlays.append(self.zoom_tool)
+
+        #self.zoom_tool = ClickUndoZoomTool(
+        #    plot, tool_mode="box", always_on=True, pointer="cross",
+        #    drag_button=settings.zoom_button,
+        #    undo_button=settings.undo_button,
+        #)
+        #plot.overlays.append(self.zoom_tool)
+        #plot.tools.append(TraitsTool(plot))
+
         self.last_flip_order = self.flip_order
         return self.container
 

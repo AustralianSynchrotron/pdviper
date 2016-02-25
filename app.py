@@ -48,8 +48,9 @@ from peak_editor import PeakFittingEditor
 from traitsui.message import message
 from traitsui.editors.button_editor import ButtonEditor
 import numpy
+import version
 
-title = "PDViPeR"
+title = "PDViPeR - " + version.__version__
 size = (1200, 700)
 
 
