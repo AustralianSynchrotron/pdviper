@@ -1,5 +1,6 @@
 import logger
 
+import io
 import numpy as np
 from numpy import array
 
@@ -16,6 +17,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from processing import stack_datasets, rebin_preserving_peaks
 from base_plot import BasePlot
 from labels import get_value_scale_label
+from PySide.QtGui import QImage, QApplication
 
 
 MAX_QUALITY = 5
@@ -208,7 +210,10 @@ class MplPlot(BasePlot, HasTraitsGroup):
         return None
 
     def copy_to_clipboard(self):
-        self.figure.canvas.Copy_to_Clipboard()
+        img_buffer = io.BytesIO()
+        self.figure.savefig(img_buffer)
+        QApplication.clipboard().setImage(QImage.fromData(img_buffer.getvalue()))
+        img_buffer.close()
 
     def save_as(self, filename):
         self.figure.canvas.print_figure(filename)
