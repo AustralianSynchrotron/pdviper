@@ -20,7 +20,6 @@ setup(
 	"matplotlib ",
         "pandas",
         "pyface",
-        "kiva",
         "PySide"
     ],
 )
