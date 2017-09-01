@@ -1,0 +1,19 @@
+name: pdviper
+channels:
+- defaults
+dependencies:
+- chaco=4.5.0=np110py27_0
+- cython=0.26=py27_0
+- docutils=0.14=py27_0
+- enable=4.5.1=np110py27_0
+- kiwisolver=0.1.3=py27_0
+- matplotlib=1.5.1=np110py27_0
+- numpy=1.10.4=py27_2
+- pandas=0.18.1=np110py27_0
+- pyface=4.5.2=py27_0
+- python=2.7.13=0
+- scipy=0.17.1=np110py27_1
+- traits=4.5.0=py27_0
+- traitsui=4.5.1=py27_0
+- pip:
+  - pyside==1.2.4

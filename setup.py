@@ -11,15 +11,16 @@ setup(
     license = 'LICENSE',
     install_requires = [
         "docutils",
-	"numpy",
+        "numpy",
         "chaco",
         "scipy",
-	"enable",
-	"traits ",
-	"traitsui",
-	"matplotlib ",
+        "enable",
+        "traits ",
+        "traitsui",
+        "matplotlib ",
         "pandas",
         "pyface",
-        "PySide"
+        "PySide",
+        'kiwisolver',
     ],
 )
