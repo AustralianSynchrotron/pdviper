@@ -2,44 +2,7 @@ import logging
 import sys
 import os
 
-#from app import title
 title = 'PDViPeR'
-
-'''
-class SingleLevelFilter(logging.Filter):
-    """
-    From http://stackoverflow.com/questions/1383254/logging-streamhandler-and-standard-streams
-    """
-    def __init__(self, passlevel, reject):
-        self.passlevel = passlevel
-        self.reject = reject
-
-    def filter(self, record):
-        if self.reject:
-            return (record.levelno != self.passlevel)
-        else:
-            return (record.levelno == self.passlevel)
-
-
-It turns out that Traits exceptions are handled differently to normal Python exceptions,
-so my attempts to direct them to an errorlog file won't work unless a custom exception
-handler is pushed onto the handler stack. See
-https://svn.enthought.com/enthought/wiki/NotificationExceptionHandlers
-
-However, it appears that the traceback object is not made available so I can't log it in
-a useful way.
-
-def my_traits_exception_handler( object, trait_name, old_value, new_value ):
-    try:
-        errorlogger.error("An exception {object} occurred in trait {trait_name}".format(\
-                 object=repr(object),trait_name=trait_name))
-        errorlogger.error(traceback.extract_tb(object))
-    except IOError:
-        pass
-
-push_exception_handler(handler=my_traits_exception_handler, reraise_exceptions=True)
-'''
-
 
 # Set path to logfiles to environment variable HOME if it exists, else to HOMEPATH if it
 # exists, else to the current working directory.
@@ -103,21 +66,3 @@ if error_logger_writeable:
     errorlogger.setLevel(logging.DEBUG)
 else:
     errorlogger.setLevel(logging.CRITICAL)
-## errorlogger.addFilter(SingleLevelFilter(logging.INFO, True))
-## h2 = logging.StreamHandler(sys.stderr)
-## f2 = SingleLevelFilter(logging.INFO, True)
-## h2.addFilter(f2)
-
-
-def my_excepthook(excType, excValue, traceback, errorlogger=errorlogger):
-    """
-    A handler for logging tracebacks
-    From http://stackoverflow.com/questions/1508467/how-to-log-my-traceback-error
-    """
-    try:
-        errorlogger.error("An exception occurred",
-                 exc_info=(excType, excValue, traceback))
-    except IOError:
-        pass
-
-sys.excepthook = my_excepthook
