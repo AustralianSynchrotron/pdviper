@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
 setup(
     name='PDViPeR',
@@ -6,8 +6,18 @@ setup(
     author='Australian Synchrotron',
     author_email='pdviper@synchrotron.org.au',
     description='PDViPeR',
-    packages=find_packages(),
+    packages=[
+        'pdviper',
+        'pdviper.gui',
+    ],
     url='http://www.synchrotron.org.au/pdviper',
     license='LICENSE',
-    install_requires=[],
+    install_requires=[
+        'pyqt5',
+    ],
+    entry_points={
+        'console_scripts': [
+            'pdviper=pdviper:main',
+        ],
+    },
 )
