@@ -14,6 +14,7 @@ setup(
     license='LICENSE',
     install_requires=[
         'pyqt5',
+        'pandas',
     ],
     entry_points={
         'console_scripts': [
