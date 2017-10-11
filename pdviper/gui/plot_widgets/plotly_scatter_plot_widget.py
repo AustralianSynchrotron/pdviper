@@ -29,7 +29,7 @@ class PlotlyScatterPlotWidget(QWebEngineView):
         profile.downloadRequested.connect(self._handle_download_request)
 
     def plot(self, data_sets):
-        traces = [go.Scatter(x=ds.angle, y=ds.intensity)
+        traces = [go.Scatter(x=ds.angle, y=ds.intensity, name=ds.name)
                   for ds in data_sets]
         fig = go.Figure(data=traces)
         plot(fig, filename=str(self._plot_file_path), auto_open=False,

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pandas as pd
 
 
@@ -33,6 +35,7 @@ class DataSet:
     def __init__(self, path):
         self.source = path
         self._load_xye(path)
+        self.name = Path(path).stem
 
     def _load_xye(self, path):
         columns = ['angle', 'intensity', 'intensity_stdev']
