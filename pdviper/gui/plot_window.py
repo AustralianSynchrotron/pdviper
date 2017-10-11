@@ -1,14 +1,12 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
 
-from .plot_widgets.plotly_scatter_plot_widget import (
-    PlotlyScatterPlotWidget
-)
+from .plot_widgets.qtcharts_xy_widget import QtChartsXyPlotWidget
 
 
 class PlotWindow(QWidget):
     def __init__(self, parent=None, *, data_manager):
         super().__init__(parent)
-        self._plotWidget = PlotlyScatterPlotWidget()
+        self._plotWidget = QtChartsXyPlotWidget()
         layout = QVBoxLayout()
         layout.addWidget(self._plotWidget)
         self.setLayout(layout)

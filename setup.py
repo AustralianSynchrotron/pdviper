@@ -13,9 +13,10 @@ setup(
     url='http://www.synchrotron.org.au/pdviper',
     license='LICENSE',
     install_requires=[
-        'pyqt5',
+        'PyQt5',
         'pandas',
         'plotly',
+        'PyQtChart',
     ],
     entry_points={
         'console_scripts': [
