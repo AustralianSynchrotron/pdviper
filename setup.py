@@ -15,6 +15,7 @@ setup(
     install_requires=[
         'pyqt5',
         'pandas',
+        'plotly',
     ],
     entry_points={
         'console_scripts': [
