@@ -6,21 +6,25 @@ import pandas as pd
 class DataManager:
     def __init__(self):
         self.data_sets = []
-        self._callbacks = set()
+        self._observers = set()
 
     def load(self, paths):
-        self.data_sets.extend(DataSet(p) for p in paths)
-        self._process_callbacks()
+        start_index = len(self.data_sets)
+        self.data_sets.extend(DataSet.from_xye(p) for p in paths)
+        stop_index = len(self.data_sets)
+        self._notify_data_sets_added(list(range(start_index, stop_index)))
 
-    def add_callback(self, callback):
-        self._callbacks.add(callback)
+    def add_observer(self, observer):
+        self._observers.add(observer)
 
-    def remove_callback(self, callback):
-        self._callbacks.remove(callback)
+    def remove_observer(self, observer):
+        self._observers.remove(observer)
 
-    def _process_callbacks(self):
-        for callback in self._callbacks:
-            callback()
+    def _notify_data_sets_added(self, indices):
+        for observer in self._observers:
+            method = getattr(observer, 'data_sets_added', None)
+            if method:
+                method(indices)
 
 
 class DataSet:
@@ -32,14 +36,20 @@ class DataSet:
         intensity_stdev (array[float]): Standard deviation of intensity values
     """
 
-    def __init__(self, path):
-        self.source = path
-        self._load_xye(path)
-        self.name = Path(path).stem
+    def __init__(self, name, angle, intensity, intensity_stdev):
+        self.name = name
+        self.angle = angle
+        self.intensity = intensity
+        self.intensity_stdev = intensity_stdev
 
-    def _load_xye(self, path):
+    @classmethod
+    def from_xye(cls, path):
+        name = Path(path).stem
+
         columns = ['angle', 'intensity', 'intensity_stdev']
         df = pd.read_csv(path, delimiter=' ', names=columns, index_col=False)
-        self.angle = df.angle.values
-        self.intensity = df.intensity.values
-        self.intensity_stdev = df.intensity_stdev.values
+        angle = df.angle.values
+        intensity = df.intensity.values
+        intensity_stdev = df.intensity_stdev.values
+
+        return cls(name, angle, intensity, intensity_stdev)

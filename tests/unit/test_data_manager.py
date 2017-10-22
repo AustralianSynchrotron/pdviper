@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 import pytest
 
@@ -14,22 +14,22 @@ def manager():
     yield DataManager()
 
 
-def test_data_manager_adds_callbacks(manager):
-    callback1 = Mock()
-    callback2 = Mock()
-    manager.add_callback(callback1)
-    manager.add_callback(callback2)
+def test_data_manager_adds_observers(manager):
+    observer1 = Mock()
+    observer2 = Mock()
+    manager.add_observer(observer1)
+    manager.add_observer(observer2)
     manager.load([TEST_FILE_PATH])
-    assert callback1.called is True
-    assert callback2.called is True
+    assert observer1.data_sets_added.call_args == call([0])
+    assert observer2.data_sets_added.call_args == call([0])
 
 
-def test_data_manager_removes_callbacks(manager):
-    callback1 = Mock()
-    callback2 = Mock()
-    manager.add_callback(callback1)
-    manager.add_callback(callback2)
-    manager.remove_callback(callback1)
+def test_data_manager_removes_observers(manager):
+    observer1 = Mock()
+    observer2 = Mock()
+    manager.add_observer(observer1)
+    manager.add_observer(observer2)
+    manager.remove_observer(observer1)
     manager.load([TEST_FILE_PATH])
-    assert callback1.called is False
-    assert callback2.called is True
+    assert observer1.data_sets_added.called is False
+    assert observer2.data_sets_added.called is True
