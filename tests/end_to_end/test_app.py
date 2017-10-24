@@ -31,7 +31,7 @@ def test_application_loads(gui):
 def test_can_load_xye_file(gui, data_manager, qtbot, mocker):
     mocker.patch.object(QFileDialog, 'getOpenFileNames',
                         return_value=([TEST_FILE_PATH], None))
-    qtbot.mouseClick(gui.controlsPanel.openFilesButton, Qt.LeftButton)
+    qtbot.mouseClick(gui._controls_panel._load_panel._open_files_button, Qt.LeftButton)
     assert len(data_manager.data_sets) == 1
     data_set = data_manager.data_sets[0]
     assert data_set.name == 'file1'
@@ -42,6 +42,6 @@ def test_can_load_xye_file(gui, data_manager, qtbot, mocker):
 
 
 def test_loading_xye_file_triggers_plot(gui, data_manager, qtbot, mocker):
-    plot = mocker.patch.object(gui.plotWindow, 'plot', autospec=True)
+    plot = mocker.patch.object(gui._plot_window, 'plot', autospec=True)
     data_manager.load([TEST_FILE_PATH])
     assert plot.called is True
