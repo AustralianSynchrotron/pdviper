@@ -42,6 +42,6 @@ def test_can_load_xye_file(gui, data_manager, qtbot, mocker):
 
 
 def test_loading_xye_file_triggers_plot(gui, data_manager, qtbot, mocker):
-    plot = mocker.patch.object(gui._plot_window, 'plot', autospec=True)
+    plot = mocker.patch.object(gui._plot_window, '_plot', autospec=True)
     data_manager.load([TEST_FILE_PATH])
     assert plot.called is True
