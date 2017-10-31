@@ -10,6 +10,8 @@ from PyQt5.QtCore import QUrl
 from plotly import graph_objs as go
 from plotly.offline import plot
 
+from .xy_widget import XyPlotWidget, XyLegendState, verify_class_implements_abc
+
 
 PLOT_TEMP_DIR = Path(tempfile.mkdtemp())
 
@@ -27,13 +29,17 @@ class PlotlyScatterPlotWidget(QWebEngineView):
         super().__init__(parent)
         profile = self.page().profile()
         profile.downloadRequested.connect(self._handle_download_request)
+        self.data_sets = []
+        self.legend = XyLegendState.OFF
 
-    def plot(self, data_sets):
+    def plot(self):
+        if len(self.data_sets) == 0:
+            self.setHtml('')
+            return
         traces = [go.Scatter(x=ds.angle, y=ds.intensity, name=ds.name)
-                  for ds in data_sets]
-        fig = go.Figure(data=traces)
-        plot(fig, filename=str(self._plot_file_path), auto_open=False,
-             show_link=False)
+                  for ds in self.data_sets]
+        fig = go.Figure(data=traces, layout={'legend': {'x': .5, 'y': 1}})
+        plot(fig, filename=str(self._plot_file_path), auto_open=False, show_link=False)
         self.load(QUrl(f'file://{self._plot_file_path}'))
 
     @property
@@ -49,3 +55,6 @@ class PlotlyScatterPlotWidget(QWebEngineView):
 
     def _handle_download_request(self, download):
         download.accept()
+
+
+verify_class_implements_abc(PlotlyScatterPlotWidget, XyPlotWidget)
