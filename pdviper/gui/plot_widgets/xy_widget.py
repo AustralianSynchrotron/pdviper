@@ -13,6 +13,10 @@ class XyPlotWidget(ABC):
     def plot(self):
         ...
 
+    @abstractmethod
+    def reset_zoom(self):
+        ...
+
 
 def verify_class_implements_abc(Concrete, Abc):
     for method_name in Abc.__abstractmethods__:

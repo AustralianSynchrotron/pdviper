@@ -38,9 +38,16 @@ class PlotlyScatterPlotWidget(QWebEngineView):
             return
         traces = [go.Scatter(x=ds.angle, y=ds.intensity, name=ds.name)
                   for ds in self.data_sets]
-        fig = go.Figure(data=traces, layout={'legend': {'x': .5, 'y': 1}})
+        if self.legend == XyLegendState.OFF:
+            layout = go.Layout(showlegend=False)
+        else:
+            layout = go.Layout(legend={'x': .5, 'y': 1})
+        fig = go.Figure(data=traces, layout=layout)
         plot(fig, filename=str(self._plot_file_path), auto_open=False, show_link=False)
         self.load(QUrl(f'file://{self._plot_file_path}'))
+
+    def reset_zoom(self):
+        ...  # TODO
 
     @property
     def _plot_file_path(self):
