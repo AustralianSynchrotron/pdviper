@@ -1,36 +1,7 @@
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QCheckBox,
-                             QPushButton)
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QCheckBox, QPushButton
 from PyQt5.QtCore import Qt, pyqtSignal
 
-from .plot_widgets.qtcharts_xy_widget import QtChartsXyPlotWidget
-from .plot_widgets.plotly_scatter_plot_widget import PlotlyScatterPlotWidget
-from .plot_widgets.xy_widget import XyLegendState
-
-
-class PlotWindow(QWidget):
-    def __init__(self, parent=None, *, model):
-        super().__init__(parent)
-        self._active_plot = self._xy_plot = XyPlotPanel(self, QtChartsXyPlotWidget)
-        self._3d_plot = XyPlotPanel(self, PlotlyScatterPlotWidget)
-        layout = QVBoxLayout()
-        self._tabs = tabs = QTabWidget(self)
-        tabs.addTab(self._xy_plot, 'XY')
-        tabs.addTab(self._3d_plot, '3D')
-        layout.addWidget(tabs)
-        self.setLayout(layout)
-        self._model = model
-        self._model.changed.connect(self._handle_data_model_change)
-        tabs.currentChanged.connect(self._handle_tab_change)
-
-    def _handle_data_model_change(self):
-        self._plot()
-
-    def _handle_tab_change(self, index):
-        self._active_plot = self._tabs.currentWidget()
-        self._plot()
-
-    def _plot(self):
-        self._active_plot.plot(self._model.get_active_datasets())
+from .options import XyLegendState
 
 
 class XyPlotPanel(QWidget):

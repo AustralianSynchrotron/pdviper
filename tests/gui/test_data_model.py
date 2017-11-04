@@ -35,5 +35,5 @@ def test_data_model_provides_active_data_sets():
     model = DataModel(data_manager, None)
     data_manager.load([TEST_FILE1, TEST_FILE2])
     model.item(0, 0).setCheckState(Qt.Unchecked)
-    assert len(model.get_active_datasets()) == 1
-    assert model.get_active_datasets()[0].name == 'file2'
+    assert len(model.get_active_data_sets()) == 1
+    assert model.get_active_data_sets()[0].name == 'file2'

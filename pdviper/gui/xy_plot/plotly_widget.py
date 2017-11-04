@@ -10,7 +10,9 @@ from PyQt5.QtCore import QUrl
 from plotly import graph_objs as go
 from plotly.offline import plot
 
-from .xy_widget import XyPlotWidget, XyLegendState, verify_class_implements_abc
+from .abstract_widget import XyPlotWidget
+from .options import XyLegendState
+from ..utils import verify_class_implements_abc
 
 
 PLOT_TEMP_DIR = Path(tempfile.mkdtemp())

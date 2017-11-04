@@ -9,6 +9,7 @@ setup(
     packages=[
         'pdviper',
         'pdviper.gui',
+        'pdviper.gui.xy_plot',
     ],
     url='http://www.synchrotron.org.au/pdviper',
     license='LICENSE',

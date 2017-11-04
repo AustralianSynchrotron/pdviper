@@ -3,7 +3,9 @@ from collections import namedtuple
 from PyQt5.QtChart import QChart, QChartView, QLineSeries
 from PyQt5.QtCore import QPointF, QRectF
 
-from .xy_widget import XyPlotWidget, XyLegendState, verify_class_implements_abc
+from .abstract_widget import XyPlotWidget
+from .options import XyLegendState
+from ..utils import verify_class_implements_abc
 
 
 Zoom = namedtuple('Zoom', 'x1 x2 y1 y2')

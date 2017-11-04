@@ -5,7 +5,7 @@ from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from PyQt5.QtCore import Qt, pyqtSignal
 
 from .controls_panel import ControlsPanel
-from .plot_window import PlotWindow
+from .visualisation_panel import VisualisationPanel
 
 
 class DataModel(QStandardItemModel):
@@ -35,7 +35,7 @@ class DataModel(QStandardItemModel):
         if not self._updating:
             self.changed.emit()
 
-    def get_active_datasets(self):
+    def get_active_data_sets(self):
         data_sets = []
         for row in range(self.rowCount()):
             if self.item(row, 0).checkState() == Qt.Unchecked:
@@ -53,7 +53,7 @@ class MainWindow(QWidget):
 
         self._controls_panel = ControlsPanel(data_manager=data_manager)
         self._data_sets_table = QTableView()
-        self._plot_window = PlotWindow(model=model)
+        self._visualisation_panel = VisualisationPanel(model=model)
 
         self._data_sets_table.setModel(self._data_sets_model)
         self._data_sets_table.setColumnWidth(0, 220)
@@ -68,7 +68,7 @@ class MainWindow(QWidget):
 
         splitter = QSplitter(Qt.Horizontal)
         splitter.addWidget(lhs_widget)
-        splitter.addWidget(self._plot_window)
+        splitter.addWidget(self._visualisation_panel)
 
         main_layout = QHBoxLayout(self)
         main_layout.addWidget(splitter)

@@ -1,21 +1,4 @@
 from inspect import signature
-from abc import ABC, abstractmethod
-from enum import IntEnum
-
-
-class XyLegendState(IntEnum):
-    OFF = 0
-    ON = 1
-
-
-class XyPlotWidget(ABC):
-    @abstractmethod
-    def plot(self):
-        ...
-
-    @abstractmethod
-    def reset_zoom(self):
-        ...
 
 
 def verify_class_implements_abc(Concrete, Abc):
