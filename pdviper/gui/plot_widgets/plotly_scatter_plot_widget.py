@@ -47,7 +47,7 @@ class PlotlyScatterPlotWidget(QWebEngineView):
         self.load(QUrl(f'file://{self._plot_file_path}'))
 
     def reset_zoom(self):
-        ...  # TODO
+        self.plot()
 
     @property
     def _plot_file_path(self):

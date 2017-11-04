@@ -1,7 +1,7 @@
 from collections import namedtuple
 
 from PyQt5.QtChart import QChart, QChartView, QLineSeries
-from PyQt5.QtCore import Qt, QPointF, QRectF
+from PyQt5.QtCore import QPointF, QRectF
 
 from .xy_widget import XyPlotWidget, XyLegendState, verify_class_implements_abc
 
@@ -27,11 +27,8 @@ class QtChartsXyPlotWidget(QChartView):
             series.setName(ds.name)
             chart.addSeries(series)
         chart.createDefaultAxes()
-        if self.legend == XyLegendState.ON:
-            chart.legend().setAlignment(Qt.AlignRight)
-        else:
-            chart.legend().setVisible(False)
         self.setChart(chart)
+        self._draw_legend()
 
         x_axis = self._chart.axisX()
         y_axis = self._chart.axisY()
@@ -43,6 +40,21 @@ class QtChartsXyPlotWidget(QChartView):
                 self._handle_zoom_change()
             x_axis.rangeChanged.connect(self._handle_zoom_change)
             y_axis.rangeChanged.connect(self._handle_zoom_change)
+
+    def _draw_legend(self):
+        if not self._chart:
+            return
+        if self.legend == XyLegendState.ON:
+            inset_x = width = 310
+            inset_y = 30
+            legend = self._chart.legend()
+            legend.detachFromChart()
+            loc = self.geometry().topRight() - QPointF(inset_x, inset_y)
+            height = self.geometry().height()
+            legend.setGeometry(QRectF(loc.x(), loc.y(), width, height))
+            legend.update()
+        else:
+            self._chart.legend().setVisible(False)
 
     def reset_zoom(self):
         if self._chart:
@@ -66,6 +78,10 @@ class QtChartsXyPlotWidget(QChartView):
         height = abs(p1.y() - p2.y())
         rect = QRectF(x, y, width, height)
         self._chart.zoomIn(rect)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._draw_legend()
 
 
 verify_class_implements_abc(QtChartsXyPlotWidget, XyPlotWidget)
