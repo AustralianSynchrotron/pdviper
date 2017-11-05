@@ -27,19 +27,19 @@ atexit.register(_clean_temp_dir)
 
 class PlotlyScatterPlotWidget(QWebEngineView):
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *, data_presenter):
         super().__init__(parent)
         profile = self.page().profile()
         profile.downloadRequested.connect(self._handle_download_request)
-        self.data_sets = []
+        self._data_presenter = data_presenter
         self.legend = XyLegendState.OFF
 
     def plot(self):
-        if len(self.data_sets) == 0:
+        if len(self._data_presenter.series) == 0:
             self.setHtml('')
             return
-        traces = [go.Scatter(x=ds.angle, y=ds.intensity, name=ds.name)
-                  for ds in self.data_sets]
+        traces = [go.Scatter(x=s.x, y=s.y, name=s.name)
+                  for s in self._data_presenter.series]
         if self.legend == XyLegendState.OFF:
             layout = go.Layout(showlegend=False)
         else:

@@ -2,13 +2,15 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QCheckBox, QPushB
 from PyQt5.QtCore import Qt, pyqtSignal
 
 from .options import XyLegendState
+from .presenter import XyDataPresenter
 
 
 class XyPlotPanel(QWidget):
     def __init__(self, parent, PlotWidgetCls):
         super().__init__(parent)
-        self._plot_widget = PlotWidgetCls()
-        controls = XyPlotControls()
+        self._presenter = XyDataPresenter()
+        self._plot_widget = PlotWidgetCls(data_presenter=self._presenter)
+        controls = XyPlotControls(data_presenter=self._presenter)
         controls.legend_state_changed.connect(self._handle_legend_state_changed)
         controls.zoom_reset.connect(self._plot_widget.reset_zoom)
         layout = QVBoxLayout()
@@ -17,7 +19,7 @@ class XyPlotPanel(QWidget):
         self.setLayout(layout)
 
     def plot(self, data_sets):
-        self._plot_widget.data_sets = data_sets
+        self._presenter.data_sets = data_sets
         self._plot_widget.plot()
 
     def _handle_legend_state_changed(self, state):
@@ -30,7 +32,7 @@ class XyPlotControls(QWidget):
     legend_state_changed = pyqtSignal(XyLegendState)
     zoom_reset = pyqtSignal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *, data_presenter):
         super().__init__(parent)
         show_legend = QCheckBox('Show legend')
         show_legend.stateChanged.connect(self._handle_show_legend_change)

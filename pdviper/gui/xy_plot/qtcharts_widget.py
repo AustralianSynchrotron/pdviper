@@ -12,22 +12,22 @@ Zoom = namedtuple('Zoom', 'x1 x2 y1 y2')
 
 
 class QtChartsXyPlotWidget(QChartView):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *, data_presenter):
         super().__init__(parent)
         self.setRubberBand(QChartView.RectangleRubberBand)
-        self.data_sets = []
+        self._data_presenter = data_presenter
         self.legend = XyLegendState.OFF
         self._chart = None
         self._last_zoom = None
 
     def plot(self):
         self._chart = chart = QChart()
-        for ds in self.data_sets:
-            series = QLineSeries(chart)
-            for x, y in zip(ds.angle, ds.intensity):
-                series.append(QPointF(x, y))
-            series.setName(ds.name)
-            chart.addSeries(series)
+        for data_series in self._data_presenter.series:
+            line_series = QLineSeries(chart)
+            for x, y in zip(data_series.x, data_series.y):
+                line_series.append(QPointF(x, y))
+            line_series.setName(data_series.name)
+            chart.addSeries(line_series)
         chart.createDefaultAxes()
         self.setChart(chart)
         self._draw_legend()

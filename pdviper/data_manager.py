@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pandas as pd
+import numpy as np
 
 
 class DataManager:
@@ -38,9 +39,9 @@ class DataSet:
 
     def __init__(self, name, angle, intensity, intensity_stdev):
         self.name = name
-        self.angle = angle
-        self.intensity = intensity
-        self.intensity_stdev = intensity_stdev
+        self.angle = np.array(angle, 'float64')
+        self.intensity = np.array(intensity, 'float64')
+        self.intensity_stdev = np.array(intensity_stdev, 'float64')
 
     @classmethod
     def from_xye(cls, path):
