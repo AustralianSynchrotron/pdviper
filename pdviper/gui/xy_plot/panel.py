@@ -1,23 +1,26 @@
-from collections import OrderedDict
-
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QCheckBox, QPushButton,
                              QComboBox)
 from PyQt5.QtCore import Qt, pyqtSignal
 import numpy as np
 
 from .options import XyLegendState
-from .presenter import XyDataPresenter
+from .presenter import XyDataPresenter, AxisScaler
 
 
 class XyPlotPanel(QWidget):
     def __init__(self, parent, PlotWidgetCls):
         super().__init__(parent)
         self._presenter = XyDataPresenter(
-            y_transforms=OrderedDict([
-                ('Linear', None),
-                ('Log', lambda x: np.log(x)),
-                ('Sqrt', lambda x: np.sqrt(x)),
-            ]),
+            x_scales=[
+                AxisScaler('Normal', axis_label='Angle (2θ)'),
+            ],
+            y_scales=[
+                AxisScaler('Linear', axis_label='Intensity (N)'),
+                AxisScaler('Log', axis_label='Intensity (log₁₀(N))',
+                           transformation=lambda x: np.log10(x)),
+                AxisScaler('Sqrt', axis_label='Intensity (√N)',
+                           transformation=lambda x: np.sqrt(x)),
+            ],
         )
         self._plot_widget = PlotWidgetCls(data_presenter=self._presenter)
         controls = XyPlotControls(data_presenter=self._presenter)
@@ -38,7 +41,7 @@ class XyPlotPanel(QWidget):
         self._plot_widget.plot()
 
     def _y_transform_changed(self, name):
-        self._presenter.active_y_transform = name
+        self._presenter.set_y_scale(name)
         self._plot_widget.plot(preserve_zoom=False)
 
 
@@ -55,7 +58,7 @@ class XyPlotControls(QWidget):
         show_legend.stateChanged.connect(self._handle_show_legend_change)
 
         y_transforms = QComboBox()
-        for name in data_presenter.y_transforms:
+        for name in data_presenter.y_scale_options:
             y_transforms.addItem(name)
         y_transforms.currentTextChanged.connect(self.y_transform_changed)
 

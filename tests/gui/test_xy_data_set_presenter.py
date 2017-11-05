@@ -1,6 +1,8 @@
 import numpy as np
 
-from pdviper.gui.xy_plot.presenter import XyDataPresenter
+import pytest  # noqa
+
+from pdviper.gui.xy_plot.presenter import XyDataPresenter, AxisScaler
 from pdviper.data_manager import DataSet
 
 
@@ -25,34 +27,50 @@ def test_XyDataPresenter_holds_data_sets():
     assert np.array_equal(series.name, 'test')
 
 
-def test_XyDataPresenter_lists_transforms():
+@pytest.mark.wip
+def test_XyDataPresenter_lists_scales():
     presenter = XyDataPresenter(
-        x_transforms={
-            'degrees': None,
-            'radians': lambda x: x * np.pi / 180,
-        },
-        y_transforms={
-            'linear': None,
-            'log': lambda x: np.log(x),
-        },
+        x_scales=[
+            AxisScaler(name='degrees'),
+            AxisScaler(name='radians', transformation=lambda x: x * np.pi / 180),
+        ],
+        y_scales=[
+            AxisScaler(name='linear'),
+            AxisScaler(name='log', transformation=lambda x: np.log(x)),
+        ],
     )
-    assert list(presenter.x_transforms) == ['degrees', 'radians']
-    assert list(presenter.y_transforms) == ['linear', 'log']
+    assert presenter.x_scale_options == ['degrees', 'radians']
+    assert presenter.y_scale_options == ['linear', 'log']
+
+
+def test_XyDataPresenter_allows_selecting_scale():
+    presenter = XyDataPresenter(
+        x_scales=[
+            AxisScaler(name='degrees', axis_label='Angle (deg)'),
+            AxisScaler(name='radians', axis_label='Angle (rad)'),
+        ],
+        y_scales=[
+            AxisScaler(name='linear', axis_label='Linear'),
+            AxisScaler(name='log', axis_label='Log'),
+        ],
+    )
+    presenter.set_x_scale('radians')
+    presenter.set_y_scale('log')
+    assert presenter.x_axis_label == 'Angle (rad)'
+    assert presenter.y_axis_label == 'Log'
 
 
 def test_XyDataPresenter_applies_first_transform_by_default():
     presenter = XyDataPresenter(
-        x_transforms={
-            'doubled': lambda x: x * 2,
-            'normal': None,
-        },
-        y_transforms={
-            'halved': lambda x: x / 2,
-        },
+        x_scales=[
+            AxisScaler(name='doubled', transformation=lambda x: x * 2),
+            AxisScaler(name='normal', transformation=None),
+        ],
+        y_scales=[
+            AxisScaler(name='halved', transformation=lambda x: x / 2),
+        ],
     )
     presenter.data_sets = [DATA_SET]
-    assert presenter.active_x_transform == 'doubled'
-    assert presenter.active_y_transform == 'halved'
     assert np.array_equal(presenter.series[0].x, [0, 2, 4])
     assert np.array_equal(presenter.series[0].y, [4.5, 4, 3.5])
 
@@ -60,7 +78,5 @@ def test_XyDataPresenter_applies_first_transform_by_default():
 def test_XyDataPresenter_handles_no_transforms():
     presenter = XyDataPresenter()
     presenter.data_sets = [DATA_SET]
-    assert presenter.active_x_transform is None
-    assert presenter.active_y_transform is None
     assert np.array_equal(presenter.series[0].x, np.array([0, 1, 2]))
     assert np.array_equal(presenter.series[0].y, np.array([9, 8, 7]))

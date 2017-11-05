@@ -21,7 +21,13 @@ class QtChartsXyPlotWidget(QChartView):
         self._last_zoom = None
 
     def plot(self, preserve_zoom=True):
+
         self._chart = chart = QChart()
+
+        if len(self._data_presenter.series) == 0:
+            self.setChart(chart)
+            return
+
         for data_series in self._data_presenter.series:
             line_series = QLineSeries(chart)
             for x, y in zip(data_series.x, data_series.y):
@@ -35,13 +41,16 @@ class QtChartsXyPlotWidget(QChartView):
         x_axis = self._chart.axisX()
         y_axis = self._chart.axisY()
 
-        if x_axis:
-            if preserve_zoom and self._last_zoom:
-                self._restore_zoom_range()
-            else:
-                self._handle_zoom_change()
-            x_axis.rangeChanged.connect(self._handle_zoom_change)
-            y_axis.rangeChanged.connect(self._handle_zoom_change)
+        x_axis.setTitleText(self._data_presenter.x_axis_label)
+        y_axis.setTitleText(self._data_presenter.y_axis_label)
+
+        if preserve_zoom and self._last_zoom:
+            self._restore_zoom_range()
+        else:
+            self._handle_zoom_change()
+
+        x_axis.rangeChanged.connect(self._handle_zoom_change)
+        y_axis.rangeChanged.connect(self._handle_zoom_change)
 
     def _draw_legend(self):
         if not self._chart:
