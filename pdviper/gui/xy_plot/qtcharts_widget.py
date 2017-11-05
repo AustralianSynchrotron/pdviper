@@ -20,7 +20,7 @@ class QtChartsXyPlotWidget(QChartView):
         self._chart = None
         self._last_zoom = None
 
-    def plot(self):
+    def plot(self, preserve_zoom=True):
         self._chart = chart = QChart()
         for data_series in self._data_presenter.series:
             line_series = QLineSeries(chart)
@@ -36,7 +36,7 @@ class QtChartsXyPlotWidget(QChartView):
         y_axis = self._chart.axisY()
 
         if x_axis:
-            if self._last_zoom:
+            if preserve_zoom and self._last_zoom:
                 self._restore_zoom_range()
             else:
                 self._handle_zoom_change()

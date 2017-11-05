@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 import numpy as np
 
 from pdviper.gui.xy_plot.presenter import XyDataPresenter
@@ -44,13 +42,13 @@ def test_XyDataPresenter_lists_transforms():
 
 def test_XyDataPresenter_applies_first_transform_by_default():
     presenter = XyDataPresenter(
-        x_transforms=OrderedDict({
+        x_transforms={
             'doubled': lambda x: x * 2,
             'normal': None,
-        }),
-        y_transforms=OrderedDict({
+        },
+        y_transforms={
             'halved': lambda x: x / 2,
-        }),
+        },
     )
     presenter.data_sets = [DATA_SET]
     assert presenter.active_x_transform == 'doubled'
