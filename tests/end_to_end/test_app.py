@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pytest
 
 from PyQt5.QtCore import Qt
@@ -8,8 +6,7 @@ from pdviper import MainWindow
 from pdviper import DataManager
 from pdviper.gui.controls_panel import QFileDialog
 
-
-TEST_FILE_PATH = str(Path(__file__).parent / '../fixtures/file1.xye')
+from tests.fixtures import TEST_FILE1
 
 
 @pytest.fixture
@@ -30,7 +27,7 @@ def test_application_loads(gui):
 
 def test_can_load_xye_file(gui, data_manager, qtbot, mocker):
     mocker.patch.object(QFileDialog, 'getOpenFileNames',
-                        return_value=([TEST_FILE_PATH], None))
+                        return_value=([TEST_FILE1], None))
     qtbot.mouseClick(gui._controls_panel._load_panel._open_files_button, Qt.LeftButton)
     assert len(data_manager.data_sets) == 1
     data_set = data_manager.data_sets[0]
@@ -43,5 +40,5 @@ def test_can_load_xye_file(gui, data_manager, qtbot, mocker):
 
 def test_loading_xye_file_triggers_plot(gui, data_manager, qtbot, mocker):
     plot = mocker.patch.object(gui._visualisation_panel, '_plot', autospec=True)
-    data_manager.load([TEST_FILE_PATH])
+    data_manager.load([TEST_FILE1])
     assert plot.called is True

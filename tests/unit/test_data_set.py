@@ -1,15 +1,12 @@
-from pathlib import Path
-
 import numpy as np
 
 from pdviper.data_manager import DataSet
 
-
-TEST_FILE_PATH = str(Path(__file__).parent / '../fixtures/file1.xye')
+from tests.fixtures import TEST_FILE1
 
 
 def test_DataSet_sets_sample_name():
-    data_set = DataSet.from_xye(TEST_FILE_PATH)
+    data_set = DataSet.from_xye(TEST_FILE1)
     assert data_set.name == 'file1'
 
 

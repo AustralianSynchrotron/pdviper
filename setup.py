@@ -6,6 +6,7 @@ setup(
     author='Australian Synchrotron',
     author_email='pdviper@synchrotron.org.au',
     description='PDViPeR',
+    package_dir={'': 'src'},
     packages=[
         'pdviper',
         'pdviper.gui',
