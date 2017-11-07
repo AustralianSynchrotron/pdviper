@@ -1,4 +1,5 @@
 from PyQt5.QtWidgets import QWidget, QPushButton, QFileDialog, QVBoxLayout, QTabWidget
+from PyQt5.QtCore import Qt
 
 
 class LoadPanel(QWidget):
@@ -7,11 +8,12 @@ class LoadPanel(QWidget):
         self._data_manager = data_manager
         layout = QVBoxLayout(self)
         self._open_files_button = open_files_button = QPushButton('Open files...')
-        open_files_button.pressed.connect(self._handleOpenFilesButtonPress)
+        open_files_button.clicked.connect(self._handleOpenFilesButtonClick)
         layout.addWidget(open_files_button)
+        layout.setAlignment(Qt.AlignTop)
         self.setLayout(layout)
 
-    def _handleOpenFilesButtonPress(self):
+    def _handleOpenFilesButtonClick(self):
         file_names, _ = QFileDialog.getOpenFileNames(self, 'Open files', '',
                                                      'XYE files (*.xye)')
         self._data_manager.load(file_names)

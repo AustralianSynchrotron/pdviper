@@ -63,7 +63,7 @@ class XyPlotControls(QWidget):
         y_transforms.currentTextChanged.connect(self.y_transform_changed)
 
         reset_zoom = QPushButton('Reset zoom')
-        reset_zoom.pressed.connect(self.zoom_reset)
+        reset_zoom.clicked.connect(self.zoom_reset)
 
         layout = QHBoxLayout()
         layout.addWidget(show_legend)
