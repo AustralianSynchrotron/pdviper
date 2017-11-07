@@ -1,6 +1,15 @@
 from PyQt5.QtWidgets import QTableView
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, QSysInfo, pyqtSignal
+
+
+def is_delete_key(key):
+    if key == Qt.Key_Delete:
+        return True
+    elif QSysInfo().productType() == 'osx' and key == Qt.Key_Backspace:
+        return True
+    else:
+        return False
 
 
 class DataSetsTable(QTableView):
@@ -8,6 +17,10 @@ class DataSetsTable(QTableView):
         super().__init__(parent)
         self.setModel(model)
         self.setColumnWidth(0, 300)
+
+    def keyPressEvent(self, event):
+        if is_delete_key(event.key()):
+            self.model().delete_items(self.selectedIndexes())
 
 
 class DataSetsModel(QStandardItemModel):
@@ -22,15 +35,20 @@ class DataSetsModel(QStandardItemModel):
         self._updating = False
         self.itemChanged.connect(self._handle_item_changed)
 
-    def data_sets_added(self, indices):
+    def data_sets_added(self, indexes):
         self._updating = True
-        for row in indices:
+        for row in indexes:
             ds = self._data_manager.data_sets[row]
             item = QStandardItem(ds.name)
             item.setCheckable(True)
             item.setCheckState(Qt.Checked)
             self.setItem(row, 0, item)
         self._updating = False
+        self.changed.emit()
+
+    def data_sets_removed(self, indexes):
+        for index in reversed(indexes):
+            self.removeRow(index)
         self.changed.emit()
 
     def _handle_item_changed(self, item):
@@ -44,3 +62,6 @@ class DataSetsModel(QStandardItemModel):
                 continue
             data_sets.append(self._data_manager.data_sets[row])
         return data_sets
+
+    def delete_items(self, table_indexes):
+        self._data_manager.remove([index.row() for index in table_indexes])

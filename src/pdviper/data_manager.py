@@ -13,7 +13,13 @@ class DataManager:
         start_index = len(self.data_sets)
         self.data_sets.extend(DataSet.from_xye(p) for p in paths)
         stop_index = len(self.data_sets)
-        self._notify_data_sets_added(list(range(start_index, stop_index)))
+        self._notify_observers('data_sets_added', list(range(start_index, stop_index)))
+
+    def remove(self, indexes):
+        sorted_indexes = list(sorted(indexes))
+        for index in reversed(sorted_indexes):
+            del self.data_sets[index]
+        self._notify_observers('data_sets_removed', sorted_indexes)
 
     def add_observer(self, observer):
         self._observers.add(observer)
@@ -21,9 +27,9 @@ class DataManager:
     def remove_observer(self, observer):
         self._observers.remove(observer)
 
-    def _notify_data_sets_added(self, indices):
+    def _notify_observers(self, method_name, indices):
         for observer in self._observers:
-            method = getattr(observer, 'data_sets_added', None)
+            method = getattr(observer, method_name, None)
             if method:
                 method(indices)
 
