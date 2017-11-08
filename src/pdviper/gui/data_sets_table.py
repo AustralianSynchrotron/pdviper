@@ -52,8 +52,12 @@ class DataSetsModel(QStandardItemModel):
         self.changed.emit()
 
     def _handle_item_changed(self, item):
-        if not self._updating:
-            self.changed.emit()
+        if self._updating:
+            return
+        data_set = self._data_manager.data_sets[item.row()]
+        if data_set.name != item.text():
+            data_set.name = item.text()
+        self.changed.emit()
 
     def get_active_data_sets(self):
         data_sets = []
