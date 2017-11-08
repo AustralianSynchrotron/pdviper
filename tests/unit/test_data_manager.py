@@ -1,19 +1,44 @@
 from unittest.mock import Mock, call
+from pathlib import Path
 
 import pytest
 
 from pdviper.data_manager import DataManager, DataSet
 
-from tests.fixtures import TEST_FILE1
+from tests.fixtures import TEST_FILE1, TEST_FILE2
 
 
-def create_data_set(name):
-    return DataSet(name=name, angle=[], intensity=[], intensity_stdev=[])
+def create_data_set(name, path=None):
+    return DataSet(name=name, angle=[], intensity=[], intensity_stdev=[], path=path)
 
 
 @pytest.fixture
 def manager():
     yield DataManager()
+
+
+def test_load_handles_no_paths(manager):
+    observer = Mock()
+    manager.add_observer(observer)
+    manager.load([])
+    assert observer.data_sets_added.called is False
+
+
+def test_load_handles_invalid_paths(manager):
+    observer = Mock()
+    manager.add_observer(observer)
+    manager.load([Path('/bad/path')])
+    assert observer.data_sets_added.called is False
+
+
+def test_data_manager_loads_str_and_Path_types(manager):
+    manager.load([str(TEST_FILE1), Path(TEST_FILE2)])
+
+
+def test_data_manager_doesnt_load_file_twice(manager):
+    manager.load([TEST_FILE1])
+    manager.load([TEST_FILE1])
+    assert len(manager.data_sets) == 1
 
 
 def test_data_manager_adds_observers(manager):
@@ -83,3 +108,17 @@ def test_data_manager_notifies_observers_on_removal(manager):
     manager.remove([0, 1])
     assert observer1.data_sets_removed.call_args == call([0, 1])
     assert observer2.data_sets_removed.call_args == call([0, 1])
+
+
+def test_data_manager_loads_partners_for_xye_files(manager, mocker):
+    load_mock = mocker.patch.object(manager, 'load')
+    manager.data_sets = [create_data_set('ds1', path='/path/to/prefix_p1_suffix')]
+    manager.load_partners()
+    assert load_mock.call_args == call([Path('/path/to/prefix_p2_suffix')])
+
+
+def test_load_partners_handles_data_set_without_a_path(manager, mocker):
+    load_mock = mocker.patch.object(manager, 'load')
+    manager.data_sets = [create_data_set('ds1')]
+    manager.load_partners()
+    assert load_mock.call_args == call([])
