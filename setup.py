@@ -1,4 +1,10 @@
 from setuptools import setup
+import re
+
+
+with open('src/pdviper/__init__.py') as file:
+    version = re.search(r"__version__ = '(.*)'", file.read()).group(1)
+
 
 setup(
     name='PDViPeR',
@@ -22,7 +28,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'pdviper=pdviper:main',
+            'pdviper=pdviper.main:main',
         ],
     },
 )

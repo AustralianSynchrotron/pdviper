@@ -1,11 +1,8 @@
-from PyQt5.QtWidgets import QApplication
-
-from .gui import MainWindow
-from .data_manager import DataManager
+from .data_manager import DataSet, splice
 
 
-def main():
-    app = QApplication([])
-    main_window = MainWindow(data_manager=DataManager())
-    main_window.show()
-    app.exec_()
+__version__ = '3.0.0'
+__all__ = [
+    'DataSet',
+    'splice',
+]

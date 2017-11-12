@@ -39,7 +39,7 @@ def test_data_model_provides_active_data_sets(data_manager, model):
     data_manager.load([TEST_FILE1, TEST_FILE2])
     model.item(0, 0).setCheckState(Qt.Unchecked)
     assert len(model.get_active_data_sets()) == 1
-    assert model.get_active_data_sets()[0].name == 'file2'
+    assert model.get_active_data_sets()[0].name == 'ds1_0000_p2_0000'
 
 
 def test_data_model_emits_changed_when_rows_added(data_manager, model):
@@ -61,7 +61,7 @@ def test_data_model_removes_single_data_sets(data_manager, model):
     assert model.rowCount() == 2
     data_manager.remove([0])
     assert model.rowCount() == 1
-    assert model.item(0, 0).text() == 'file2'
+    assert model.item(0, 0).text() == 'ds1_0000_p2_0000'
 
 
 def test_data_model_remove_data_set_preserves_check_states(data_manager, model):

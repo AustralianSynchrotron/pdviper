@@ -1,5 +1,8 @@
-from PyQt5.QtWidgets import QWidget, QPushButton, QFileDialog, QVBoxLayout, QTabWidget
+from PyQt5.QtWidgets import QWidget, QPushButton, QFileDialog, QVBoxLayout, QTabWidget, \
+                            QGroupBox, QRadioButton, QHBoxLayout, QButtonGroup
 from PyQt5.QtCore import Qt
+
+from pdviper.data_manager import MergePartners
 
 
 class ControlsPanel(QWidget):
@@ -37,11 +40,52 @@ class LoadPanel(QWidget):
 
 
 class ProcessPanel(QWidget):
+
+    _merge_partners_options = [
+        MergePartners.P1_2,
+        MergePartners.P3_4,
+        MergePartners.P12_34,
+    ]
+    _default_merge_partners_index = 0
+
     def __init__(self, parent=None, *, data_manager):
         super().__init__(parent)
+
+        self._merge_partners = self._merge_partners_options[
+            self._default_merge_partners_index
+        ]
+
         self._load_partners_button = QPushButton('Load Partners')
         self._load_partners_button.clicked.connect(lambda: data_manager.load_partners())
+
+        merge_partners_group = self._add_merge_patners_selections()
+        self._combine_partners_button = QPushButton('Splice')
+        self._combine_partners_button.clicked.connect(
+            lambda: data_manager.merge_partners(self._merge_partners))
+
         layout = QVBoxLayout()
         layout.addWidget(self._load_partners_button)
+        layout.addSpacing(15)
+        layout.addWidget(merge_partners_group)
+        layout.addWidget(self._combine_partners_button)
         layout.setAlignment(Qt.AlignTop)
         self.setLayout(layout)
+
+    def _add_merge_patners_selections(self):
+
+        layout = QHBoxLayout()
+        self._merge_partners_group = group = QButtonGroup()
+        for idx, merge_partners in enumerate(self._merge_partners_options):
+            pos1, pos2 = merge_partners.value
+            button = QRadioButton(f'p{pos1.value}+p{pos2.value}')
+            layout.addWidget(button)
+            group.addButton(button, idx)
+
+        box = QGroupBox('Positions to Combine')
+        box.setLayout(layout)
+        group.buttonClicked[int].connect(self._handle_merge_partners_option_change)
+        group.button(self._default_merge_partners_index).setChecked(True)
+        return box
+
+    def _handle_merge_partners_option_change(self, index):
+        self._merge_partners = self._merge_partners_options[index]

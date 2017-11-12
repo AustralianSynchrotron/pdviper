@@ -2,8 +2,8 @@ import pytest
 
 from PyQt5.QtCore import Qt
 
-from pdviper import MainWindow
-from pdviper import DataManager
+from pdviper.main import MainWindow
+from pdviper.data_manager import DataManager
 from pdviper.gui.controls_panel import QFileDialog
 
 from tests.fixtures import TEST_FILE1
@@ -31,11 +31,11 @@ def test_can_load_xye_file(gui, data_manager, qtbot, mocker):
     qtbot.mouseClick(gui._controls_panel._load_panel._open_files_button, Qt.LeftButton)
     assert len(data_manager.data_sets) == 1
     data_set = data_manager.data_sets[0]
-    assert data_set.name == 'file1'
-    assert len(data_set.angle) == 19890
-    assert list(data_set.angle[:3]) == [3.01002, 3.01378, 3.01753]
-    assert list(data_set.intensity[:3]) == [5096.21, 5060.57, 4973.6]
-    assert list(data_set.intensity_stdev[:3]) == [67.053, 68.1375, 69.2789]
+    assert data_set.name == 'ds1_0000_p1_0000'
+    assert len(data_set.angle) == 19160
+    assert list(data_set.angle[:3]) == [3.00627, 3.01002, 3.01378]
+    assert list(data_set.intensity[:3]) == [5061.39, 5096.21, 5060.57]
+    assert list(data_set.intensity_stdev[:3]) == [64.4807, 67.053, 68.1375]
 
 
 def test_loading_xye_file_triggers_plot(gui, data_manager, qtbot, mocker):

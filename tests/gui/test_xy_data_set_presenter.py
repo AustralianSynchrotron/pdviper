@@ -27,7 +27,6 @@ def test_XyDataPresenter_holds_data_sets():
     assert np.array_equal(series.name, 'test')
 
 
-@pytest.mark.wip
 def test_XyDataPresenter_lists_scales():
     presenter = XyDataPresenter(
         x_scales=[
