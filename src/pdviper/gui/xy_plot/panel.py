@@ -19,8 +19,8 @@ def _two_theta_to_q(angle):
 
 
 class XyPlotPanel(QWidget):
-    def __init__(self, parent, PlotWidgetCls):
-        super().__init__(parent)
+    def __init__(self, PlotWidgetCls):
+        super().__init__()
         self._presenter = XyDataPresenter(
             x_scales=[
                 AxisScaler('2θ', axis_label='Angle (2θ)'),

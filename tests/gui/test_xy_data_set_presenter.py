@@ -12,7 +12,7 @@ DATA_SET = DataSet(name='test',
                    intensity_stdev=[.5, .5, .5])
 
 
-def test_XyDataPresenter_has_empty_data_sets_by_default():
+def test_XyDataPresenter_has_empty_series_by_default():
     presenter = XyDataPresenter()
     assert len(presenter.series) == 0
 

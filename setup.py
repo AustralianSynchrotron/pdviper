@@ -25,6 +25,7 @@ setup(
         'pandas',
         'plotly',
         'PyQtChart',
+        'matplotlib',
     ],
     entry_points={
         'console_scripts': [

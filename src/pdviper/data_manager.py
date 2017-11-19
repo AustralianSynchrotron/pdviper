@@ -97,6 +97,10 @@ class DataSet:
                                  self.intensity[:, None],
                                  self.intensity_stdev[:, None]])
 
+    @property
+    def data(self):
+        return self._array
+
     @classmethod
     def from_xye(cls, path):
         path = Path(path)
