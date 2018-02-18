@@ -1,3 +1,6 @@
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPainter, QPen
+
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 
@@ -12,6 +15,61 @@ class MatplotlibHeatmapWidget(FigureCanvasQTAgg):
         self._ax = self._figure.add_subplot(111)
         self._image = None
         self._colorbar = None
+        self._mouse_clicked = False
+        self._zoom_rect = None
+        self.mpl_connect('button_press_event', self._on_mouse_click)
+        self.mpl_connect('button_release_event', self._on_mouse_release)
+        self.mpl_connect('motion_notify_event', self._on_mouse_move)
+
+    @property
+    def _figure_height(self):
+        return self.figure.bbox.height
+
+    def _on_mouse_click(self, event):
+        if event.inaxes != self._ax:
+            return
+        self._mouse_clicked = True
+        self._update_zoom_rect(p0=(event.x, self._figure_height - event.y))
+
+    def _on_mouse_move(self, event):
+        if not self._mouse_clicked:
+            return
+        self._update_zoom_rect(p1=(event.x, self._figure_height - event.y))
+
+    def _on_mouse_release(self, event):
+        if not self._mouse_clicked:
+            return
+        self._mouse_clicked = False
+        self._clear_zoom_rect()
+
+    def _update_zoom_rect(self, *, p0=None, p1=None):
+        if p0 is None:
+            p0 = self._zoom_rect[:2]
+        if p1 is None:
+            p1 = p0
+        self._zoom_rect = (*p0, *p1)
+        self.update()
+
+    def _clear_zoom_rect(self):
+        self._zoom_rect = None
+        self.update()
+
+    def paintEvent(self, e):
+        super().paintEvent(e)
+        self._paint_zoom_rect()
+
+    def _paint_zoom_rect(self):
+        if self._zoom_rect is None:
+            return
+        painter = QPainter(self)
+        painter.setPen(QPen(Qt.red, 5 / self._dpi_ratio, Qt.DotLine))
+        painter.drawRect(*self._zoom_rect_for_qt)
+        painter.end()
+
+    @property
+    def _zoom_rect_for_qt(self):
+        x0, y0, x1, y1 = [pt / self._dpi_ratio for pt in self._zoom_rect]
+        return x0, y0, x1 - x0, y1 - y0
 
     def plot(self):
 
