@@ -40,7 +40,11 @@ class MatplotlibHeatmapWidget(FigureCanvasQTAgg):
         if not self._mouse_clicked:
             return
         self._mouse_clicked = False
+        x0, _ = self._transform_display_to_data_coords(self._zoom_rect[:2])
+        x1, _ = self._transform_display_to_data_coords(self._zoom_rect[2:])
         self._clear_zoom_rect()
+        self._ax.set_xlim(x0, x1)
+        self.draw()
 
     def _update_zoom_rect(self, *, p0=None, p1=None):
         if p0 is None:
@@ -53,6 +57,9 @@ class MatplotlibHeatmapWidget(FigureCanvasQTAgg):
     def _clear_zoom_rect(self):
         self._zoom_rect = None
         self.update()
+
+    def _transform_display_to_data_coords(self, point):
+        return self._ax.transData.inverted().transform(point)
 
     def paintEvent(self, e):
         super().paintEvent(e)
@@ -99,4 +106,6 @@ class MatplotlibHeatmapWidget(FigureCanvasQTAgg):
         self.draw()
 
     def reset_zoom(self):
-        pass
+        self._ax.set_autoscale_on(True)
+        self._ax.autoscale_view()
+        self.draw()
