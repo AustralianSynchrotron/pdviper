@@ -92,6 +92,8 @@ class MatplotlibHeatmapWidget(FigureCanvasQTAgg):
         data = self._presenter.data
 
         self._image.set(data=data, extent=(0, data.shape[1], 0, data.shape[0]))
+        self._ax.relim()
+
         if self._colorbar is not None:
             self._colorbar.remove()
         self._colorbar = self._figure.colorbar(self._image)
@@ -106,6 +108,5 @@ class MatplotlibHeatmapWidget(FigureCanvasQTAgg):
         self.draw()
 
     def reset_zoom(self):
-        self._ax.set_autoscale_on(True)
-        self._ax.autoscale_view()
+        self._ax.autoscale()
         self.draw()

@@ -17,6 +17,7 @@ setup(
         'pdviper',
         'pdviper.gui',
         'pdviper.gui.xy_plot',
+        'pdviper.gui.heatmap',
     ],
     url='http://www.synchrotron.org.au/pdviper',
     license='LICENSE',
@@ -25,7 +26,7 @@ setup(
         'pandas',
         'plotly',
         'PyQtChart',
-        'matplotlib',
+        'matplotlib>=2.2.0rc1',
     ],
     entry_points={
         'console_scripts': [
