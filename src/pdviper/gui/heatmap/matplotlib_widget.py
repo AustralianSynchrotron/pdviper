@@ -1,5 +1,4 @@
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPainter, QPen
+from PyQt5.QtGui import QPainter, QColor
 
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
@@ -8,6 +7,7 @@ import numpy as np
 
 
 class MatplotlibHeatmapWidget(FigureCanvasQTAgg):
+
     def __init__(self, *, data_presenter):
         self._figure = Figure()
         super().__init__(self._figure)
@@ -43,7 +43,7 @@ class MatplotlibHeatmapWidget(FigureCanvasQTAgg):
         x0, _ = self._transform_display_to_data_coords(self._zoom_rect[:2])
         x1, _ = self._transform_display_to_data_coords(self._zoom_rect[2:])
         self._clear_zoom_rect()
-        self._ax.set_xlim(x0, x1)
+        self._ax.set_xlim(*sorted((x0, x1)))
         self.draw()
 
     def _update_zoom_rect(self, *, p0=None, p1=None):
@@ -69,14 +69,19 @@ class MatplotlibHeatmapWidget(FigureCanvasQTAgg):
         if self._zoom_rect is None:
             return
         painter = QPainter(self)
-        painter.setPen(QPen(Qt.red, 5 / self._dpi_ratio, Qt.DotLine))
+        painter.setPen(QColor(190, 190, 190, 255))
+        painter.setBrush(QColor(190, 190, 190, 100))
         painter.drawRect(*self._zoom_rect_for_qt)
         painter.end()
 
     @property
     def _zoom_rect_for_qt(self):
-        x0, y0, x1, y1 = [pt / self._dpi_ratio for pt in self._zoom_rect]
-        return x0, y0, x1 - x0, y1 - y0
+        ax = self._ax
+        _, y0 = self._ax.bbox.min
+        y0 = self._figure_height - (y0 + ax.bbox.height) + 1
+        x0, _, x1, _ = [pt / self._dpi_ratio for pt in self._zoom_rect]
+        x0, x1 = sorted((x0, x1))
+        return x0, y0, x1 - x0, ax.bbox.height
 
     def plot(self):
 

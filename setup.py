@@ -8,7 +8,7 @@ with open('src/pdviper/__init__.py') as file:
 
 setup(
     name='PDViPeR',
-    version='3.0.0',
+    version='3.0.0.dev1',
     author='Australian Synchrotron',
     author_email='pdviper@synchrotron.org.au',
     description='PDViPeR',
