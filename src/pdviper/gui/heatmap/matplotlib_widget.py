@@ -16,7 +16,7 @@ class MatplotlibHeatmapWidget(FigureCanvasQTAgg):
         self._image = None
         self._colorbar = None
         self._mouse_clicked = False
-        self._zoom_rect = None
+        self._zoom_limits = None
         self.mpl_connect('button_press_event', self._on_mouse_click)
         self.mpl_connect('button_release_event', self._on_mouse_release)
         self.mpl_connect('motion_notify_event', self._on_mouse_move)
@@ -29,44 +29,39 @@ class MatplotlibHeatmapWidget(FigureCanvasQTAgg):
         if event.inaxes != self._ax:
             return
         self._mouse_clicked = True
-        self._update_zoom_rect(p0=(event.x, self._figure_height - event.y))
+        self._set_zoom_limits(event.x, event.x)
 
     def _on_mouse_move(self, event):
         if not self._mouse_clicked:
             return
-        self._update_zoom_rect(p1=(event.x, self._figure_height - event.y))
+        self._set_zoom_limits(self._zoom_limits[0], event.x)
 
     def _on_mouse_release(self, event):
         if not self._mouse_clicked:
             return
         self._mouse_clicked = False
-        x0, _ = self._transform_display_to_data_coords(self._zoom_rect[:2])
-        x1, _ = self._transform_display_to_data_coords(self._zoom_rect[2:])
-        self._clear_zoom_rect()
-        self._ax.set_xlim(*sorted((x0, x1)))
+        x0, x1 = [self._transform_x_display_to_data_coord(x) for x in sorted(self._zoom_limits)]
+        self._clear_zoom_limits()
+        self._ax.set_xlim(x0, x1)
         self.draw()
 
-    def _update_zoom_rect(self, *, p0=None, p1=None):
-        if p0 is None:
-            p0 = self._zoom_rect[:2]
-        if p1 is None:
-            p1 = p0
-        self._zoom_rect = (*p0, *p1)
+    def _set_zoom_limits(self, start, end):
+        self._zoom_limits = (start, end)
         self.update()
 
-    def _clear_zoom_rect(self):
-        self._zoom_rect = None
+    def _clear_zoom_limits(self):
+        self._zoom_limits = None
         self.update()
 
-    def _transform_display_to_data_coords(self, point):
-        return self._ax.transData.inverted().transform(point)
+    def _transform_x_display_to_data_coord(self, x):
+        return self._ax.transData.inverted().transform((x, 0))[0]
 
     def paintEvent(self, e):
         super().paintEvent(e)
         self._paint_zoom_rect()
 
     def _paint_zoom_rect(self):
-        if self._zoom_rect is None:
+        if self._zoom_limits is None:
             return
         painter = QPainter(self)
         painter.setPen(QColor(190, 190, 190, 255))
@@ -76,12 +71,11 @@ class MatplotlibHeatmapWidget(FigureCanvasQTAgg):
 
     @property
     def _zoom_rect_for_qt(self):
-        ax = self._ax
+        ax_height = self._ax.bbox.height
         _, y0 = self._ax.bbox.min
-        y0 = self._figure_height - (y0 + ax.bbox.height) + 1
-        x0, _, x1, _ = [pt / self._dpi_ratio for pt in self._zoom_rect]
-        x0, x1 = sorted((x0, x1))
-        return x0, y0, x1 - x0, ax.bbox.height
+        y0 = self._figure_height - (y0 + ax_height) + 1
+        x0, x1 = [x / self._dpi_ratio for x in sorted(self._zoom_limits)]
+        return x0, y0, x1 - x0, ax_height
 
     def plot(self):
 
