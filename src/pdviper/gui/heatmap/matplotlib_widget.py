@@ -40,9 +40,9 @@ class MatplotlibHeatmapWidget(FigureCanvasQTAgg):
         if not self._mouse_clicked:
             return
         self._mouse_clicked = False
-        x0, x1 = [self._transform_x_display_to_data_coord(x) for x in sorted(self._zoom_limits)]
+        if self._zoom_limits[0] != self._zoom_limits[1]:
+            self._ax.set_xlim(*self._zoom_limits_in_data_coordinates)
         self._clear_zoom_limits()
-        self._ax.set_xlim(x0, x1)
         self.draw()
 
     def _set_zoom_limits(self, start, end):
@@ -53,8 +53,10 @@ class MatplotlibHeatmapWidget(FigureCanvasQTAgg):
         self._zoom_limits = None
         self.update()
 
-    def _transform_x_display_to_data_coord(self, x):
-        return self._ax.transData.inverted().transform((x, 0))[0]
+    @property
+    def _zoom_limits_in_data_coordinates(self):
+        display_to_data_transform = self._ax.transData.inverted().transform
+        return [display_to_data_transform((x, 0))[0] for x in sorted(self._zoom_limits)]
 
     def paintEvent(self, e):
         super().paintEvent(e)
