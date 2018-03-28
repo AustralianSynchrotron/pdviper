@@ -78,8 +78,11 @@ class MatplotlibHeatmapWidget(FigureCanvasQTAgg):
     @property
     def _zoom_rect_for_qt(self):
         y0 = self._figure_height - self._ax.transAxes.transform((0, 1))[1] + 1
-        x0, x1 = [x / self._dpi_ratio for x in sorted(self._zoom_limits)]
-        return x0, y0, x1 - x0, self._axes_height
+        x0, x1 = sorted(self._zoom_limits)
+        return self._scale_to_dpi(x0, y0, x1 - x0, self._axes_height)
+
+    def _scale_to_dpi(self, *values):
+        return tuple(v / self._dpi_ratio for v in values)
 
     def plot(self):
 
