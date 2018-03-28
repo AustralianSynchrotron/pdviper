@@ -25,6 +25,10 @@ class MatplotlibHeatmapWidget(FigureCanvasQTAgg):
     def _figure_height(self):
         return self.figure.bbox.height
 
+    @property
+    def _axes_height(self):
+        return self._ax.bbox.height
+
     def _on_mouse_click(self, event):
         if event.inaxes != self._ax:
             return
@@ -73,11 +77,9 @@ class MatplotlibHeatmapWidget(FigureCanvasQTAgg):
 
     @property
     def _zoom_rect_for_qt(self):
-        ax_height = self._ax.bbox.height
-        _, y0 = self._ax.bbox.min
-        y0 = self._figure_height - (y0 + ax_height) + 1
+        y0 = self._figure_height - self._ax.transAxes.transform((0, 1))[1] + 1
         x0, x1 = [x / self._dpi_ratio for x in sorted(self._zoom_limits)]
-        return x0, y0, x1 - x0, ax_height
+        return x0, y0, x1 - x0, self._axes_height
 
     def plot(self):
 
