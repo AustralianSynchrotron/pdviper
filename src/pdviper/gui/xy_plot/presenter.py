@@ -1,7 +1,10 @@
+from ...data_manager import DataSetCollection
+
+
 class XyDataPresenter:
 
     def __init__(self, *, x_scales=None, y_scales=None):
-        self.data_sets = []
+        self.data_sets = DataSetCollection()
         self._x_scales = x_scales or [AxisScaler(name='X', transformation=lambda x: x)]
         self._y_scales = y_scales or [AxisScaler(name='Y', transformation=lambda x: x)]
         self._active_x_scale = self._x_scales[0]
