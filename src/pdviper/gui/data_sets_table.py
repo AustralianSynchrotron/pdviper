@@ -2,6 +2,8 @@ from PyQt5.QtWidgets import QTableView
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from PyQt5.QtCore import Qt, QSysInfo, pyqtSignal
 
+from pdviper.data_manager import DataSetCollection
+
 
 def is_delete_key(key):
     if key == Qt.Key_Delete:
@@ -65,7 +67,7 @@ class DataSetsModel(QStandardItemModel):
             if self.item(row, 0).checkState() == Qt.Unchecked:
                 continue
             data_sets.append(self._data_manager.data_sets[row])
-        return data_sets
+        return DataSetCollection(data_sets)
 
     def delete_items(self, table_indexes):
         self._data_manager.remove([index.row() for index in table_indexes])

@@ -1,4 +1,4 @@
-from ...data_manager import DataSet
+from ...data_manager import DataSet, DataSetCollection
 
 import numpy as np
 
@@ -6,7 +6,7 @@ import numpy as np
 class HeatmapDataPresenter:
 
     def __init__(self, *, x_step_size=0.00375):
-        self.data_sets = []
+        self.data_sets = DataSetCollection()
         self._x_step_size = x_step_size
 
     @property
@@ -29,13 +29,16 @@ class HeatmapDataPresenter:
         else:
             return np.zeros(shape=(0, 0))
 
+    @property
+    def x_range(self):
+        return self.data_sets.common_angle_span
+
 
 def standardize_angles(data_sets, *, step):
     new_data_sets = []
-    largest_start = max(ds.angle[0] for ds in data_sets)
-    smallest_end = min(ds.angle[-1] for ds in data_sets)
+    start_angle, end_angle = data_sets.common_angle_span
     for ds in data_sets:
-        new_ds = regrid(ds, step=step, start=largest_start, end=smallest_end)
+        new_ds = regrid(ds, step=step, start=start_angle, end=end_angle)
         new_data_sets.append(new_ds)
     return new_data_sets
 

@@ -1,9 +1,17 @@
+from enum import IntEnum
+
 from PyQt5.QtGui import QPainter, QColor
 
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 
 import numpy as np
+
+
+class MouseButton:
+    LEFT = 1
+    MIDDLE = 2
+    RIGHT = 3
 
 
 class MatplotlibHeatmapWidget(FigureCanvasQTAgg):
@@ -32,8 +40,25 @@ class MatplotlibHeatmapWidget(FigureCanvasQTAgg):
     def _on_mouse_click(self, event):
         if event.inaxes != self._ax:
             return
+        if event.button == MouseButton.LEFT:
+            self._start_zoom_selection(event)
+        elif event.button == MouseButton.RIGHT:
+            self._zoom_out(event)
+
+    def _start_zoom_selection(self, event):
         self._mouse_clicked = True
         self._set_zoom_limits(event.x, event.x)
+
+    def _zoom_out(self, event):
+        x_min, x_max = self._presenter.x_range
+        if x_min is None:
+            return
+        current_x_min, current_x_max = self._ax.get_xlim()
+        current_x_span = current_x_max - current_x_min
+        new_x_min = max(current_x_min - current_x_span, x_min)
+        new_x_max = min(current_x_max + current_x_span, x_max)
+        self._ax.set_xlim(new_x_min, new_x_max)
+        self.draw()
 
     def _on_mouse_move(self, event):
         if not self._mouse_clicked:
@@ -97,7 +122,7 @@ class MatplotlibHeatmapWidget(FigureCanvasQTAgg):
 
         data = self._presenter.data
 
-        self._image.set(data=data, extent=(0, data.shape[1], 0, data.shape[0]))
+        self._image.set(data=data, extent=(*self._presenter.x_range, 0, data.shape[0]))
         self._ax.relim()
 
         if self._colorbar is not None:
@@ -106,7 +131,7 @@ class MatplotlibHeatmapWidget(FigureCanvasQTAgg):
         self._ax.set(
             xlabel=self._presenter.x_axis_label,
             ylabel=self._presenter.y_axis_label,
-            yticks=np.arange(data.shape[0])+0.5,
+            yticks=np.arange(data.shape[0]) + 0.5,
             yticklabels=np.arange(1, data.shape[0] + 1),
         )
         self._ax.xaxis.tick_bottom()

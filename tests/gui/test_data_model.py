@@ -5,7 +5,7 @@ from PyQt5.QtCore import Qt
 import pytest
 
 from pdviper.gui.data_sets_table import DataSetsModel
-from pdviper.data_manager import DataManager
+from pdviper.data_manager import DataManager, DataSetCollection
 
 from tests.fixtures import TEST_FILE1, TEST_FILE2
 
@@ -40,6 +40,7 @@ def test_data_model_provides_active_data_sets(data_manager, model):
     model.item(0, 0).setCheckState(Qt.Unchecked)
     assert len(model.get_active_data_sets()) == 1
     assert model.get_active_data_sets()[0].name == 'ds1_0000_p2_0000'
+    assert isinstance(model.get_active_data_sets(), DataSetCollection)
 
 
 def test_data_model_emits_changed_when_rows_added(data_manager, model):

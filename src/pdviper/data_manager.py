@@ -2,14 +2,25 @@ from pathlib import Path
 from itertools import product
 from enum import Enum
 import re
+from collections import UserList
 
 import pandas as pd
 import numpy as np
 
 
+class DataSetCollection(UserList):
+    @property
+    def common_angle_span(self):
+        if not self.data:
+            return (None, None)
+        largest_start = max(ds.angle[0] for ds in self.data)
+        smallest_end = min(ds.angle[-1] for ds in self.data)
+        return largest_start, smallest_end
+
+
 class DataManager:
     def __init__(self):
-        self.data_sets = []
+        self.data_sets = DataSetCollection()
         self._observers = set()
 
     def load(self, paths):
