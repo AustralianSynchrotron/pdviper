@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QCheckBox, QPushButton,
-                             QComboBox)
+                             QComboBox, QFormLayout)
 from PyQt5.QtCore import Qt, pyqtSignal
 import numpy as np
 
@@ -91,14 +91,34 @@ class XyPlotControls(QWidget):
         reset_zoom = QPushButton('Reset zoom')
         reset_zoom.clicked.connect(self.zoom_reset)
 
-        layout = QHBoxLayout()
-        layout.addWidget(show_legend)
-        layout.addWidget(y_transforms)
-        layout.addWidget(x_transforms)
-        layout.addWidget(reset_zoom)
+        layout = QVBoxLayout()
+
+        row1 = QHBoxLayout()
+        row1.addWidget(show_legend)
+        row1.addWidget(y_transforms)
+        row1.addWidget(x_transforms)
+        row1.addWidget(reset_zoom)
+
+        save_image_button = QPushButton('Save to file')
+        save_image_button.clicked.connect(self._save_image)
+
+        format_selection_box = QComboBox()
+        format_selection_box.addItem('PNG')
+        format_selection_layout = QFormLayout()
+        format_selection_layout.addRow('Format:', format_selection_box)
+
+        row2 = QHBoxLayout()
+        row2.addWidget(save_image_button)
+        row2.addLayout(format_selection_layout)
+
+        layout.addLayout(row1)
+        layout.addLayout(row2)
 
         self.setLayout(layout)
 
     def _handle_show_legend_change(self, state):
         legend_state = XyLegendState.ON if state == Qt.Checked else XyLegendState.OFF
         self.legend_state_changed.emit(legend_state)
+
+    def _save_image(self):
+        print('saving')

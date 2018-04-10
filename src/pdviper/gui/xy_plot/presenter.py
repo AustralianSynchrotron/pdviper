@@ -38,6 +38,11 @@ class XyDataPresenter:
                                   x_scaler=self._active_x_scale,
                                   y_scaler=self._active_y_scale)
 
+    @property
+    def x_range(self):
+        return tuple(sorted(map(self._active_x_scale.transform,
+                                self.data_sets.common_angle_span)))
+
 
 class XySeriesCollection:
     def __init__(self, data_sets, *, x_scaler, y_scaler):
