@@ -6,9 +6,16 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 import numpy as np
 
 from ...constants import MouseButton
+from ..utils import verify_class_implements_abc, ImageFormat
+from .abstract_widget import HeatmapWidget
 
 
 class MatplotlibHeatmapWidget(FigureCanvasQTAgg):
+
+    supported_image_formats = [
+        ImageFormat('PNG', 'png'),
+        ImageFormat('EPS', 'eps'),
+    ]
 
     def __init__(self, *, data_presenter):
         self._figure = Figure()
@@ -135,3 +142,9 @@ class MatplotlibHeatmapWidget(FigureCanvasQTAgg):
     def reset_zoom(self):
         self._ax.autoscale()
         self.draw()
+
+    def export_image(self, path, image_format):
+        self._figure.savefig(path, format=image_format.extension)
+
+
+verify_class_implements_abc(MatplotlibHeatmapWidget, HeatmapWidget)
