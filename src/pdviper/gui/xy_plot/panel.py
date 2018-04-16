@@ -1,10 +1,11 @@
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QCheckBox, QPushButton,
-                             QComboBox, QFormLayout)
+                             QComboBox, QFileDialog)
 from PyQt5.QtCore import Qt, pyqtSignal
 import numpy as np
 
 from .options import XyLegendState
 from .presenter import XyDataPresenter, AxisScaler
+from ..utils import ImageFormat
 
 
 DEG_TO_RAD = np.pi / 180
@@ -38,11 +39,15 @@ class XyPlotPanel(QWidget):
             ],
         )
         self._plot_widget = PlotWidgetCls(data_presenter=self._presenter)
-        controls = XyPlotControls(data_presenter=self._presenter)
+        self._controls = controls = XyPlotControls(
+            data_presenter=self._presenter,
+            image_formats=self._plot_widget.supported_image_formats,
+        )
         controls.legend_state_changed.connect(self._handle_legend_state_changed)
         controls.y_transform_changed.connect(self._y_transform_changed)
         controls.x_transform_changed.connect(self._x_transform_changed)
         controls.zoom_reset.connect(self._plot_widget.reset_zoom)
+        controls.export_image.connect(self._plot_widget.export_image)
         layout = QVBoxLayout()
         layout.addWidget(controls)
         layout.addWidget(self._plot_widget)
@@ -71,9 +76,13 @@ class XyPlotControls(QWidget):
     x_transform_changed = pyqtSignal(str)
     y_transform_changed = pyqtSignal(str)
     zoom_reset = pyqtSignal()
+    export_image = pyqtSignal(str, ImageFormat)
 
-    def __init__(self, parent=None, *, data_presenter):
+    def __init__(self, parent=None, *, data_presenter, image_formats):
         super().__init__(parent)
+
+        self._image_formats = image_formats
+        self._selected_format = image_formats[0] if image_formats else None
 
         show_legend = QCheckBox('Show legend')
         show_legend.stateChanged.connect(self._handle_show_legend_change)
@@ -99,17 +108,13 @@ class XyPlotControls(QWidget):
         row1.addWidget(x_transforms)
         row1.addWidget(reset_zoom)
 
-        save_image_button = QPushButton('Save to file')
+        self._save_image_button = save_image_button = QPushButton('Save to file')
+        if not image_formats:
+            self._save_image_button.setEnabled(False)
         save_image_button.clicked.connect(self._save_image)
-
-        format_selection_box = QComboBox()
-        format_selection_box.addItem('PNG')
-        format_selection_layout = QFormLayout()
-        format_selection_layout.addRow('Format:', format_selection_box)
 
         row2 = QHBoxLayout()
         row2.addWidget(save_image_button)
-        row2.addLayout(format_selection_layout)
 
         layout.addLayout(row1)
         layout.addLayout(row2)
@@ -121,4 +126,7 @@ class XyPlotControls(QWidget):
         self.legend_state_changed.emit(legend_state)
 
     def _save_image(self):
-        print('saving')
+        filters = ';;'.join(fmt.qt_filter for fmt in self._image_formats)
+        destination, chosen_fltr = QFileDialog.getSaveFileName(self, 'Save image', '', filters)
+        format_ = next(fmt for fmt in self._image_formats if fmt.qt_filter == chosen_fltr)
+        self.export_image.emit(destination, format_)

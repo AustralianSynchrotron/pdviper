@@ -1,7 +1,7 @@
 import sys
 import signal
 
-from PyQt5.QtWidgets import QApplication, QMessageBox
+from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QTimer
 
 from .gui import MainWindow

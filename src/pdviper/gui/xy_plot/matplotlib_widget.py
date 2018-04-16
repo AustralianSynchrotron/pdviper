@@ -4,10 +4,17 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 
 from .options import XyLegendState
+from .abstract_widget import XyPlotWidget
+from ..utils import verify_class_implements_abc, ImageFormat
 from ...constants import MouseButton
 
 
 class MatplotlibXyPlotWidget(FigureCanvasQTAgg):
+
+    supported_image_formats = [
+        ImageFormat('PNG', 'png'),
+        ImageFormat('EPS', 'eps'),
+    ]
 
     def __init__(self, *, data_presenter):
         self._figure = Figure()
@@ -130,3 +137,9 @@ class MatplotlibXyPlotWidget(FigureCanvasQTAgg):
         self._user_axes_limits = None
         self._ax.autoscale()
         self.draw()
+
+    def export_image(self, path, image_format):
+        self._figure.savefig(path, format=image_format.extension)
+
+
+verify_class_implements_abc(MatplotlibXyPlotWidget, XyPlotWidget)
