@@ -31,32 +31,22 @@ Future features
 Requirements
 ------------
 
-PDViPeR relies on the (free) `Enthought Python Distribution`_ for easy one-click installation of dependencies.
-
-.. _`Enthought Python Distribution`: http://www.enthought.com/products/epd_free.php
+PDViPeR relies on Python 3.6 or later.
 
 
 Installation
 ------------
 
-Windows::
+The development version of PDViPeR runs on Windows, macOS and Linux. To install it with
+[pipenv](https://docs.pipenv.org/) run the following commands in your terminal::
 
-   conda env create -f environment.yml
-   activate pdviper
-   pip install -e .
-   python setup_fortran_bin.py
-   python app.py
+   git clone https://github.com/AustralianSynchrotron/pdviper.git
+   cd pdviper
+   pipenv install
 
-macOS::
+Once PDViPeR is installed you can run it with::
 
-   conda env create -f environment.yml
-   source activate pdviper
-   conda install python.app=1.2
-   pip install -e .
-   ln -s $CONDA_PREFIX/lib/python2.7/site-packages/PySide/libpyside-python2.7.1.2.dylib $CONDA_PREFIX/lib/
-   ln -s $CONDA_PREFIX/lib/python2.7/site-packages/PySide/libshiboken-python2.7.1.2.dylib $CONDA_PREFIX/lib/
-   python setup_fortran_bin.py
-   python.app app.py
+   pipenv run pdviper
 
 
 Version History
@@ -79,12 +69,6 @@ Version History
     -Improved behaviour of 3d waterfall plot quality setting
 
 0.1 -Initial release
-
-
-Known Issues
-------------
-
-- 2d surface plot sometimes literally "loses the plot" when zooming. The symptom of this is that zooming occasionally shows a blank window. Workaround: If this occurs, click back to the Stacked plot then click back to 2d surface.
 
 
 Acknowledgements
